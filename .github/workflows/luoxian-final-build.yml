@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ../../../final-output
-          go build -trimpath -ldflags='-s -w' -o ../../../final-output/LuoXian.exe ./cmd/luoxian
+          go build -trimpath -ldflags='-H=windowsgui -s -w' -o ../../../final-output/LuoXian.exe ./cmd/luoxian
           go build -trimpath -ldflags='-s -w' -o ../../../final-output/lxpatch.exe ./cmd/lxpatch
 
       - name: Verify Windows binaries and checksums
@@ -65,8 +65,19 @@ jobs:
           set -euo pipefail
           cd final-output
           file LuoXian.exe lxpatch.exe
-          file LuoXian.exe | grep -q 'PE32+'
-          file lxpatch.exe | grep -q 'PE32+'
+          python3 - <<'PY'
+          import struct
+          for path, expected_subsystem in [('LuoXian.exe', 2), ('lxpatch.exe', 3)]:
+              data = open(path, 'rb').read()
+              pe = struct.unpack_from('<I', data, 0x3c)[0]
+              machine = struct.unpack_from('<H', data, pe + 4)[0]
+              magic = struct.unpack_from('<H', data, pe + 24)[0]
+              subsystem = struct.unpack_from('<H', data, pe + 24 + 68)[0]
+              assert machine == 0x8664, (path, hex(machine))
+              assert magic == 0x20b, (path, hex(magic))
+              assert subsystem == expected_subsystem, (path, subsystem, expected_subsystem)
+              print(path, 'PE32+ x64 subsystem', subsystem, 'OK')
+          PY
           sha256sum LuoXian.exe lxpatch.exe > SHA256SUMS.txt
           cat SHA256SUMS.txt
           ls -lh
