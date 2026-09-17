@@ -1,0 +1,1 @@
+Trigger final LuoXian v30 Windows build after workflow registration.
