@@ -30,13 +30,15 @@ jobs:
           base64 -d final-build/launcher-build-source-final.zip.b64 > final-build/launcher-build-source-final.zip
           echo "971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5  final-build/launcher-build-source-final.zip" | sha256sum -c -
           unzip -q final-build/launcher-build-source-final.zip -d .final-build
+          cp -R hotfix-overlay/. .final-build/src/launcher/
           test -f .final-build/src/launcher/go.mod
+          test -f .final-build/src/launcher/internal/windowstate/state.go
 
       - name: Run platform-neutral Go tests
         working-directory: .final-build/src/launcher
         run: |
           set -euo pipefail
-          go test ./internal/aihttp ./internal/airuntime ./internal/config ./internal/content ./internal/repair ./internal/storage ./internal/worlddb
+          go test ./internal/aihttp ./internal/airuntime ./internal/config ./internal/content ./internal/repair ./internal/storage ./internal/worlddb ./internal/windowstate
 
       - name: Cross-compile complete Windows launcher tree
         working-directory: .final-build/src/launcher
