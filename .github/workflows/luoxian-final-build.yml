@@ -1,0 +1,69 @@
+name: LuoXian Final Windows Build
+
+on:
+  push:
+    branches:
+      - build/luoxian-v30-final-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go 1.25.0
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: false
+
+      - name: Reassemble and verify source
+        run: |
+          mkdir -p .final-build
+          cat final-build/b64part-* > final-build/launcher-build-source-final.zip.b64
+          base64 -d final-build/launcher-build-source-final.zip.b64 > final-build/launcher-build-source-final.zip
+          echo "971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5  final-build/launcher-build-source-final.zip" | sha256sum -c -
+          unzip -q final-build/launcher-build-source-final.zip -d .final-build
+          test -f .final-build/src/launcher/go.mod
+
+      - name: Run Go tests
+        working-directory: .final-build/src/launcher
+        run: go test ./...
+
+      - name: Build Windows binaries
+        working-directory: .final-build/src/launcher
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          mkdir -p ../../../final-output
+          go build -trimpath -ldflags='-s -w' -o ../../../final-output/LuoXian.exe ./cmd/luoxian
+          go build -trimpath -ldflags='-s -w' -o ../../../final-output/lxpatch.exe ./cmd/lxpatch
+
+      - name: Build Linux patch helper
+        working-directory: .final-build/src/launcher
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: |
+          go build -trimpath -ldflags='-s -w' -o ../../../final-output/lxpatch-linux-amd64 ./cmd/lxpatch
+
+      - name: Checksums
+        run: |
+          cd final-output
+          sha256sum LuoXian.exe lxpatch.exe lxpatch-linux-amd64 > SHA256SUMS.txt
+          ls -lh
+
+      - name: Upload final binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-v30-final-binaries
+          path: final-output/
+          if-no-files-found: error
+          retention-days: 7
