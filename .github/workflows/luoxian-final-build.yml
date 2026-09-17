@@ -60,22 +60,14 @@ jobs:
           go build -trimpath -ldflags='-s -w' -o ../../../final-output/LuoXian.exe ./cmd/luoxian
           go build -trimpath -ldflags='-s -w' -o ../../../final-output/lxpatch.exe ./cmd/lxpatch
 
-      - name: Build Linux patch helper
-        working-directory: .final-build/src/launcher
-        env:
-          GOOS: linux
-          GOARCH: amd64
-          CGO_ENABLED: '0'
-        run: |
-          set -euo pipefail
-          go build -trimpath -ldflags='-s -w' -o ../../../final-output/lxpatch-linux-amd64 ./cmd/lxpatch
-
-      - name: Checksums
+      - name: Verify Windows binaries and checksums
         run: |
           set -euo pipefail
           cd final-output
           file LuoXian.exe lxpatch.exe
-          sha256sum LuoXian.exe lxpatch.exe lxpatch-linux-amd64 > SHA256SUMS.txt
+          file LuoXian.exe | grep -q 'PE32+'
+          file lxpatch.exe | grep -q 'PE32+'
+          sha256sum LuoXian.exe lxpatch.exe > SHA256SUMS.txt
           cat SHA256SUMS.txt
           ls -lh
 
