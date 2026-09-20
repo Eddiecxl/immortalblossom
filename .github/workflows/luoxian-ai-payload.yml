@@ -142,7 +142,7 @@ jobs:
 
           $src = [System.IO.File]::OpenRead((Resolve-Path 'payload/runtime/models/universal.gguf'))
           try {
-            $chunkSize = 400000000
+            $chunkSize = 100000000
             $buffer = New-Object byte[] (4MB)
             $part = 0
             while ($src.Position -lt $src.Length) {
@@ -161,7 +161,7 @@ jobs:
               Write-Host "$outPath $((Get-Item $outPath).Length)"
               $part++
             }
-            if ($part -ne 5) { throw "expected 5 model chunks, got $part" }
+            if ($part -ne 19) { throw "expected 19 model chunks, got $part" }
           } finally { $src.Dispose() }
 
       - name: Upload runtime and config chunk
@@ -217,3 +217,130 @@ jobs:
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
+
+      - name: Upload model chunk 05
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-05
+          path: chunks/model-part-05.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 06
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-06
+          path: chunks/model-part-06.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 07
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-07
+          path: chunks/model-part-07.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 08
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-08
+          path: chunks/model-part-08.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 09
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-09
+          path: chunks/model-part-09.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 10
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-10
+          path: chunks/model-part-10.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 11
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-11
+          path: chunks/model-part-11.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 12
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-12
+          path: chunks/model-part-12.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 13
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-13
+          path: chunks/model-part-13.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 14
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-14
+          path: chunks/model-part-14.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 15
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-15
+          path: chunks/model-part-15.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 16
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-16
+          path: chunks/model-part-16.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 17
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-17
+          path: chunks/model-part-17.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 18
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-18
+          path: chunks/model-part-18.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
