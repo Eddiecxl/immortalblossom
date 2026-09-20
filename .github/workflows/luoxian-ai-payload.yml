@@ -1,0 +1,130 @@
+name: LuoXian Universal AI Payload
+
+on:
+  push:
+    branches:
+      - build/luoxian-v30-final-20260917
+    paths:
+      - '.github/workflows/luoxian-ai-payload.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-ai:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download pinned llama.cpp Vulkan runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path downloads,payload/runtime/llama,payload/runtime/models | Out-Null
+          $url = 'https://github.com/ggml-org/llama.cpp/releases/download/b10343/llama-b10343-bin-win-vulkan-x64.zip'
+          & curl.exe -L --fail --retry 20 --retry-delay 5 --retry-all-errors -C - -o downloads/llama-vulkan.zip $url
+          if ($LASTEXITCODE -ne 0) { throw "llama.cpp download failed" }
+          Expand-Archive downloads/llama-vulkan.zip -DestinationPath payload/runtime/llama -Force
+          if (!(Test-Path payload/runtime/llama/llama-server.exe)) { throw "llama-server.exe missing" }
+
+      - name: Download pinned Qwen3 1.7B Q6_K model with resume
+        shell: pwsh
+        run: |
+          $url = 'https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q6_K.gguf?download=true'
+          & curl.exe -L --fail --retry 30 --retry-delay 10 --retry-all-errors -C - -o payload/runtime/models/universal.gguf $url
+          if ($LASTEXITCODE -ne 0) { throw "model download failed" }
+          $size = (Get-Item payload/runtime/models/universal.gguf).Length
+          Write-Host "Model bytes: $size"
+          if ($size -lt 1500000000) { throw "model file is unexpectedly small" }
+
+      - name: Write universal profiles
+        shell: pwsh
+        run: |
+          @'
+          {
+            "schemaVersion": 1,
+            "profiles": [
+              {
+                "id": "lite",
+                "label": "Lite · Universal Local AI",
+                "model": "universal.gguf",
+                "minRamGB": 6,
+                "contextSize": 4096,
+                "threads": 4,
+                "gpuLayers": "auto",
+                "maxOutputTokens": 384
+              },
+              {
+                "id": "standard",
+                "label": "Standard · Universal Local AI",
+                "model": "universal.gguf",
+                "minRamGB": 16,
+                "contextSize": 8192,
+                "threads": 8,
+                "gpuLayers": "auto",
+                "maxOutputTokens": 640
+              }
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 payload/runtime/models/profiles.json
+          '{"profile":"auto"}' | Set-Content -Encoding UTF8 payload/runtime/models/active-profile.json
+
+      - name: Smoke test on Windows runner without discrete GPU
+        shell: pwsh
+        run: |
+          $server = Resolve-Path payload/runtime/llama/llama-server.exe
+          $model = Resolve-Path payload/runtime/models/universal.gguf
+          $logOut = Join-Path $PWD 'llama-out.log'
+          $logErr = Join-Path $PWD 'llama-err.log'
+          $p = Start-Process -FilePath $server -ArgumentList @('--model', $model, '--host', '127.0.0.1', '--port', '24825', '--ctx-size', '2048', '--threads', '2', '--n-gpu-layers', 'auto') -PassThru -RedirectStandardOutput $logOut -RedirectStandardError $logErr
+          try {
+            $ready = $false
+            for ($i=0; $i -lt 120; $i++) {
+              Start-Sleep -Seconds 1
+              if ($p.HasExited) {
+                Get-Content $logOut -ErrorAction SilentlyContinue
+                Get-Content $logErr -ErrorAction SilentlyContinue
+                throw "llama-server exited early with code $($p.ExitCode)"
+              }
+              try {
+                $r = Invoke-RestMethod -Uri 'http://127.0.0.1:24825/health' -TimeoutSec 2
+                $ready = $true
+                break
+              } catch {}
+            }
+            if (!$ready) {
+              Get-Content $logOut -ErrorAction SilentlyContinue
+              Get-Content $logErr -ErrorAction SilentlyContinue
+              throw "llama-server health timed out"
+            }
+            $body = @{
+              model='local'
+              messages=@(@{role='user';content='只回复四个字：落仙可用'})
+              max_tokens=16
+              temperature=0
+            } | ConvertTo-Json -Depth 5
+            $resp = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:24825/v1/chat/completions' -ContentType 'application/json' -Body $body -TimeoutSec 120
+            $text = $resp.choices[0].message.content
+            Write-Host "Smoke generation: $text"
+            if ([string]::IsNullOrWhiteSpace($text)) { throw "empty generation response" }
+          } finally {
+            if (!$p.HasExited) { Stop-Process -Id $p.Id -Force }
+          }
+
+      - name: Record payload hashes
+        shell: pwsh
+        run: |
+          Get-FileHash payload/runtime/models/universal.gguf -Algorithm SHA256 | Format-List | Out-File payload/AI_PAYLOAD_SHA256.txt
+          Get-FileHash payload/runtime/llama/llama-server.exe -Algorithm SHA256 | Format-List | Out-File -Append payload/AI_PAYLOAD_SHA256.txt
+          Get-ChildItem payload/runtime/llama | Select-Object Name,Length | Format-Table | Out-File payload/LLAMA_RUNTIME_FILES.txt
+          Get-Content payload/AI_PAYLOAD_SHA256.txt
+
+      - name: Upload universal AI payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-universal-ai-payload
+          path: payload/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
