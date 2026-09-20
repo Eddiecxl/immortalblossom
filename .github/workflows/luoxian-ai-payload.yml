@@ -28,15 +28,15 @@ jobs:
           Expand-Archive downloads/llama-vulkan.zip -DestinationPath payload/runtime/llama -Force
           if (!(Test-Path payload/runtime/llama/llama-server.exe)) { throw "llama-server.exe missing" }
 
-      - name: Download pinned Qwen3 1.7B Q6_K model with resume
+      - name: Download pinned Qwen3 4B Instruct 2507 IQ3_XS model with resume
         shell: pwsh
         run: |
-          $url = 'https://huggingface.co/bartowski/Qwen_Qwen3-1.7B-GGUF/resolve/main/Qwen_Qwen3-1.7B-Q6_K.gguf?download=true'
+          $url = 'https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-IQ3_XS.gguf?download=true'
           & curl.exe -L --fail --retry 30 --retry-delay 10 --retry-all-errors -C - -o payload/runtime/models/universal.gguf $url
           if ($LASTEXITCODE -ne 0) { throw "model download failed" }
           $size = (Get-Item payload/runtime/models/universal.gguf).Length
           Write-Host "Model bytes: $size"
-          if ($size -lt 1500000000) { throw "model file is unexpectedly small" }
+          if ($size -lt 1750000000) { throw "model file is unexpectedly small" }
 
       - name: Write universal profiles
         shell: pwsh
@@ -100,8 +100,8 @@ jobs:
             }
             $body = @{
               model='local'
-              messages=@(@{role='user';content='只回复四个字：落仙可用'})
-              max_tokens=16
+              messages=@(@{role='user';content='严格只回复四个字：落仙可用'})
+              max_tokens=32
               temperature=0
             } | ConvertTo-Json -Depth 5
             $resp = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:24825/v1/chat/completions' -ContentType 'application/json' -Body $body -TimeoutSec 120
