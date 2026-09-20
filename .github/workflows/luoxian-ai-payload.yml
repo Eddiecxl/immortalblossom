@@ -158,47 +158,238 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload GGUF shard 1
+      - name: Split GGUF shards into connector-safe transfer chunks
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path transfer | Out-Null
+          $chunkSize = 100000000
+          $manifest = @()
+          $shards = Get-ChildItem payload/runtime/models/universal-*-of-*.gguf | Sort-Object Name
+          foreach ($shard in $shards) {
+            $shardIndex = [int]([regex]::Match($shard.Name, '000(\d)-of-00005').Groups[1].Value)
+            $src = [System.IO.File]::OpenRead($shard.FullName)
+            $parts = @()
+            try {
+              $buffer = New-Object byte[] (4MB)
+              $part = 0
+              while ($src.Position -lt $src.Length) {
+                $outName = ('s{0:D2}-p{1:D2}.bin' -f $shardIndex, $part)
+                $outPath = Join-Path 'transfer' $outName
+                $dst = [System.IO.File]::Create($outPath)
+                try {
+                  $remaining = [Math]::Min($chunkSize, $src.Length - $src.Position)
+                  while ($remaining -gt 0) {
+                    $want = [Math]::Min($buffer.Length, $remaining)
+                    $read = $src.Read($buffer, 0, [int]$want)
+                    if ($read -le 0) { throw 'unexpected EOF while splitting shard' }
+                    $dst.Write($buffer, 0, $read)
+                    $remaining -= $read
+                  }
+                } finally { $dst.Dispose() }
+                $item = Get-Item $outPath
+                $hash = (Get-FileHash $outPath -Algorithm SHA256).Hash.ToLower()
+                $parts += [pscustomobject]@{ name=$outName; size=$item.Length; sha256=$hash }
+                $part++
+              }
+            } finally { $src.Dispose() }
+            $manifest += [pscustomobject]@{
+              shard=$shard.Name
+              size=$shard.Length
+              sha256=(Get-FileHash $shard.FullName -Algorithm SHA256).Hash.ToLower()
+              parts=$parts
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 transfer/manifest.json
+          Get-Content transfer/manifest.json
+          $allParts = Get-ChildItem transfer/*.bin
+          if ($allParts.Count -ne 20) { throw "expected 20 transfer chunks, got $($allParts.Count)" }
+
+      - name: Upload transfer manifest
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-gguf-shard-01
-          path: payload/runtime/models/universal-00001-of-00005.gguf
+          name: luoxian-ai-shard-transfer-manifest
+          path: transfer/manifest.json
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload GGUF shard 2
+      - name: Upload transfer chunk s01-p00
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-gguf-shard-02
-          path: payload/runtime/models/universal-00002-of-00005.gguf
+          name: luoxian-ai-transfer-s01-p00
+          path: transfer/s01-p00.bin
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload GGUF shard 3
+      - name: Upload transfer chunk s01-p01
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-gguf-shard-03
-          path: payload/runtime/models/universal-00003-of-00005.gguf
+          name: luoxian-ai-transfer-s01-p01
+          path: transfer/s01-p01.bin
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload GGUF shard 4
+      - name: Upload transfer chunk s01-p02
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-gguf-shard-04
-          path: payload/runtime/models/universal-00004-of-00005.gguf
+          name: luoxian-ai-transfer-s01-p02
+          path: transfer/s01-p02.bin
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload GGUF shard 5
+      - name: Upload transfer chunk s01-p03
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-gguf-shard-05
-          path: payload/runtime/models/universal-00005-of-00005.gguf
+          name: luoxian-ai-transfer-s01-p03
+          path: transfer/s01-p03.bin
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
+
+      - name: Upload transfer chunk s01-p04
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s01-p04
+          path: transfer/s01-p04.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s02-p00
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s02-p00
+          path: transfer/s02-p00.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s02-p01
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s02-p01
+          path: transfer/s02-p01.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s02-p02
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s02-p02
+          path: transfer/s02-p02.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s02-p03
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s02-p03
+          path: transfer/s02-p03.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s03-p00
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s03-p00
+          path: transfer/s03-p00.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s03-p01
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s03-p01
+          path: transfer/s03-p01.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s03-p02
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s03-p02
+          path: transfer/s03-p02.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s03-p03
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s03-p03
+          path: transfer/s03-p03.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s04-p00
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s04-p00
+          path: transfer/s04-p00.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s04-p01
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s04-p01
+          path: transfer/s04-p01.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s04-p02
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s04-p02
+          path: transfer/s04-p02.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s04-p03
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s04-p03
+          path: transfer/s04-p03.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s05-p00
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s05-p00
+          path: transfer/s05-p00.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s05-p01
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s05-p01
+          path: transfer/s05-p01.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload transfer chunk s05-p02
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-transfer-s05-p02
+          path: transfer/s05-p02.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
