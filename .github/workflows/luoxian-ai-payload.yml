@@ -38,17 +38,34 @@ jobs:
           Write-Host "Model bytes: $size"
           if ($size -lt 1750000000) { throw "model file is unexpectedly small" }
 
+      - name: Split model into patch-safe GGUF shards
+        shell: pwsh
+        run: |
+          $splitter = Resolve-Path payload/runtime/llama/llama-gguf-split.exe
+          $model = Resolve-Path payload/runtime/models/universal.gguf
+          & $splitter --split --split-max-size 400M $model payload/runtime/models/universal
+          if ($LASTEXITCODE -ne 0) { throw "GGUF shard split failed" }
+          $shards = Get-ChildItem payload/runtime/models/universal-*-of-*.gguf | Sort-Object Name
+          $shards | Select-Object Name,Length | Format-Table
+          if ($shards.Count -ne 5) { throw "expected 5 GGUF shards, got $($shards.Count)" }
+          foreach ($s in $shards) {
+            if ($s.Length -ge 520000000) { throw "patch-unsafe shard: $($s.Name) $($s.Length)" }
+          }
+          Remove-Item payload/runtime/models/universal.gguf
+
       - name: Write universal profiles
         shell: pwsh
         run: |
-          @'
+          $first = (Get-ChildItem payload/runtime/models/universal-00001-of-*.gguf | Select-Object -First 1).Name
+          if ([string]::IsNullOrWhiteSpace($first)) { throw "first shard missing" }
+          @"
           {
             "schemaVersion": 1,
             "profiles": [
               {
                 "id": "lite",
                 "label": "Lite · Universal Local AI",
-                "model": "universal.gguf",
+                "model": "$first",
                 "minRamGB": 6,
                 "contextSize": 4096,
                 "threads": 4,
@@ -58,7 +75,7 @@ jobs:
               {
                 "id": "standard",
                 "label": "Standard · Universal Local AI",
-                "model": "universal.gguf",
+                "model": "$first",
                 "minRamGB": 24,
                 "contextSize": 8192,
                 "threads": 8,
@@ -67,7 +84,7 @@ jobs:
               }
             ]
           }
-          '@ | Set-Content -Encoding UTF8 payload/runtime/models/profiles.json
+          "@ | Set-Content -Encoding UTF8 payload/runtime/models/profiles.json
           '{"profile":"auto"}' | Set-Content -Encoding UTF8 payload/runtime/models/active-profile.json
 
       - name: Add upstream licenses
@@ -78,11 +95,11 @@ jobs:
           & curl.exe -L --fail --retry 10 --retry-delay 3 -o payload/runtime/models/LICENSE-Qwen3-4B-Instruct-2507.txt 'https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507/resolve/main/LICENSE'
           if ($LASTEXITCODE -ne 0) { throw "Qwen license download failed" }
 
-      - name: Smoke test on Windows runner without discrete GPU
+      - name: Smoke test sharded model on Windows runner without discrete GPU
         shell: pwsh
         run: |
           $server = Resolve-Path payload/runtime/llama/llama-server.exe
-          $model = Resolve-Path payload/runtime/models/universal.gguf
+          $model = Resolve-Path (Get-ChildItem payload/runtime/models/universal-00001-of-*.gguf | Select-Object -First 1).FullName
           $logOut = Join-Path $PWD 'llama-out.log'
           $logErr = Join-Path $PWD 'llama-err.log'
           $p = Start-Process -FilePath $server -ArgumentList @('--model', $model, '--host', '127.0.0.1', '--port', '24825', '--ctx-size', '2048', '--threads', '2', '--n-gpu-layers', 'auto') -PassThru -RedirectStandardOutput $logOut -RedirectStandardError $logErr
@@ -96,16 +113,12 @@ jobs:
                 throw "llama-server exited early with code $($p.ExitCode)"
               }
               try {
-                $r = Invoke-RestMethod -Uri 'http://127.0.0.1:24825/health' -TimeoutSec 2
+                Invoke-RestMethod -Uri 'http://127.0.0.1:24825/health' -TimeoutSec 2 | Out-Null
                 $ready = $true
                 break
               } catch {}
             }
-            if (!$ready) {
-              Get-Content $logOut -ErrorAction SilentlyContinue
-              Get-Content $logErr -ErrorAction SilentlyContinue
-              throw "llama-server health timed out"
-            }
+            if (!$ready) { throw "llama-server health timed out" }
             $body = @{
               model='local'
               messages=@(@{role='user';content='严格只回复四个字：落仙可用'})
@@ -114,7 +127,7 @@ jobs:
             } | ConvertTo-Json -Depth 5
             $resp = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:24825/v1/chat/completions' -ContentType 'application/json' -Body $body -TimeoutSec 120
             $text = $resp.choices[0].message.content
-            Write-Host "Smoke generation: $text"
+            Write-Host "Sharded smoke generation: $text"
             if ([string]::IsNullOrWhiteSpace($text)) { throw "empty generation response" }
           } finally {
             if (!$p.HasExited) { Stop-Process -Id $p.Id -Force }
@@ -123,224 +136,69 @@ jobs:
       - name: Record payload hashes
         shell: pwsh
         run: |
-          Get-FileHash payload/runtime/models/universal.gguf -Algorithm SHA256 | Format-List | Out-File payload/AI_PAYLOAD_SHA256.txt
+          Get-ChildItem payload/runtime/models/universal-*-of-*.gguf | Sort-Object Name | ForEach-Object {
+            Get-FileHash $_.FullName -Algorithm SHA256 | Format-List | Out-File -Append payload/AI_PAYLOAD_SHA256.txt
+          }
           Get-FileHash payload/runtime/llama/llama-server.exe -Algorithm SHA256 | Format-List | Out-File -Append payload/AI_PAYLOAD_SHA256.txt
           Get-ChildItem payload/runtime/llama | Select-Object Name,Length | Format-Table | Out-File payload/LLAMA_RUNTIME_FILES.txt
           Get-Content payload/AI_PAYLOAD_SHA256.txt
 
-      - name: Split model into connector-safe chunks
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path chunks/runtime-config | Out-Null
-          Copy-Item -Recurse payload/runtime/llama chunks/runtime-config/
-          New-Item -ItemType Directory -Force -Path chunks/runtime-config/models | Out-Null
-          Copy-Item payload/runtime/models/profiles.json chunks/runtime-config/models/
-          Copy-Item payload/runtime/models/active-profile.json chunks/runtime-config/models/
-          Copy-Item payload/runtime/models/LICENSE-Qwen3-4B-Instruct-2507.txt chunks/runtime-config/models/
-          Copy-Item payload/AI_PAYLOAD_SHA256.txt chunks/runtime-config/
-          Copy-Item payload/LLAMA_RUNTIME_FILES.txt chunks/runtime-config/
-
-          $src = [System.IO.File]::OpenRead((Resolve-Path 'payload/runtime/models/universal.gguf'))
-          try {
-            $chunkSize = 100000000
-            $buffer = New-Object byte[] (4MB)
-            $part = 0
-            while ($src.Position -lt $src.Length) {
-              $outPath = ('chunks/model-part-{0:D2}.bin' -f $part)
-              $dst = [System.IO.File]::Create($outPath)
-              try {
-                $remaining = [Math]::Min($chunkSize, $src.Length - $src.Position)
-                while ($remaining -gt 0) {
-                  $want = [Math]::Min($buffer.Length, $remaining)
-                  $read = $src.Read($buffer, 0, [int]$want)
-                  if ($read -le 0) { throw 'unexpected EOF while splitting model' }
-                  $dst.Write($buffer, 0, $read)
-                  $remaining -= $read
-                }
-              } finally { $dst.Dispose() }
-              Write-Host "$outPath $((Get-Item $outPath).Length)"
-              $part++
-            }
-            if ($part -ne 19) { throw "expected 19 model chunks, got $part" }
-          } finally { $src.Dispose() }
-
-      - name: Upload runtime and config chunk
+      - name: Upload runtime and config
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-runtime-config
-          path: chunks/runtime-config/
+          name: luoxian-ai-runtime-config-sharded
+          path: |
+            payload/runtime/llama/
+            payload/runtime/models/profiles.json
+            payload/runtime/models/active-profile.json
+            payload/runtime/models/LICENSE-Qwen3-4B-Instruct-2507.txt
+            payload/AI_PAYLOAD_SHA256.txt
+            payload/LLAMA_RUNTIME_FILES.txt
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload model chunk 00
+      - name: Upload GGUF shard 1
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-model-part-00
-          path: chunks/model-part-00.bin
+          name: luoxian-ai-gguf-shard-01
+          path: payload/runtime/models/universal-00001-of-00005.gguf
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload model chunk 01
+      - name: Upload GGUF shard 2
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-model-part-01
-          path: chunks/model-part-01.bin
+          name: luoxian-ai-gguf-shard-02
+          path: payload/runtime/models/universal-00002-of-00005.gguf
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload model chunk 02
+      - name: Upload GGUF shard 3
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-model-part-02
-          path: chunks/model-part-02.bin
+          name: luoxian-ai-gguf-shard-03
+          path: payload/runtime/models/universal-00003-of-00005.gguf
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload model chunk 03
+      - name: Upload GGUF shard 4
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-model-part-03
-          path: chunks/model-part-03.bin
+          name: luoxian-ai-gguf-shard-04
+          path: payload/runtime/models/universal-00004-of-00005.gguf
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload model chunk 04
+      - name: Upload GGUF shard 5
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-ai-model-part-04
-          path: chunks/model-part-04.bin
+          name: luoxian-ai-gguf-shard-05
+          path: payload/runtime/models/universal-00005-of-00005.gguf
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
-
-      - name: Upload model chunk 05
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-05
-          path: chunks/model-part-05.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 06
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-06
-          path: chunks/model-part-06.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 07
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-07
-          path: chunks/model-part-07.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 08
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-08
-          path: chunks/model-part-08.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 09
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-09
-          path: chunks/model-part-09.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 10
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-10
-          path: chunks/model-part-10.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 11
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-11
-          path: chunks/model-part-11.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 12
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-12
-          path: chunks/model-part-12.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 13
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-13
-          path: chunks/model-part-13.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 14
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-14
-          path: chunks/model-part-14.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 15
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-15
-          path: chunks/model-part-15.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 16
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-16
-          path: chunks/model-part-16.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 17
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-17
-          path: chunks/model-part-17.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload model chunk 18
-        uses: actions/upload-artifact@v4
-        with:
-          name: luoxian-ai-model-part-18
-          path: chunks/model-part-18.bin
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
