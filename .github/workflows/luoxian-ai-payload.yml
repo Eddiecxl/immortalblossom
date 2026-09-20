@@ -70,6 +70,14 @@ jobs:
           '@ | Set-Content -Encoding UTF8 payload/runtime/models/profiles.json
           '{"profile":"auto"}' | Set-Content -Encoding UTF8 payload/runtime/models/active-profile.json
 
+      - name: Add upstream licenses
+        shell: pwsh
+        run: |
+          & curl.exe -L --fail --retry 10 --retry-delay 3 -o payload/runtime/llama/LICENSE-llama.cpp.txt 'https://raw.githubusercontent.com/ggml-org/llama.cpp/b10343/LICENSE'
+          if ($LASTEXITCODE -ne 0) { throw "llama.cpp license download failed" }
+          & curl.exe -L --fail --retry 10 --retry-delay 3 -o payload/runtime/models/LICENSE-Qwen3-4B-Instruct-2507.txt 'https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507/resolve/main/LICENSE'
+          if ($LASTEXITCODE -ne 0) { throw "Qwen license download failed" }
+
       - name: Smoke test on Windows runner without discrete GPU
         shell: pwsh
         run: |
@@ -120,11 +128,92 @@ jobs:
           Get-ChildItem payload/runtime/llama | Select-Object Name,Length | Format-Table | Out-File payload/LLAMA_RUNTIME_FILES.txt
           Get-Content payload/AI_PAYLOAD_SHA256.txt
 
-      - name: Upload universal AI payload
+      - name: Split model into connector-safe chunks
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path chunks/runtime-config | Out-Null
+          Copy-Item -Recurse payload/runtime/llama chunks/runtime-config/
+          New-Item -ItemType Directory -Force -Path chunks/runtime-config/models | Out-Null
+          Copy-Item payload/runtime/models/profiles.json chunks/runtime-config/models/
+          Copy-Item payload/runtime/models/active-profile.json chunks/runtime-config/models/
+          Copy-Item payload/runtime/models/LICENSE-Qwen3-4B-Instruct-2507.txt chunks/runtime-config/models/
+          Copy-Item payload/AI_PAYLOAD_SHA256.txt chunks/runtime-config/
+          Copy-Item payload/LLAMA_RUNTIME_FILES.txt chunks/runtime-config/
+
+          $src = [System.IO.File]::OpenRead((Resolve-Path 'payload/runtime/models/universal.gguf'))
+          try {
+            $chunkSize = 400000000
+            $buffer = New-Object byte[] (4MB)
+            $part = 0
+            while ($src.Position -lt $src.Length) {
+              $outPath = ('chunks/model-part-{0:D2}.bin' -f $part)
+              $dst = [System.IO.File]::Create($outPath)
+              try {
+                $remaining = [Math]::Min($chunkSize, $src.Length - $src.Position)
+                while ($remaining -gt 0) {
+                  $want = [Math]::Min($buffer.Length, $remaining)
+                  $read = $src.Read($buffer, 0, [int]$want)
+                  if ($read -le 0) { throw 'unexpected EOF while splitting model' }
+                  $dst.Write($buffer, 0, $read)
+                  $remaining -= $read
+                }
+              } finally { $dst.Dispose() }
+              Write-Host "$outPath $((Get-Item $outPath).Length)"
+              $part++
+            }
+            if ($part -ne 5) { throw "expected 5 model chunks, got $part" }
+          } finally { $src.Dispose() }
+
+      - name: Upload runtime and config chunk
         uses: actions/upload-artifact@v4
         with:
-          name: luoxian-universal-ai-payload
-          path: payload/
+          name: luoxian-ai-runtime-config
+          path: chunks/runtime-config/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 00
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-00
+          path: chunks/model-part-00.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-01
+          path: chunks/model-part-01.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-02
+          path: chunks/model-part-02.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-03
+          path: chunks/model-part-03.bin
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload model chunk 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-ai-model-part-04
+          path: chunks/model-part-04.bin
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
