@@ -31,7 +31,7 @@ jobs:
       - name: Download pinned Qwen3 4B Instruct 2507 IQ3_XS model with resume
         shell: pwsh
         run: |
-          $url = 'https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-IQ3_XS.gguf?download=true'
+          $url = 'https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen_Qwen3-4B-Instruct-2507-IQ3_XS.gguf?download=true'
           & curl.exe -L --fail --retry 30 --retry-delay 10 --retry-all-errors -C - -o payload/runtime/models/universal.gguf $url
           if ($LASTEXITCODE -ne 0) { throw "model download failed" }
           $size = (Get-Item payload/runtime/models/universal.gguf).Length
@@ -59,7 +59,7 @@ jobs:
                 "id": "standard",
                 "label": "Standard · Universal Local AI",
                 "model": "universal.gguf",
-                "minRamGB": 16,
+                "minRamGB": 24,
                 "contextSize": 8192,
                 "threads": 8,
                 "gpuLayers": "auto",
