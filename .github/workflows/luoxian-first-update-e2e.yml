@@ -1,0 +1,188 @@
+name: LuoXian First-Update E2E
+
+on:
+  push:
+    branches:
+      - hotfix/luoxian-v30.0.3-ai-runtime
+    paths:
+      - '.github/workflows/luoxian-first-update-e2e.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  first-update:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: false
+
+      - name: Reassemble old and new launcher source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $b64 = ''
+          0..7 | ForEach-Object { $b64 += Get-Content ("final-build/b64part-{0:D2}" -f $_) -Raw }
+          [IO.File]::WriteAllBytes('source.zip', [Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash 'source.zip' -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5') {
+            throw "source hash mismatch: $hash"
+          }
+          New-Item -ItemType Directory -Force -Path old,new,out | Out-Null
+          Expand-Archive source.zip -DestinationPath old -Force
+          Expand-Archive source.zip -DestinationPath new -Force
+          Copy-Item 'hotfix-overlay\*' 'new\src\launcher\' -Recurse -Force
+
+          $oldVersion = Get-Content 'old\src\launcher\internal\config\version.go' -Raw
+          $oldVersion = $oldVersion -replace 'var buildGameVersion = "[^"]+"', 'var buildGameVersion = "30.0.2"'
+          $oldVersion = $oldVersion -replace 'var buildLauncherVersion = "[^"]+"', 'var buildLauncherVersion = "5.1.1"'
+          Set-Content -NoNewline -Encoding UTF8 'old\src\launcher\internal\config\version.go' $oldVersion
+
+      - name: Run v30.0.5 Windows regression tests
+        working-directory: new/src/launcher
+        shell: pwsh
+        run: |
+          go test -v ./internal/airuntime ./internal/shell ./internal/app ./internal/config ./cmd/luoxian
+          if ($LASTEXITCODE -ne 0) { throw "regression tests failed" }
+
+      - name: Build real old launcher, new launcher, and patch builder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Push-Location old\src\launcher
+          go build -trimpath -ldflags="-H=windowsgui -s -w" -o ..\..\..\out\LuoXian-old.exe .\cmd\luoxian
+          if ($LASTEXITCODE -ne 0) { throw "old launcher build failed" }
+          Pop-Location
+
+          Push-Location new\src\launcher
+          go build -trimpath -ldflags="-H=windowsgui -s -w" -o ..\..\..\out\LuoXian-new.exe .\cmd\luoxian
+          if ($LASTEXITCODE -ne 0) { throw "new launcher build failed" }
+          go build -trimpath -ldflags="-s -w" -o ..\..\..\out\lxpatch.exe .\cmd\lxpatch
+          if ($LASTEXITCODE -ne 0) { throw "patch builder failed" }
+          Pop-Location
+
+      - name: Prepare clean v30.0.2 installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'e2e-package'
+          New-Item -ItemType Directory -Force -Path $root,(Join-Path $root 'launcher'),(Join-Path $root 'game'),(Join-Path $root 'Updates'),(Join-Path $root 'runtime\models'),(Join-Path $root 'runtime\llama') | Out-Null
+          Copy-Item out\LuoXian-old.exe (Join-Path $root 'LuoXian.exe') -Force
+          @'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><title>LuoXian E2E</title>
+          <style>html,body{background:#090b10;color:#eef2f8;font-family:Segoe UI,sans-serif}</style></head>
+          <body><main id="ready">LuoXian launcher E2E ready</main></body></html>
+          '@ | Set-Content -Encoding UTF8 (Join-Path $root 'launcher\index.html')
+          '{}' | Set-Content -Encoding UTF8 (Join-Path $root 'launcher\content.json')
+          '{"version":"30.0.2","launcher_min":"5.1.1","save_schema":4}' | Set-Content -NoNewline -Encoding UTF8 (Join-Path $root 'game\version.json')
+          @'
+          {
+            "schemaVersion":1,
+            "profiles":[
+              {"id":"lite","label":"Lite","model":"missing.gguf","minRamGB":6,"contextSize":2048,"threads":2,"gpuLayers":"0","maxOutputTokens":128},
+              {"id":"standard","label":"Standard","model":"missing.gguf","minRamGB":24,"contextSize":4096,"threads":4,"gpuLayers":"0","maxOutputTokens":256}
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 (Join-Path $root 'runtime\models\profiles.json')
+          '{"profile":"auto"}' | Set-Content -Encoding UTF8 (Join-Path $root 'runtime\models\active-profile.json')
+
+      - name: Build real 30.0.2 to 30.0.5 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $payload = Join-Path $PWD 'e2e-payload'
+          New-Item -ItemType Directory -Force -Path $payload,(Join-Path $payload 'game') | Out-Null
+          Copy-Item out\LuoXian-new.exe (Join-Path $payload 'LuoXian.exe') -Force
+          '{"version":"30.0.5","launcher_min":"5.1.1","save_schema":4}' | Set-Content -NoNewline -Encoding UTF8 (Join-Path $payload 'game\version.json')
+          @'
+          {
+            "format":2,
+            "patch_id":"luoxian_v30.0.5_first_update_e2e",
+            "from_version":"30.0.2",
+            "to_version":"30.0.5",
+            "launcher_min":"5.1.1",
+            "files":[
+              {"path":"LuoXian.exe","kind":"core"},
+              {"path":"game/version.json","kind":"direct"}
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 e2e-manifest.json
+          & out\lxpatch.exe build --root $payload --manifest e2e-manifest.json --out e2e-package\Updates\first-update.lxpatch
+          if ($LASTEXITCODE -ne 0) { throw "patch build failed" }
+
+      - name: Execute actual first update and verify automatic restart + WebView ready
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Resolve-Path 'e2e-package'
+          $env:LOCALAPPDATA = Join-Path $PWD 'e2e-localappdata'
+          New-Item -ItemType Directory -Force -Path $env:LOCALAPPDATA | Out-Null
+          $log = Join-Path $env:LOCALAPPDATA 'LuoXian\logs\launcher.log'
+
+          $oldHash = (Get-FileHash (Join-Path $root 'LuoXian.exe') -Algorithm SHA256).Hash
+          $newHash = (Get-FileHash 'out\LuoXian-new.exe' -Algorithm SHA256).Hash
+          Write-Host "OLD=$oldHash"
+          Write-Host "NEW=$newHash"
+
+          $p = Start-Process -FilePath (Join-Path $root 'LuoXian.exe') -WorkingDirectory $root -PassThru
+          Write-Host "Started old launcher PID=$($p.Id)"
+
+          $deadline = (Get-Date).AddSeconds(120)
+          $statusOK = $false
+          $pageOK = $false
+          $webviewReady = $false
+          $versionOK = $false
+          $hashOK = $false
+
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 500
+
+            try {
+              $version = (Get-Content (Join-Path $root 'game\version.json') -Raw | ConvertFrom-Json).version
+              if ($version -eq '30.0.5') { $versionOK = $true }
+            } catch {}
+
+            try {
+              $currentHash = (Get-FileHash (Join-Path $root 'LuoXian.exe') -Algorithm SHA256).Hash
+              if ($currentHash -eq $newHash) { $hashOK = $true }
+            } catch {}
+
+            try {
+              $s = Invoke-RestMethod -Uri 'http://127.0.0.1:24824/api/status' -TimeoutSec 1
+              if ($s.version -eq '30.0.5') { $statusOK = $true }
+            } catch {}
+
+            try {
+              $page = Invoke-WebRequest -Uri 'http://127.0.0.1:24824/launcher/' -TimeoutSec 1 -UseBasicParsing
+              if ($page.StatusCode -eq 200 -and $page.Content -match 'LuoXian launcher E2E ready') { $pageOK = $true }
+            } catch {}
+
+            if (Test-Path $log) {
+              $logText = Get-Content $log -Raw -ErrorAction SilentlyContinue
+              if ($logText -match 'launcher WebView page ready: http://127\.0\.0\.1:24824/launcher/') {
+                $webviewReady = $true
+              }
+            }
+
+            if ($versionOK -and $hashOK -and $statusOK -and $pageOK -and $webviewReady) { break }
+          }
+
+          if (Test-Path $log) {
+            Write-Host '===== launcher.log ====='
+            Get-Content $log
+          }
+
+          Write-Host "versionOK=$versionOK hashOK=$hashOK statusOK=$statusOK pageOK=$pageOK webviewReady=$webviewReady"
+          if (-not ($versionOK -and $hashOK -and $statusOK -and $pageOK -and $webviewReady)) {
+            Get-Process LuoXian -ErrorAction SilentlyContinue | Format-List Id,Path,StartTime
+            throw 'first-update E2E did not fully reach restarted WebView-ready state'
+          }
+
+          Get-Process LuoXian -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process 'LuoXian-Updater-v5' -ErrorAction SilentlyContinue | Stop-Process -Force
