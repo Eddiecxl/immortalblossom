@@ -90,8 +90,23 @@ func (host *Host) openNative(ctx context.Context, url string) error {
 	if err := view.Bind("nativeAction", func(value string) error { return host.handleCommand(value) }); err != nil {
 		return err
 	}
-	view.Init(`document.addEventListener('dragstart',function(e){if(e.target&&e.target.tagName==='IMG')e.preventDefault()});`)
-	view.Navigate(url)
+	pageReady := make(chan struct{})
+	var pageReadyOnce sync.Once
+	if err := view.Bind("nativePageReady", func(href string) error {
+		if strings.HasPrefix(href, url) {
+			pageReadyOnce.Do(func() { close(pageReady) })
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	view.Init(`(function(){
+		document.addEventListener('dragstart',function(e){if(e.target&&e.target.tagName==='IMG')e.preventDefault()});
+		function reportReady(){try{if(window.nativePageReady){window.nativePageReady(String(location.href));}}catch(e){}}
+		document.addEventListener('DOMContentLoaded',reportReady,{once:true});
+		window.addEventListener('load',reportReady,{once:true});
+	})();`)
+	startLauncherNavigation(ctx, view, url, pageReady)
 	host.maximizeWindow()
 	go func() {
 		<-ctx.Done()
