@@ -7,11 +7,11 @@ import (
 )
 
 func TestCurrentBuildTargetsV30(t *testing.T) {
-	if Current.GameVersion != "30.0.3" {
-		t.Fatalf("Current.GameVersion = %q, want %q", Current.GameVersion, "30.0.3")
+	if Current.GameVersion != "30.0.4" {
+		t.Fatalf("Current.GameVersion = %q, want %q", Current.GameVersion, "30.0.4")
 	}
-	if Current.LauncherVersion != "5.1.2" {
-		t.Fatalf("Current.LauncherVersion = %q, want %q", Current.LauncherVersion, "5.1.2")
+	if Current.LauncherVersion != "5.1.3" {
+		t.Fatalf("Current.LauncherVersion = %q, want %q", Current.LauncherVersion, "5.1.3")
 	}
 }
 
