@@ -1,0 +1,37 @@
+name: LuoXian Update Diagnostics
+
+on:
+  push:
+    branches:
+      - hotfix/luoxian-v30.0.3-ai-runtime
+    paths:
+      - '.github/workflows/luoxian-update-diagnostics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .build/diag
+          cat final-build/b64part-00 final-build/b64part-01 final-build/b64part-02 final-build/b64part-03 final-build/b64part-04 final-build/b64part-05 final-build/b64part-06 final-build/b64part-07 > final-build/source.zip.b64
+          base64 -d final-build/source.zip.b64 > final-build/source.zip
+          echo "971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5  final-build/source.zip" | sha256sum -c -
+          unzip -q final-build/source.zip -d .build/srcroot
+          cp -R hotfix-overlay/. .build/srcroot/src/launcher/
+          cp .build/srcroot/src/launcher/internal/app/app.go .build/diag/app.go
+          find .build/srcroot/src/launcher/internal/shell -maxdepth 1 -type f -name '*.go' -exec cp {} .build/diag/ \;
+          cp .build/srcroot/src/launcher/internal/httpapi/server.go .build/diag/httpapi_server.go
+          cp .build/srcroot/src/launcher/cmd/luoxian/main.go .build/diag/main.go
+          printf 'source archive verified and diagnostic files collected\n' > .build/diag/STATUS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-update-diagnostics
+          path: .build/diag/
+          retention-days: 1
