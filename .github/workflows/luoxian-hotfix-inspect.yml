@@ -32,6 +32,12 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Locate launcher frontend files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find .inspect -type f \( -name 'index.html' -o -name 'app.js' -o -name 'ai-management.js' \) | sort | head -200
+
       - name: Inspect launcher frontend bootstrap and status API
         shell: bash
         run: |
