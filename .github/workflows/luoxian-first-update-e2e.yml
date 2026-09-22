@@ -5,6 +5,7 @@ on:
     branches:
       - hotfix/luoxian-v30.0.3-ai-runtime
     paths:
+      - 'hotfix-overlay/**'
       - '.github/workflows/luoxian-first-update-e2e.yml'
 
 permissions:
