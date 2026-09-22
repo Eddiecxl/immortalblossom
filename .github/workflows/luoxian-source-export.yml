@@ -1,0 +1,29 @@
+name: LuoXian Source Export
+
+on:
+  push:
+    branches:
+      - hotfix/luoxian-v30.0.3-ai-runtime
+    paths:
+      - '.github/workflows/luoxian-source-export.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble launcher source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat final-build/b64part-00 final-build/b64part-01 final-build/b64part-02 final-build/b64part-03 final-build/b64part-04 final-build/b64part-05 final-build/b64part-06 final-build/b64part-07 > source.zip.b64
+          base64 -d source.zip.b64 > source.zip
+          echo "971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5  source.zip" | sha256sum -c -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-launcher-source
+          path: source.zip
+          retention-days: 1
