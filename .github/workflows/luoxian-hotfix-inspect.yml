@@ -32,6 +32,11 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Emit exact manager source
+        shell: bash
+        run: |
+          echo "MANAGER_B64=$(base64 -w0 .inspect/src/launcher/internal/airuntime/manager.go)"
+
       - name: Print runtime supervisor sources
         shell: bash
         run: |
