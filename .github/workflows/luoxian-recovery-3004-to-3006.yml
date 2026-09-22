@@ -1,0 +1,320 @@
+name: LuoXian v30.0.6 Recovery E2E
+
+on:
+  push:
+    branches:
+      - hotfix/luoxian-v30.0.3-ai-runtime
+    paths:
+      - 'recovery-overlay/**'
+      - '.github/workflows/luoxian-recovery-3004-to-3006.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-e2e:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: false
+
+      - name: Reassemble source and exact v30.0.4 baseline
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $b64 = ''
+          0..7 | ForEach-Object { $b64 += Get-Content ("final-build/b64part-{0:D2}" -f $_) -Raw }
+          [IO.File]::WriteAllBytes('source.zip', [Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash 'source.zip' -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5') {
+            throw "source hash mismatch: $hash"
+          }
+
+          New-Item -ItemType Directory -Force -Path old,new,old-overlay,out | Out-Null
+          Expand-Archive source.zip -DestinationPath old -Force
+          Expand-Archive source.zip -DestinationPath new -Force
+
+          git archive --format=zip --output old-overlay.zip 0280db96e91e09f9b108404176af1f664b1de73c hotfix-overlay
+          if ($LASTEXITCODE -ne 0) { throw "could not export exact v30.0.4 overlay" }
+          Expand-Archive old-overlay.zip -DestinationPath old-overlay -Force
+          Copy-Item 'old-overlay\hotfix-overlay\*' 'old\src\launcher\' -Recurse -Force
+
+          Copy-Item 'hotfix-overlay\*' 'new\src\launcher\' -Recurse -Force
+          Copy-Item 'recovery-overlay\*' 'new\src\launcher\' -Recurse -Force
+
+      - name: Verify exact old and recovery build identities
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $oldText = Get-Content 'old\src\launcher\internal\config\version.go' -Raw
+          if ($oldText -notmatch 'buildGameVersion = "30\.0\.4"') { throw "old source is not game 30.0.4" }
+          if ($oldText -notmatch 'buildLauncherVersion = "5\.1\.3"') { throw "old source is not launcher 5.1.3" }
+
+          $newText = Get-Content 'new\src\launcher\internal\config\version.go' -Raw
+          if ($newText -notmatch 'buildGameVersion = "30\.0\.6"') { throw "new source is not game 30.0.6" }
+          if ($newText -notmatch 'buildLauncherVersion = "5\.1\.5"') { throw "new source is not launcher 5.1.5" }
+
+      - name: Run recovery regression tests
+        working-directory: new/src/launcher
+        shell: pwsh
+        run: |
+          go test -v ./internal/repair ./internal/config ./internal/airuntime ./internal/shell ./internal/app ./cmd/luoxian
+          if ($LASTEXITCODE -ne 0) { throw "recovery regression tests failed" }
+
+      - name: Build exact v30.0.4 launcher, recovery launcher, and patch builder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Push-Location old\src\launcher
+          go build -trimpath -ldflags="-H=windowsgui -s -w" -o ..\..\..\out\LuoXian-v30.0.4.exe .\cmd\luoxian
+          if ($LASTEXITCODE -ne 0) { throw "old launcher build failed" }
+          Pop-Location
+
+          Push-Location new\src\launcher
+          go build -trimpath -ldflags="-H=windowsgui -s -w" -o ..\..\..\out\LuoXian-v30.0.6.exe .\cmd\luoxian
+          if ($LASTEXITCODE -ne 0) { throw "recovery launcher build failed" }
+          go build -trimpath -ldflags="-s -w" -o ..\..\..\out\lxpatch.exe .\cmd\lxpatch
+          if ($LASTEXITCODE -ne 0) { throw "patch builder failed" }
+          Pop-Location
+
+      - name: Prepare the exact split-version state seen by the user
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'recovery-package'
+          New-Item -ItemType Directory -Force -Path $root,(Join-Path $root 'launcher'),(Join-Path $root 'game'),(Join-Path $root 'repair'),(Join-Path $root 'Updates'),(Join-Path $root 'runtime\models'),(Join-Path $root 'runtime\llama') | Out-Null
+
+          Copy-Item out\LuoXian-v30.0.4.exe (Join-Path $root 'LuoXian.exe') -Force
+
+          @'
+          <!doctype html>
+          <html><head><meta charset="utf-8"><title>LuoXian Recovery E2E</title>
+          <style>html,body{background:#090b10;color:#eef2f8;font-family:Segoe UI,sans-serif}</style></head>
+          <body><main id="ready">LuoXian recovery E2E ready</main></body></html>
+          '@ | Set-Content -Encoding UTF8 (Join-Path $root 'launcher\index.html')
+          '{}' | Set-Content -Encoding UTF8 (Join-Path $root 'launcher\content.json')
+
+          $baselineVersion = '{"version":"30.0.2","launcher_min":"5.1.1","save_schema":4}'
+          $installedVersion = '{"version":"30.0.4","launcher_min":"5.1.1","save_schema":4}'
+          $gameBody = '<!doctype html><html><body>game baseline</body></html>'
+
+          $installedVersion | Set-Content -NoNewline -Encoding UTF8 (Join-Path $root 'game\version.json')
+          $gameBody | Set-Content -NoNewline -Encoding UTF8 (Join-Path $root 'game\index.html')
+
+          $baselineBytes = [Text.Encoding]::UTF8.GetBytes($baselineVersion)
+          $gameBytes = [Text.Encoding]::UTF8.GetBytes($gameBody)
+          $baselineHash = ([BitConverter]::ToString([Security.Cryptography.SHA256]::HashData($baselineBytes))).Replace('-','').ToLower()
+          $gameHash = ([BitConverter]::ToString([Security.Cryptography.SHA256]::HashData($gameBytes))).Replace('-','').ToLower()
+
+          $manifest = [ordered]@{
+            version = '30.0.2'
+            files = @(
+              [ordered]@{ path='game/version.json'; sha256=$baselineHash; size=$baselineBytes.Length },
+              [ordered]@{ path='game/index.html'; sha256=$gameHash; size=$gameBytes.Length }
+            )
+          }
+          ($manifest | ConvertTo-Json -Depth 6 -Compress) | Set-Content -NoNewline -Encoding UTF8 (Join-Path $root 'game\manifest.json')
+
+          @'
+          {
+            "schemaVersion":1,
+            "profiles":[
+              {"id":"lite","label":"Lite","model":"missing.gguf","minRamGB":6,"contextSize":2048,"threads":2,"gpuLayers":"0","maxOutputTokens":128},
+              {"id":"standard","label":"Standard","model":"missing.gguf","minRamGB":24,"contextSize":4096,"threads":4,"gpuLayers":"0","maxOutputTokens":256}
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 (Join-Path $root 'runtime\models\profiles.json')
+          '{"profile":"auto"}' | Set-Content -Encoding UTF8 (Join-Path $root 'runtime\models\active-profile.json')
+
+      - name: Prove v30.0.4 launcher reproduces the misleading 30.0.2 status
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Resolve-Path 'recovery-package'
+          $env:LOCALAPPDATA = Join-Path $PWD 'baseline-localappdata'
+          New-Item -ItemType Directory -Force -Path $env:LOCALAPPDATA | Out-Null
+
+          $p = Start-Process -FilePath (Join-Path $root 'LuoXian.exe') -WorkingDirectory $root -PassThru
+          $deadline = (Get-Date).AddSeconds(45)
+          $status = $null
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 500
+            try {
+              $status = Invoke-RestMethod -Uri 'http://127.0.0.1:24824/api/status' -TimeoutSec 1
+              if ($status) { break }
+            } catch {}
+          }
+          if (!$status) { throw 'old launcher never exposed /api/status' }
+
+          Write-Host ("BASELINE_STATUS=" + ($status | ConvertTo-Json -Compress))
+          if ($status.version -ne '30.0.2') { throw "expected misleading UI version 30.0.2, got $($status.version)" }
+          if ($status.launcher -ne '5.1.3') { throw "expected launcher 5.1.3, got $($status.launcher)" }
+          if ($status.healthy -ne $false) { throw 'expected baseline integrity warning' }
+          if (@($status.bad_files) -notcontains 'game/version.json') { throw 'expected game/version.json to be the one bad file' }
+
+          Get-Process LuoXian -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process 'LuoXian-Updater-v5' -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 2
+
+      - name: Build v30.0.4 to v30.0.6 recovery patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $payload = Join-Path $PWD 'recovery-payload'
+          New-Item -ItemType Directory -Force -Path $payload,(Join-Path $payload 'game') | Out-Null
+          Copy-Item out\LuoXian-v30.0.6.exe (Join-Path $payload 'LuoXian.exe') -Force
+          '{"version":"30.0.6","launcher_min":"5.1.3","save_schema":4}' | Set-Content -NoNewline -Encoding UTF8 (Join-Path $payload 'game\version.json')
+
+          @'
+          {
+            "format":2,
+            "patch_id":"luoxian_v30.0.6_split_version_recovery",
+            "from_version":"30.0.4",
+            "to_version":"30.0.6",
+            "launcher_min":"5.1.3",
+            "notes":[
+              "Recover installations that display Game 30.0.2 while the installed update marker is 30.0.4.",
+              "Keep the repair baseline from downgrading a newer hotfix version marker.",
+              "Carry forward the first-update WebView white-screen fix.",
+              "Carry forward hidden Local AI process and restart-storm fixes."
+            ],
+            "files":[
+              {"path":"LuoXian.exe","kind":"core"},
+              {"path":"game/version.json","kind":"direct"}
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 recovery-manifest.json
+
+          & out\lxpatch.exe build --root $payload --manifest recovery-manifest.json --out recovery-package\Updates\LuoXian-v30.0.6-Recovery-Hotfix-from-30.0.4.lxpatch
+          if ($LASTEXITCODE -ne 0) { throw "recovery patch build failed" }
+
+      - name: Execute recovery update and verify restart, WebView, version, and repair state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Resolve-Path 'recovery-package'
+          $env:LOCALAPPDATA = Join-Path $PWD 'recovery-localappdata'
+          New-Item -ItemType Directory -Force -Path $env:LOCALAPPDATA | Out-Null
+          $log = Join-Path $env:LOCALAPPDATA 'LuoXian\logs\launcher.log'
+
+          $newHash = (Get-FileHash 'out\LuoXian-v30.0.6.exe' -Algorithm SHA256).Hash
+          Write-Host "RECOVERY_EXE_SHA256=$newHash"
+
+          $p = Start-Process -FilePath (Join-Path $root 'LuoXian.exe') -WorkingDirectory $root -PassThru
+          Write-Host "Started exact v30.0.4 launcher PID=$($p.Id)"
+
+          $deadline = (Get-Date).AddSeconds(120)
+          $versionOK = $false
+          $hashOK = $false
+          $statusOK = $false
+          $repairOK = $false
+          $pageOK = $false
+          $webviewReady = $false
+
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 500
+
+            try {
+              $version = (Get-Content (Join-Path $root 'game\version.json') -Raw | ConvertFrom-Json).version
+              if ($version -eq '30.0.6') { $versionOK = $true }
+            } catch {}
+
+            try {
+              $currentHash = (Get-FileHash (Join-Path $root 'LuoXian.exe') -Algorithm SHA256).Hash
+              if ($currentHash -eq $newHash) { $hashOK = $true }
+            } catch {}
+
+            try {
+              $s = Invoke-RestMethod -Uri 'http://127.0.0.1:24824/api/status' -TimeoutSec 1
+              if ($s.version -eq '30.0.6' -and $s.launcher -eq '5.1.5' -and $s.healthy -eq $true -and @($s.bad_files).Count -eq 0) {
+                $statusOK = $true
+              }
+            } catch {}
+
+            try {
+              $page = Invoke-WebRequest -Uri 'http://127.0.0.1:24824/launcher/' -TimeoutSec 1 -UseBasicParsing
+              if ($page.StatusCode -eq 200 -and $page.Content -match 'LuoXian recovery E2E ready') { $pageOK = $true }
+            } catch {}
+
+            if (Test-Path $log) {
+              $logText = Get-Content $log -Raw -ErrorAction SilentlyContinue
+              if ($logText -match 'page ready: http://127\.0\.0\.1:24824/launcher/') { $webviewReady = $true }
+            }
+
+            if ($versionOK -and $hashOK -and $statusOK -and $pageOK -and $webviewReady) { break }
+          }
+
+          if (Test-Path $log) {
+            Write-Host '===== recovery launcher.log ====='
+            Get-Content $log
+          }
+
+          Write-Host "versionOK=$versionOK hashOK=$hashOK statusOK=$statusOK pageOK=$pageOK webviewReady=$webviewReady"
+          if (-not ($versionOK -and $hashOK -and $statusOK -and $pageOK -and $webviewReady)) {
+            throw 'recovery update did not fully reach healthy restarted WebView-ready state'
+          }
+
+          $repair = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:24824/api/repair' -TimeoutSec 5
+          Write-Host ("REPAIR_STATUS=" + ($repair | ConvertTo-Json -Compress))
+          $versionAfterRepair = (Get-Content (Join-Path $root 'game\version.json') -Raw | ConvertFrom-Json).version
+          if ($repair.healthy -eq $true -and $repair.version -eq '30.0.6' -and @($repair.bad_files).Count -eq 0 -and $versionAfterRepair -eq '30.0.6') {
+            $repairOK = $true
+          }
+          if (-not $repairOK) { throw 'repair path attempted to downgrade or still reports the stale baseline' }
+
+          $applied = Get-ChildItem (Join-Path $root 'Updates\Applied') -Filter '*.lxpatch' -ErrorAction Stop | Select-Object -First 1
+          if (!$applied) { throw 'recovery patch was not moved to Updates\Applied' }
+
+          Get-Process LuoXian -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process 'LuoXian-Updater-v5' -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      - name: Publish the exact E2E-applied recovery patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          $applied = Get-ChildItem 'recovery-package\Updates\Applied' -Filter '*.lxpatch' | Select-Object -First 1
+          if (!$applied) { throw 'applied recovery patch not found' }
+          $out = 'release\LuoXian-v30.0.6-Recovery-Hotfix-from-30.0.4.lxpatch'
+          Copy-Item $applied.FullName $out -Force
+
+          @'
+          import json, zipfile, hashlib, pathlib
+          p = pathlib.Path('release/LuoXian-v30.0.6-Recovery-Hotfix-from-30.0.4.lxpatch')
+          exe = pathlib.Path('out/LuoXian-v30.0.6.exe').read_bytes()
+          exe_hash = hashlib.sha256(exe).hexdigest()
+          with zipfile.ZipFile(p) as z:
+              meta = json.loads(z.read('patch.json'))
+              assert meta['from_version'] == '30.0.4', meta
+              assert meta['to_version'] == '30.0.6', meta
+              assert meta['launcher_min'] == '5.1.3', meta
+              payload_hash = hashlib.sha256(z.read('payload/LuoXian.exe')).hexdigest()
+              assert payload_hash == exe_hash, (payload_hash, exe_hash)
+              version = json.loads(z.read('payload/game/version.json'))
+              assert version['version'] == '30.0.6', version
+          patch_hash = hashlib.sha256(p.read_bytes()).hexdigest()
+          pathlib.Path('release/SHA256SUMS.txt').write_text(
+              f"{patch_hash}  {p.name}\n{exe_hash}  LuoXian-v30.0.6.exe\n",
+              encoding='ascii'
+          )
+          print('TESTED_EXE_SHA256=' + exe_hash)
+          print('PATCH_SHA256=' + patch_hash)
+          '@ | python -
+          Get-Content release\SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-v30.0.6-recovery-e2e-verified
+          path: |
+            release/LuoXian-v30.0.6-Recovery-Hotfix-from-30.0.4.lxpatch
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
