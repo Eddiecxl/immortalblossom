@@ -3,7 +3,7 @@ name: LuoXian v30.0.4 Hotfix Patch
 on:
   push:
     branches:
-      - hotfix/luoxian-v30.0.4-ai-runtime
+      - hotfix/luoxian-v30.0.3-ai-runtime
     paths:
       - 'hotfix-overlay/**'
       - '.github/workflows/luoxian-hotfix-patch.yml'
