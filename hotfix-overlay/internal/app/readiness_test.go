@@ -1,5 +1,6 @@
 package app
 
+// First-update regression coverage: launcher HTML must be ready before WebView opens.
 import (
 	"context"
 	"net/http"
