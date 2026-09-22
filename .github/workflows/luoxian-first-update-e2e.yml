@@ -187,3 +187,88 @@ jobs:
 
           Get-Process LuoXian -ErrorAction SilentlyContinue | Stop-Process -Force
           Get-Process 'LuoXian-Updater-v5' -ErrorAction SilentlyContinue | Stop-Process -Force
+
+
+      - name: Package the exact E2E-installed patch for release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+          $applied = Get-ChildItem 'e2e-package\Updates\Applied' -Filter '*.lxpatch' | Select-Object -First 1
+          if (!$applied) { throw "E2E applied patch not found" }
+          Copy-Item $applied.FullName 'release\LuoXian-v30.0.5-Verified-Hotfix-from-30.0.2.lxpatch' -Force
+
+          @'
+          {
+            "format":2,
+            "patch_id":"luoxian_v30.0.5_verified_hotfix_from_30.0.4",
+            "from_version":"30.0.4",
+            "to_version":"30.0.5",
+            "launcher_min":"5.1.1",
+            "notes":[
+              "Fix first-update WebView white-screen race.",
+              "Verify launcher HTML before opening WebView.",
+              "Show a dark loading page instead of a blank white window.",
+              "Retry WebView navigation until the launcher page reports ready.",
+              "Keep the updater helper from rolling back the new launcher.",
+              "Hide Local AI command windows and stop restart storms."
+            ],
+            "files":[
+              {"path":"LuoXian.exe","kind":"core"},
+              {"path":"game/version.json","kind":"direct"}
+            ]
+          }
+          '@ | Set-Content -Encoding UTF8 release\manifest-3004.json
+
+          & out\lxpatch.exe build --root e2e-payload --manifest release\manifest-3004.json --out release\LuoXian-v30.0.5-Verified-Hotfix-from-30.0.4.lxpatch
+          if ($LASTEXITCODE -ne 0) { throw "30.0.4 patch build failed" }
+
+      - name: Prove release patch integrity and tested binary identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          @'
+          import json, zipfile, hashlib, pathlib
+
+          exe = pathlib.Path('out/LuoXian-new.exe').read_bytes()
+          exe_hash = hashlib.sha256(exe).hexdigest()
+          print('TESTED_EXE_SHA256=' + exe_hash)
+
+          cases = [
+              ('release/LuoXian-v30.0.5-Verified-Hotfix-from-30.0.2.lxpatch', '30.0.2'),
+              ('release/LuoXian-v30.0.5-Verified-Hotfix-from-30.0.4.lxpatch', '30.0.4'),
+          ]
+          lines = []
+          for path, from_version in cases:
+              with zipfile.ZipFile(path) as z:
+                  names = sorted(z.namelist())
+                  assert names == ['checksums.sha256','patch.json','payload/LuoXian.exe','payload/game/version.json'], names
+                  meta = json.loads(z.read('patch.json'))
+                  assert meta['from_version'] == from_version, meta
+                  assert meta['to_version'] == '30.0.5', meta
+                  payload_exe = z.read('payload/LuoXian.exe')
+                  payload_hash = hashlib.sha256(payload_exe).hexdigest()
+                  assert payload_hash == exe_hash, (payload_hash, exe_hash)
+                  version = json.loads(z.read('payload/game/version.json'))
+                  assert version['version'] == '30.0.5', version
+                  patch_hash = hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+                  lines.append(f"{patch_hash}  {pathlib.Path(path).name}")
+                  print(path, meta)
+                  print('PAYLOAD_EXE_SHA256=' + payload_hash)
+                  print('PATCH_SHA256=' + patch_hash)
+
+          lines.append(f"{exe_hash}  LuoXian-new.exe")
+          pathlib.Path('release/SHA256SUMS.txt').write_text('\n'.join(lines) + '\n', encoding='ascii')
+          '@ | python -
+          Get-Content release\SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luoxian-v30.0.5-e2e-verified-hotfix
+          path: |
+            release/LuoXian-v30.0.5-Verified-Hotfix-from-30.0.2.lxpatch
+            release/LuoXian-v30.0.5-Verified-Hotfix-from-30.0.4.lxpatch
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
