@@ -1,4 +1,4 @@
-name: LuoXian v30.0.4 Windows Native Test
+name: LuoXian v30.0.5 Windows Native Test
 
 on:
   push:
@@ -37,4 +37,4 @@ jobs:
           Copy-Item 'hotfix-overlay\*' '.build\src\launcher\' -Recurse -Force
       - name: Run Windows launcher and airuntime tests
         working-directory: .build/src/launcher
-        run: go test -v ./internal/airuntime ./cmd/luoxian
+        run: go test -v ./internal/airuntime ./internal/shell ./internal/app ./cmd/luoxian
