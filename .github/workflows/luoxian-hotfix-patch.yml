@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $expected = 'AB7F6C22C1950372FED666D17B2BB20B63E1644208A84575359118D8AF9EEE8D'
+          $expected = '17D997DFC476DA5A457DE95F6D8B4AFA2D4F4BB58EE5BBC5F2CFB14EC302977F'
           $actual = (Get-FileHash 'release/payload/LuoXian.exe' -Algorithm SHA256).Hash
           Write-Host "E2E tested EXE expected=$expected"
           Write-Host "Patch EXE actual=$actual"
