@@ -31,5 +31,9 @@ jobs:
           set -euo pipefail
           for f in             .inspect/src/launcher/internal/airuntime/manager.go             .inspect/src/launcher/internal/airuntime/manager_test.go             .inspect/src/launcher/internal/airuntime/profiles.go             .inspect/src/launcher/internal/aihttp/handler.go             .inspect/src/launcher/cmd/luoxian/main.go; do
               echo "===== FILE: $f ====="
-              sed -n '1,320p' "$f"
+              if [[ "$f" == *"/manager.go" ]]; then
+                sed -n '300,760p' "$f"
+              else
+                sed -n '1,360p' "$f"
+              fi
           done
