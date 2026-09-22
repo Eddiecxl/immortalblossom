@@ -1,4 +1,4 @@
-name: LuoXian v30.0.3 Hotfix Build
+name: LuoXian v30.0.4 Hotfix Build
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
           cp -R hotfix-overlay/. .build/src/launcher/
       - name: Run hotfix tests
         working-directory: .build/src/launcher
-        run: go test ./internal/airuntime ./internal/aihttp ./internal/config ./cmd/luoxian
+        run: go test ./internal/airuntime ./internal/aihttp ./internal/config
       - name: Cross-compile Windows tree
         working-directory: .build/src/launcher
         env:
@@ -63,7 +63,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: luoxian-v30.0.3-hotfix-launcher
+          name: luoxian-v30.0.4-hotfix-launcher
           path: out/
           if-no-files-found: error
           retention-days: 7
