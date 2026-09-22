@@ -25,6 +25,13 @@ jobs:
           echo "971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5  final-build/source.zip" | sha256sum -c -
           unzip -q final-build/source.zip -d .inspect
           cp -R hotfix-overlay/. .inspect/src/launcher/
+      - name: Inspect browser AI recovery paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== RECOVERY SEARCH ====="
+          grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
+
       - name: Print runtime supervisor sources
         shell: bash
         run: |
