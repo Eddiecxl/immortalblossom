@@ -72,7 +72,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $PWD 'e2e-package'
-          New-Item -ItemType Directory -Force -Path $root,(Join-Path $root 'launcher'),(Join-Path $root 'game'),(Join-Path $root 'Updates'),(Join-Path $root 'runtime\models'),(Join-Path $root 'runtime\llama') | Out-Null
+          New-Item -ItemType Directory -Force -Path $root,(Join-Path $root 'launcher'),(Join-Path $root 'game'),(Join-Path $root 'repair'),(Join-Path $root 'Updates'),(Join-Path $root 'runtime\models'),(Join-Path $root 'runtime\llama') | Out-Null
           Copy-Item out\LuoXian-old.exe (Join-Path $root 'LuoXian.exe') -Force
           @'
           <!doctype html>
