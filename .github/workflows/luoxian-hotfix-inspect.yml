@@ -32,6 +32,19 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Inspect launcher frontend bootstrap and status API
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== HANDLERS STATUS ====="
+          sed -n '120,360p' .inspect/src/launcher/internal/httpapi/handlers.go
+          echo "===== LAUNCHER INDEX ====="
+          sed -n '1,320p' .inspect/launcher/index.html
+          echo "===== LAUNCHER APP ====="
+          sed -n '1,520p' .inspect/launcher/app.js
+          echo "===== LAUNCHER AI MANAGEMENT ====="
+          sed -n '1,520p' .inspect/launcher/ai-management.js
+
       - name: Inspect launcher startup and WebView navigation
         shell: bash
         run: |
