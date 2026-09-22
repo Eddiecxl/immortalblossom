@@ -14,8 +14,8 @@ type BuildInfo struct {
 	PatchFormat     int
 }
 
-var buildGameVersion = "30.0.1"
-var buildLauncherVersion = "5.1.1"
+var buildGameVersion = "30.0.3"
+var buildLauncherVersion = "5.1.2"
 
 var Current = BuildInfo{
 	GameVersion:     buildGameVersion,
