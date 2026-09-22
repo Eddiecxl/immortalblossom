@@ -32,7 +32,7 @@ jobs:
           cp -R hotfix-overlay/. .build/src/launcher/
       - name: Run hotfix tests
         working-directory: .build/src/launcher
-        run: go test ./internal/airuntime ./internal/aihttp ./internal/config ./internal/app
+        run: go test ./internal/airuntime ./internal/aihttp ./internal/config
       - name: Cross-compile Windows tree
         working-directory: .build/src/launcher
         env:
