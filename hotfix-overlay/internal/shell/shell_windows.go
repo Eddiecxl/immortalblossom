@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"syscall"
 
 	webview2 "github.com/jchv/go-webview2"
