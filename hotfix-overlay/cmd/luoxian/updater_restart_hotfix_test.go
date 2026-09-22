@@ -1,5 +1,6 @@
 package main
 
+// Regression: post-update restart must not refresh a still-running updater helper.
 import "testing"
 
 func TestHotfixRefreshUpdaterOnLaunchSkipsPostUpdateRestart(t *testing.T) {
