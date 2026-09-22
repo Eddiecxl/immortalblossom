@@ -26,6 +26,7 @@ jobs:
           unzip -q final-build/source.zip -d .build/srcroot
           cp -R hotfix-overlay/. .build/srcroot/src/launcher/
           cp .build/srcroot/src/launcher/internal/app/app.go .build/diag/app.go
+          cp .build/srcroot/src/launcher/internal/app/app_test.go .build/diag/app_test.go
           find .build/srcroot/src/launcher/internal/shell -maxdepth 1 -type f -name '*.go' -exec cp {} .build/diag/ \;
           cp .build/srcroot/src/launcher/internal/httpapi/server.go .build/diag/httpapi_server.go
           cp .build/srcroot/src/launcher/cmd/luoxian/main.go .build/diag/main.go
