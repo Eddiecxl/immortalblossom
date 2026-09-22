@@ -5,6 +5,7 @@ package shell
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -96,7 +97,10 @@ func (host *Host) openNative(ctx context.Context, url string) error {
 	var pageReadyOnce sync.Once
 	if err := view.Bind("nativePageReady", func(href string) error {
 		if strings.HasPrefix(href, url) {
-			pageReadyOnce.Do(func() { close(pageReady) })
+			pageReadyOnce.Do(func() {
+				log.Printf("launcher WebView page ready: %s", href)
+				close(pageReady)
+			})
 		}
 		return nil
 	}); err != nil {
