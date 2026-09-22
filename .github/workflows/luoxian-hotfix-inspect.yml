@@ -70,6 +70,17 @@ jobs:
           set -euo pipefail
           grep -RIn -E 'ScanChain\(|GameVersion|version.json' .inspect/src/launcher/internal .inspect/src/launcher/cmd | head -300 || true
 
+      - name: Inspect core updater and restart implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== MAIN RESTART ====="
+          sed -n '1,420p' .inspect/src/launcher/cmd/luoxian/main.go
+          echo "===== PATCH UPDATER ====="
+          sed -n '1,520p' .inspect/src/launcher/internal/patch/updater.go
+          echo "===== APP RESTART SEARCH ====="
+          grep -RIn -E 'Restart|Updater|CoreFiles|LuoXian-Updater|StartProcess|exec.Command' .inspect/src/launcher/cmd .inspect/src/launcher/internal | head -320 || true
+
       - name: Inspect patch generator sources
         shell: bash
         run: |
