@@ -156,7 +156,7 @@ jobs:
 
             try {
               $s = Invoke-RestMethod -Uri 'http://127.0.0.1:24824/api/status' -TimeoutSec 1
-              if ($s.version -eq '30.0.5') { $statusOK = $true }
+              if ($s.version -eq '30.0.5' -or $s.game_version -eq '30.0.5') { $statusOK = $true }
             } catch {}
 
             try {
@@ -166,7 +166,7 @@ jobs:
 
             if (Test-Path $log) {
               $logText = Get-Content $log -Raw -ErrorAction SilentlyContinue
-              if ($logText -match 'launcher WebView page ready: http://127\.0\.0\.1:24824/launcher/') {
+              if ($logText -match 'WebView launcher page ready: http://127\.0\.0\.1:24824/launcher/') {
                 $webviewReady = $true
               }
             }
