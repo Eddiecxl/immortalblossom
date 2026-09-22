@@ -32,6 +32,15 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Inspect patch generator sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in .inspect/src/launcher/cmd/lxpatch/main.go .inspect/src/launcher/internal/patch/*.go; do
+            echo "===== PATCHFILE: $f ====="
+            sed -n '1,420p' "$f"
+          done
+
       - name: Emit exact manager source
         shell: bash
         run: |
