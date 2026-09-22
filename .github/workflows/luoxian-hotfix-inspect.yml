@@ -32,6 +32,19 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Inspect launcher startup and WebView navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== APP RUN ====="
+          sed -n '1,360p' .inspect/src/launcher/internal/app/app.go
+          echo "===== HTTP SERVER ====="
+          sed -n '1,380p' .inspect/src/launcher/internal/httpapi/server.go
+          echo "===== SHELL ====="
+          sed -n '1,520p' .inspect/src/launcher/internal/shell/shell_windows.go
+          echo "===== STARTUP SEARCH ====="
+          grep -RIn -E 'Navigate|24824|launcher/|game/|Start\(|Run\(' .inspect/src/launcher/internal/app .inspect/src/launcher/internal/shell .inspect/src/launcher/internal/httpapi | head -260 || true
+
       - name: Inspect patch current-version source
         shell: bash
         run: |
