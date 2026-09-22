@@ -32,6 +32,12 @@ jobs:
           echo "===== RECOVERY SEARCH ====="
           grep -RIn --include='*.js' -E 'recover|EnsureReady|/api/ai/(recover|generate|status|start)' .inspect 2>/dev/null | head -250 || true
 
+      - name: Inspect patch current-version source
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -RIn -E 'ScanChain\(|GameVersion|version.json' .inspect/src/launcher/internal .inspect/src/launcher/cmd | head -300 || true
+
       - name: Inspect patch generator sources
         shell: bash
         run: |
