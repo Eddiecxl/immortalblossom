@@ -265,7 +265,9 @@ jobs:
           $repair = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:24824/api/repair' -TimeoutSec 5
           Write-Host ("REPAIR_STATUS=" + ($repair | ConvertTo-Json -Compress))
           $versionAfterRepair = (Get-Content (Join-Path $root 'game\version.json') -Raw | ConvertFrom-Json).version
-          if ($repair.healthy -eq $true -and $repair.version -eq '30.0.6' -and @($repair.bad_files).Count -eq 0 -and $versionAfterRepair -eq '30.0.6') {
+          $badCount = if ($null -eq $repair.bad_files) { 0 } else { @($repair.bad_files).Count }
+          Write-Host "repairHealthy=$($repair.healthy) repairVersion=$($repair.version) badCount=$badCount versionAfterRepair=$versionAfterRepair"
+          if ([bool]$repair.healthy -and [string]$repair.version -eq '30.0.6' -and $badCount -eq 0 -and [string]$versionAfterRepair -eq '30.0.6') {
             $repairOK = $true
           }
           if (-not $repairOK) { throw 'repair path attempted to downgrade or still reports the stale baseline' }
