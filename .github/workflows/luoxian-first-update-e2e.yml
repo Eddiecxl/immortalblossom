@@ -166,7 +166,7 @@ jobs:
 
             if (Test-Path $log) {
               $logText = Get-Content $log -Raw -ErrorAction SilentlyContinue
-              if ($logText -match 'WebView launcher page ready: http://127\.0\.0\.1:24824/launcher/') {
+              if ($logText -match 'page ready: http://127\.0\.0\.1:24824/launcher/') {
                 $webviewReady = $true
               }
             }
