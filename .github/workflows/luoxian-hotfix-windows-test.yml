@@ -1,0 +1,40 @@
+name: LuoXian v30.0.3 Windows Native Test
+
+on:
+  push:
+    branches:
+      - hotfix/luoxian-v30.0.3-ai-runtime
+    paths:
+      - 'hotfix-overlay/**'
+      - '.github/workflows/luoxian-hotfix-windows-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.0'
+          cache: false
+      - name: Reassemble source and apply hotfix overlay
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .build | Out-Null
+          $b64 = ''
+          0..7 | ForEach-Object {
+            $b64 += Get-Content ("final-build/b64part-{0:D2}" -f $_) -Raw
+          }
+          [IO.File]::WriteAllBytes('final-build/source.zip', [Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash 'final-build/source.zip' -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '971b06609e04a6bbdfc82730f157653bf3750b27e1ca6f5e66f3dd95884c15a5') {
+            throw "source hash mismatch: $hash"
+          }
+          Expand-Archive 'final-build/source.zip' -DestinationPath .build -Force
+          Copy-Item 'hotfix-overlay\*' '.build\src\launcher\' -Recurse -Force
+      - name: Run Windows airuntime tests
+        working-directory: .build/src/launcher
+        run: go test -v ./internal/airuntime
