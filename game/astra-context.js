@@ -19,6 +19,24 @@ const compact = (value, fields, limits = {}) => Object.fromEntries(fields
   .filter(key => value?.[key] !== undefined)
   .map(key => [key, typeof value[key] === 'string' ? text(value[key], limits[key] ?? 160) : boundedValue(value[key])]));
 
+// Keep the newest facts, then add older facts that overlap the player's
+// question. This uses local state only and does not spend a model request.
+function recall(items, query, limit, describe) {
+  const rows = list(items);
+  const recentStart = Math.max(0, rows.length - Math.ceil(limit / 2));
+  const recent = rows.slice(recentStart);
+  const phrases = [...String(query).matchAll(/[\p{Script=Han}]{2,}/gu)].map(match => match[0]);
+  const grams = [...new Set(phrases.flatMap(phrase => Array.from({ length: phrase.length - 1 }, (_, i) => phrase.slice(i, i + 2))))];
+  if (!grams.length) return rows.slice(-limit);
+  const older = rows.slice(0, recentStart).map((entry, index) => {
+    const value = String(describe(entry) || '');
+    return { entry, index, score: grams.filter(gram => value.includes(gram)).length };
+  }).filter(hit => hit.score > 0)
+    .sort((a, b) => b.score - a.score || b.index - a.index)
+    .slice(0, limit - recent.length).map(hit => hit.entry);
+  return [...recent, ...older];
+}
+
 const RULES = [
   'Engine state is authoritative. Narrate only facts supported by this packet.',
   'Only present, living NPCs may speak; each NPC may use only its listed knowledge.',
@@ -66,7 +84,8 @@ export function compileAstraContext(state, input, recentTurns = []) {
   const npcIds = npcs.map(idOf);
   const presentNpcs = npcs.map(npc => ({
     ...compact(npc, ['id', 'name', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
-    memories: list(npc.memories).slice(-4).map(x => typeof x === 'string' ? text(x, 140) : compact(x, ['id', 'summary', 'text'], { summary: 140, text: 140 })),
+    memories: recall(npc.memories, query, 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
+      .map(x => typeof x === 'string' ? text(x, 140) : compact(x, ['id', 'summary', 'text'], { summary: 140, text: 140 })),
     allowedSecrets: secrets.filter(secret => knownBy(secret).some(id => id === npc.id || id === npc.name))
       .slice(0, 4).map(secret => compact(secret, ['id', 'text', 'summary'], { text: 140, summary: 140 }))
   }));
@@ -76,13 +95,14 @@ export function compileAstraContext(state, input, recentTurns = []) {
   const dueEvents = list(world.eventQueue).filter(event => Number(event?.dueAt ?? event?.minute) <= minute)
     .sort((a, b) => Number(a.dueAt ?? a.minute) - Number(b.dueAt ?? b.minute)).slice(0, 8)
     .map(event => compact(event, ['id', 'type', 'dueAt', 'locationId', 'summary', 'payload'], { summary: 120 }));
-  const history = list(world.history).filter(entry => (entry?.playerWitnessed || entry?.public || entry?.visibleToPlayer)
-    && relevant(entry, locationId, query, npcIds)).slice(-8)
+  const history = recall(list(world.history).filter(entry => (entry?.playerWitnessed || entry?.public || entry?.visibleToPlayer)
+    && relevant(entry, locationId, query, npcIds) && entry?.type !== 'player_speech'), query, 8, entry => entry?.summary)
     .map(entry => compact(entry, ['id', 'timestamp', 'type', 'actors', 'locationId', 'summary', 'worldImpact'], { summary: 160, worldImpact: 100 }));
   const rumors = list(world.rumors).filter(entry => knownBy(entry).some(id => npcIds.includes(id)) && relevant(entry, locationId, query, npcIds))
     .slice(-6).map(entry => compact(entry, ['id', 'text', 'summary', 'truthConfidence', 'sourceCredibility'], { text: 140, summary: 140 }));
-  const memories = list(world.memories ?? state?.memory?.episodes).filter(entry => relevant(entry, locationId, query, npcIds))
-    .slice(-6).map(entry => compact(entry, ['id', 'summary', 'text', 'timestamp', 'locationId'], { summary: 140, text: 140 }));
+  const memories = recall(list(world.memories ?? state?.memory?.episodes).filter(entry => relevant(entry, locationId, query, npcIds)),
+    query, 6, entry => entry?.summary ?? entry?.text)
+    .map(entry => compact(entry, ['id', 'summary', 'text', 'timestamp', 'locationId'], { summary: 140, text: 140 }));
   const turns = Array.isArray(recentTurns) ? recentTurns.filter(turn => turn?.kind !== 'system').slice(-6) : [];
   const packet = {
     systemRules: RULES, minute, input: query,
@@ -97,7 +117,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
   // Long saves may contain unusually verbose individual facts. Keep the
   // packet capped even when the stored world was produced by an older build.
   const trimOrder = ['history', 'memories', 'rumors', 'recentTurns', 'activeQuests', 'dueEvents', 'nearbyLocations', 'nearbyEdges', 'presentNpcs'];
-  while (JSON.stringify(packet).length > 18_000) {
+  while (JSON.stringify(packet).length > 12_000) {
     const field = trimOrder.find(key => packet[key].length > (key === 'presentNpcs' ? 1 : 0));
     if (!field) break;
     packet[field].shift();

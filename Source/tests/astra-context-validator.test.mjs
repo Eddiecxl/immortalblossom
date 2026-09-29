@@ -55,6 +55,21 @@ test('context includes only secrets and rumors known by an eligible local speake
   assert.equal(JSON.stringify(packet).includes('宗主藏有天命玉玺'), false);
 });
 
+test('old matching local history and NPC memory survive the recent-context window', () => {
+  const w = world();
+  w.history.push({ id: 'old-gift', locationId: 'market', summary: '林小满交给我一枚保命符', playerWitnessed: true });
+  w.characters.lin.memories.push({ id: 'memory:gift', summary: '我把保命符交给阿青' });
+  for (let n = 0; n < 15; n++) {
+    w.history.push({ id: `later-${n}`, locationId: 'market', summary: `第${n}次集市收摊`, playerWitnessed: true });
+    w.characters.lin.memories.push({ id: `memory:later-${n}`, summary: `第${n}次整理药铺` });
+  }
+  const packet = compileAstraContext({ astraWorld: w }, '林小满给我的保命符还在吗？', []);
+  assert.ok(packet.history.some(entry => entry.id === 'old-gift'));
+  assert.ok(packet.presentNpcs[0].memories.some(entry => entry.id === 'memory:gift'));
+  assert.ok(packet.history.length <= 8);
+  assert.ok(packet.presentNpcs[0].memories.length <= 4);
+});
+
 test('dead and remote NPC dialogue is rejected without returning unsupported blocks', () => {
   const w = world();
   const blocks = [{ type: 'dlg', name: '张三', text: '我还活着。' }, { type: 'dlg', name: '李四', text: '我到了。' }, { type: 'narr', text: '风吹过集市。' }];
