@@ -12,16 +12,16 @@ const BACKGROUND = {
   'minor noble household': '小门第的子弟'
 };
 const DANGER = {
-  bandits: '近来商路传出山匪的消息', flood: '上游的雨水令河面渐涨',
-  illness: '附近有人染上急病', monster: '山野里出现陌生的兽迹',
-  'political dispute': '地方上的权势争执正影响日常生计'
+  bandits: '近来有商路山匪活动的消息', flood: '有上游河面渐涨的消息',
+  illness: '附近有人染上急病的消息传来', monster: '山野陌生兽迹的传闻流传开来',
+  'political dispute': '地方权势争执的消息正影响日常生计'
 };
 const CHANCES = {
   'local healer': '有人传来消息，说乡间医者正在寻人帮忙；医者此刻的去向还需打听',
   'merchant route': '商队招募同行者的消息传来，具体去处还需打听',
-  'sect examination': '远处宗门的试选消息传进镇里',
+  'sect examination': '远处宗门的试选消息传来',
   'wandering mentor': '有人说一位游方前辈将经过此地',
-  'ancient rumor': '古迹传闻偶尔从路过的旅人口中流出'
+  'ancient rumor': '古迹的传闻仍在世间流传'
 };
 
 /** The opening records what the seed established; it does not resolve future encounters. */
@@ -36,8 +36,14 @@ export function createAstraOpening(source) {
   const danger = DANGER[world.flags.earlyDanger] || '世道并不安宁';
   const chance = CHANCES[world.flags.earlyOpportunity] || '眼前也有新的机会';
   const people = Object.values(world.characters || {}).filter(npc => npc.alive && npc.locationId === world.player.locationId);
-  const witnessed = people[0]?.name ? `${people[0].name}也在此地，正忙于自己的事情` : '街巷里已有人开始一天的奔走';
+  const witnessed = people[0]?.name ? `${people[0].name}也在此地，正忙于自己的事情` : '眼前暂无可以直接问话的熟面孔';
   const cue = `${danger}；${chance}。${witnessed}。`;
+  const rumorId = 'rumor:opening-opportunity';
+  world.rumors.push({ id: rumorId, originEventId: 'opening:cue', locationId: world.player.locationId,
+    summary: chance, truthConfidence: 0.6, sourceCredibility: 0.6,
+    knownBy: people.map(npc => npc.id), regionSpread: [world.player.locationId], spreadCount: 0 });
+  world.player.knowledge = [...new Set([...(world.player.knowledge || []), rumorId])];
+  for (const npc of people) npc.knowledge = [...new Set([...(npc.knowledge || []), rumorId])];
   world.history.push({ id: 'opening:cue', type: 'opening_cue', minute: world.minute,
     locationId: world.player.locationId, summary: cue, playerWitnessed: true, major: true });
   state.story.location = location.name;
@@ -53,8 +59,8 @@ export function createAstraOpening(source) {
   state.story.flags.seededOpening = true;
   const blocks = [
     { type: 'narr', text: `清晨，我在${location.name}醒来。此世我是一名${background}；家人与生计各有牵挂，脚下的路也尚未写定。` },
-    { type: 'narr', text: `${cue}街巷仍按自己的时辰运转，谁也不会因为我停下。` },
-    { type: 'sys', text: `宿主，我在。你身处${location.name}；眼前的异动已经发生。你想先问问在场的人，还是亲自查看？接下来的事不会停等。` }
+    { type: 'narr', text: `${cue}四周仍按自己的时辰运转，谁也不会因为我停下。` },
+    { type: 'sys', text: `宿主，我在。你身处${location.name}；这些线索有的尚只是传闻。${people.length ? '你想先问问在场的人，还是亲自查看？' : '你可以先查看眼前的环境，或循消息打听去向。'}接下来的事不会停等。` }
   ];
   const turn = {
     id: 'opening:astra', kind: 'world', userText: '', speech: '', actionText: '',

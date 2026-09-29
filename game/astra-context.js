@@ -79,7 +79,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
   const nearbyLocations = locations.filter(loc => nearbyIds.has(idOf(loc))).slice(0, 8)
     .map(loc => compact(loc, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'description'], { description: 100 }));
   const secrets = list(world.secrets);
-  const npcs = list(world.characters ?? world.npcs).filter(npc => active(npc)
+  const npcs = list(world.characters ?? world.npcs).filter(npc => active(npc) && !npc.travel
     && (locationOf(npc) === locationId || locationOf(npc) === current?.name)).slice(0, 8);
   const npcIds = npcs.map(idOf);
   const presentNpcs = npcs.map(npc => ({

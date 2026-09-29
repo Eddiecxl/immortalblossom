@@ -24,6 +24,7 @@ export function runNpcPlans(world, minute = world.minute) {
       const edge = possible[seedHash(world.seed, `travel:${npc.id}:${bucket}`) % possible.length];
       if (edge) {
         npc.travel = { from: npc.locationId, to: edge.to, departAt: minute, arriveAt: minute + edge.minutes };
+        npc.locationId = null;
         outcomes.push({ actorId: npc.id, type: 'depart', destinationId: edge.to, arriveAt: minute + edge.minutes });
       }
     } else if (choice === 2 && npc.goals?.length) {

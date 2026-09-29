@@ -66,7 +66,9 @@ export function validateAstraNarration(world, blocks, packet = {}) {
       if (!speaker) reject('unknown-speaker', 'Speaker is not an Engine character.');
       else if (dead(speaker))
         reject('dead-speaker', 'Dead character cannot speak normally.');
-      else if (placeOf(speaker) !== currentId && placeOf(speaker) !== currentLocation?.name)
+      else if ((placeOf(speaker) !== currentId && placeOf(speaker) !== currentLocation?.name || speaker.travel)
+        && !(packet?.conversation?.targetId === speaker.id && packet.conversation.presentAtStart
+          && speaker.travel?.from === currentId))
         reject('absent-speaker', 'Speaker is not present at the player location.');
       if (speaker) {
         const knownFacts = [...list(speaker.knownFactIds), ...list(speaker.knowledge)].map(idOf);

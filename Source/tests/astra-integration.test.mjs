@@ -28,6 +28,7 @@ test('speech advances authoritative time while preserving exact player speech', 
 
 test('bad model response cannot commit Engine world or transcript', async () => {
   const before = createGameState('试行者', 'ai', () => 'integration-fail');
+  for (const npc of Object.values(before.astraWorld.characters)) if (npc.alive) npc.locationId = 'loc:elsewhere';
   const { runner, turns } = harness('not json');
   const result = await runner.runWorld({ state: before, input: { speech: '你好', action: '' }, settings: { provider: 'groq', model: 'qwen/qwen3.8-27b' } });
   assert.equal(result.ok, false);
@@ -67,6 +68,7 @@ test('explicit quest work changes quest state and transfers a reward through Eng
 
 test('narrative loop is rejected before a second identical turn can be saved', async () => {
   const before = createGameState('试行者', 'ai', () => 'integration-loop');
+  for (const npc of Object.values(before.astraWorld.characters)) if (npc.alive) npc.locationId = 'loc:elsewhere';
   const phrase = '我在晨风里看见集市逐渐忙起来。';
   const { runner, turns } = harness(JSON.stringify({ blocks: [{ type: 'narr', text: phrase }] }));
   const first = await runner.runWorld({ state: before, input: { speech: '你好', action: '' }, settings: { provider: 'groq' } });

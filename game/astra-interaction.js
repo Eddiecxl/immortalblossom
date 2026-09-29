@@ -1,53 +1,99 @@
-// Resolve small, direct conversational intents from Engine facts before asking
-// a language model to improvise. This does not create quests or world effects.
-const localPeople = world => Object.values(world.characters || {})
+// World-backed conversation planning. Names, presence and knowledge come from
+// the active seed's instances; no opening scene or specific NPC is hard-coded.
+const clean = value => String(value ?? '').trim();
+const present = world => Object.values(world.characters || {})
   .filter(npc => npc.alive && npc.locationId === world.player.locationId && !npc.travel);
+const sayable = value => clean(value).replace(/危险程度为\d+\/100/gu, '路上有险');
+const normalized = value => clean(value).replace(/[\s\p{P}\p{S}]/gu, '');
+const subjectGrams = value => {
+  const phrases = [...clean(value).matchAll(/[\p{Script=Han}]{2,}/gu)].map(match => match[0]);
+  return [...new Set(phrases.flatMap(phrase => Array.from({ length: phrase.length - 1 }, (_, i) => phrase.slice(i, i + 2))))];
+};
 
-function interlocutor(people, speech, recentTurns) {
-  const named = people.find(npc => speech.includes(npc.name));
-  if (named) return named;
-  const last = (recentTurns || []).flatMap(turn => turn.blocks || []).filter(block => block.type === 'dlg').at(-1);
-  return people.find(npc => npc.name === last?.name) || people[0] || null;
+function knownFacts(world, npc) {
+  const quests = [], rumors = [], events = [];
+  for (const quest of Object.values(world.quests || {})) {
+    if (quest.giverId === npc.id && ['available', 'active', 'mutated'].includes(quest.state))
+      quests.push({ id: quest.id, kind: 'quest', summary: `${quest.title}尚未了结` });
+  }
+  for (const rumor of world.rumors || []) {
+    if ((rumor.knownBy || []).includes(npc.id) && rumor.summary)
+      rumors.push({ id: rumor.id, kind: 'rumor', summary: sayable(rumor.summary) });
+  }
+  for (const event of world.history || []) {
+    if ((event.actors || []).includes(npc.id) && event.summary
+      && !['player_speech', 'opening_cue', 'scene_director'].includes(event.type))
+      events.push({ id: event.id, kind: 'event', summary: sayable(event.summary) });
+  }
+  return [...quests.slice(-8), ...rumors.slice(-12), ...events.slice(-12)];
 }
 
-export function resolveAstraInteraction(world, rawSpeech, recentTurns = []) {
-  const speech = String(rawSpeech || '').trim();
-  if (!speech || speech.length > 80) return null;
-  const identity = /你(?:是)?谁|你叫什么|请问你是/u.test(speech);
-  const greeting = /^(?:有人吗|有人在吗|有人没有)[？?！!。\s]*$/u.test(speech);
-  const eventQuestion = /发生什么|怎么回事|什么情况|啥玩意/u.test(speech);
-  const offer = /我来帮你|我帮你|让我帮|需要我帮|我能帮/u.test(speech);
-  const healerQuestion = /(?:医者|郎中|大夫|你)找人[？?]?$/u.test(speech);
-  if (!identity && !greeting && !eventQuestion && !offer && !healerQuestion) return null;
-  const people = localPeople(world);
-  const healer = people.find(npc => /医|郎中|大夫|healer|doctor/iu.test(`${npc.role || ''} ${npc.occupation || ''}`));
-  if (healerQuestion && !healer) return {
-    targetId: null,
-    blocks: [{ type: 'narr', text: '我循声望去，眼前并没有那位医者。先前听到的只是附近求助的消息；若要找到人，还得向在场的人打听去向。' }]
-  };
-  const npc = healerQuestion ? healer : interlocutor(people, speech, recentTurns);
-  if (!npc) return {
-    targetId: null,
-    blocks: [{ type: 'narr', text: '我出声询问，近旁没有可应答的人。若要弄清情况，还得沿着眼前的线索去找。' }]
-  };
-  const localQuest = Object.values(world.quests || {}).find(quest =>
-    ['available', 'active', 'mutated'].includes(quest.state)
-    && quest.targetLocationId === world.player.locationId
-    && (!quest.giverId || quest.giverId === npc.id));
-  const knownRumor = [...(world.rumors || [])].reverse().find(rumor => rumor.locationId === world.player.locationId
-    && (rumor.knownBy || []).includes(npc.id) && rumor.summary);
-  const knownEvent = [...(world.history || [])].reverse().find(event => (event.actors || []).includes(npc.id)
-    && event.locationId === world.player.locationId
-    && !['player_speech', 'opening_cue', 'scene_director'].includes(event.type)
-    && event.summary);
-  const knownSituation = String(knownRumor?.summary || knownEvent?.summary || '')
-    .replace(/危险程度为\d+\/100/gu, '路上有险');
-  const text = identity ? `我是${npc.name}，在此料理手头的事。你找我有什么事？`
-    : healerQuestion ? `你找的是谁？先说清楚，我才能帮你打听。`
-      : offer ? (localQuest ? `多谢。眼下${localQuest.title}还没了结；先把这件事问清，再决定如何动手。`
-        : '多谢。先听我把眼前的情况说清楚，我们再决定从哪里着手。')
-        : eventQuestion ? (knownSituation ? `${knownSituation}你若想弄清缘由，可以再问我。`
-          : '我也只看见眼前这些动静；要弄清缘由，还得继续打听。')
-          : '我在。你想问什么？';
-  return { targetId: npc.id, blocks: [{ type: 'dlg', name: npc.name, text }] };
+export function conversationEvidence(plan, limit = 8) {
+  const grams = subjectGrams(plan?.speech);
+  return (plan?.facts || []).map((entry, index) => ({ entry, index,
+    score: grams.filter(gram => entry.summary.includes(gram)).length }))
+    .sort((a, b) => b.score - a.score || b.index - a.index)
+    .slice(0, limit).map(hit => hit.entry);
+}
+
+export function resolveAstraConversation(world, rawSpeech, recentTurns = []) {
+  const speech = clean(rawSpeech);
+  if (!speech) return { targetId: null, targetName: null, facts: [], speech };
+  const people = present(world);
+  const named = Object.values(world.characters || {}).filter(npc => npc.name && speech.includes(npc.name))
+    .sort((a, b) => b.name.length - a.name.length)[0];
+  // An explicitly named absent person must never be replaced by a bystander.
+  if (named && !people.some(npc => npc.id === named.id))
+    return { targetId: null, targetName: null, absentName: named.name, facts: [], speech };
+  const byRole = people.find(npc => [npc.role, npc.occupation]
+    .some(label => typeof label === 'string' && /[\p{Script=Han}]{2,}/u.test(label) && speech.includes(label)));
+  const ongoing = world.flags?.conversation;
+  const focused = people.find(npc => npc.id === ongoing?.npcId
+    && ongoing.locationId === world.player.locationId && world.minute - Number(ongoing.minute || 0) <= 240);
+  const prior = (recentTurns || []).slice(-2).flatMap(turn => turn.blocks || [])
+    .filter(block => block.type === 'dlg').at(-1);
+  const lastSpeaker = people.find(npc => npc.name === prior?.name);
+  const callout = /有人|谁在|喂/u.test(speech);
+  const target = named || byRole || focused || lastSpeaker || (people.length === 1 || callout ? people[0] : null);
+  return { targetId: target?.id || null, targetName: target?.name || null,
+    facts: target ? knownFacts(world, target) : [], speech };
+}
+
+export function validateAstraConversation(blocks, plan, recentTurns = []) {
+  if (!plan?.targetId) return { ok: true, errors: [] };
+  const reply = (Array.isArray(blocks) ? blocks : []).find(block => block?.type === 'dlg' && block.name === plan.targetName);
+  const errors = [];
+  if (!reply) errors.push('本轮没有被问人物的回应');
+  else {
+    const line = normalized(reply.text);
+    if (line.length < 6 || /^(?:你问的我已听见|我已听见|我听见了|帮你|你说什么|不知道)$/u.test(line))
+      errors.push('回应只是复读或空泛应声');
+    const earlier = (recentTurns || []).slice(-4).flatMap(turn => turn.blocks || [])
+      .filter(block => block.type === 'dlg' && block.name === plan.targetName)
+      .map(block => normalized(block.text));
+    if (line.length >= 6 && earlier.includes(line)) errors.push('人物重复了上一轮原话');
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+export function fallbackAstraConversation(world, plan) {
+  const npc = world.characters?.[plan?.targetId];
+  if (!npc?.alive || npc.locationId !== world.player.locationId || npc.travel) return null;
+  const speech = plan.speech || '';
+  const grams = subjectGrams(speech);
+  const fact = [...(plan.facts || [])].reverse().map(entry => ({ entry,
+    score: grams.filter(gram => entry.summary.includes(gram)).length }))
+    .sort((a, b) => b.score - a.score)[0];
+  const known = fact?.score > 0 ? fact.entry.summary : '';
+  const quest = (plan.facts || []).find(entry => entry.kind === 'quest');
+  const identity = /(?:你|您).*(?:是谁|叫什么|名字)|(?:你|您)谁/u.test(speech);
+  const offer = /(?:我|让).*?(?:帮|协助|助你)/u.test(speech);
+  const question = /[?？]|(?:什么|为何|怎么|哪里|何时|谁)/u.test(speech);
+  const answer = identity ? `我是${npc.name}。你想知道哪件事？`
+    : offer && quest ? `多谢。${quest.summary}，你愿意先听我说明吗？`
+      : known ? `${known}。我知道的就这些；你还想问哪一处？`
+        : offer ? '多谢你的好意。眼下我还没有能请你接下的明确委托。'
+          : question ? '这件事我眼下不清楚；你能说得具体些吗？'
+            : '我记下你说的话了。眼下还有什么要紧的事？';
+  return { targetId: npc.id, blocks: [{ type: 'dlg', name: npc.name, text: answer }] };
 }

@@ -62,16 +62,17 @@ export function planRealityMutation(world, statement) {
 
 export function killNpc(world, npc, mutationId) {
   if (!npc?.alive) return;
+  const deathLocationId = npc.locationId || npc.travel?.from || npc.homeId || world.player.locationId;
   npc.alive = false;
   npc.physicalCondition = 'dead';
   npc.travel = null;
   npc.currentPlan = null;
   npc.deathAt = world.minute;
-  npc.lastKnownLocationId = npc.locationId;
+  npc.lastKnownLocationId = deathLocationId;
   npc.inventory = npc.inventory || [];
   for (const itemId of npc.inventory) if (world.items[itemId]) {
     world.items[itemId].ownerId = null;
-    world.items[itemId].locationId = npc.locationId;
+    world.items[itemId].locationId = deathLocationId;
     world.items[itemId].transferHistory ||= [];
     world.items[itemId].transferHistory.push({ minute: world.minute, source: mutationId, from: npc.id, to: null });
   }

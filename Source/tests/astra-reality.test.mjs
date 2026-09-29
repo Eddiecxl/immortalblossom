@@ -1,7 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createAstraWorld } from '../../game/astra-world.js';
-import { planRealityMutation, applyRealityMutation } from '../../game/astra-reality.js';
+import { planRealityMutation, applyRealityMutation, killNpc } from '../../game/astra-reality.js';
+
+test('a traveler who dies retains a physical origin for dropped belongings', () => {
+  const world = createAstraWorld('traveler-death');
+  const npc = world.characters['npc:lin-xiaoman'];
+  const origin = npc.locationId;
+  npc.inventory = ['item:test-belonging'];
+  world.items['item:test-belonging'] = { id: 'item:test-belonging', ownerId: npc.id,
+    locationId: null, transferHistory: [] };
+  npc.travel = { from: origin, to: world.player.locationId, departAt: world.minute, arriveAt: world.minute + 60 };
+  npc.locationId = null;
+  killNpc(world, npc, 'test:traveler-death');
+  assert.equal(npc.lastKnownLocationId, origin);
+  assert.equal(world.items['item:test-belonging'].locationId, origin);
+});
 import { checkTerminalWorld } from '../../game/astra-terminal.js';
 import { advanceAstraWorld } from '../../game/astra-scheduler.js';
 import { compileAstraContext } from '../../game/astra-context.js';
