@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050b11">
+  <title>落仙 · Game Beta v4</title>
+  <link rel="stylesheet" href="./v4.css"><link rel="stylesheet" href="../beta4/beta4.css"><link rel="stylesheet" href="../beta4/tianque.css"><link rel="stylesheet" href="../beta4/chronicle.css"><link rel="stylesheet" href="../beta4/ornaments.css">
+<link rel="stylesheet" href="../beta4/ceremony.css"><link rel="stylesheet" href="../beta4/menu-video.css"></head>
+<body class="booting"><div id="bootVeil" role="status"><div class="boot-seal">仙</div><p>落 仙</p><span id="bootStatus">正在载入山河与命簿…</span><button id="bootRetry" hidden>重试载入</button></div><div id="entryVeil"></div>
+  <div class="world-bg" aria-hidden="true">
+    <div class="world-image" id="worldImage"></div>
+    <div class="world-vignette"></div>
+    <div class="moon-glow"></div>
+    <div class="cloud-silk cloud-one"></div>
+    <div class="cloud-silk cloud-two"></div>
+    <div class="mist mist-a"></div><div class="mist mist-b"></div><div class="mist mist-c"></div>
+    <div class="petal-field" id="petalField"></div>
+    <div class="grain"></div>
+  </div>
+
+  <section class="title-screen" id="titleScreen">
+    <video class="menu-loop-video" id="menuLoopVideo" autoplay muted loop playsinline preload="auto" poster="../assets/tianque-sword.png" aria-hidden="true">
+      <source src="../assets/video/luoxian_menu_loop.mp4" type="video/mp4">
+    </video>
+    <header class="title-brand">
+      <span class="title-brand-seal">仙</span>
+      <div><b>落仙 · 启程</b><small>LUO XIAN · IMMORTAL JOURNEY</small></div>
+      <div class="title-version-stack"><span class="title-edition">GAME BETA v4 · 墨起因果</span><small class="patch-proof">LOCAL AI + WORLD ENGINE</small></div>
+    </header>
+
+    <div class="title-stage">
+      <div class="title-veil"></div>
+      <div class="title-calligraphy">
+        <p class="eyebrow">一念落笔 · 万象成仙</p>
+        <h1>落仙</h1>
+        <div class="title-seal">启程</div>
+        <p class="title-english">LUO XIAN · IMMORTAL JOURNEY</p>
+      </div>
+
+      <div class="title-poem">
+        <span>此世山河</span><span>由你落笔</span>
+      </div>
+
+      <div class="title-copy-card">
+        <i class="ink-stroke"></i>
+        <p>此世山河，自有因果。<br>你是顾长生，也是那个不属于此世的人。</p>
+        <small>穿越 · 系统 · 言出法随 · 长期记忆</small>
+      </div>
+    </div>
+
+    <div class="title-actions">
+      <button class="journey-button primary" id="newJourneyButton">
+        <span class="button-flower">✿</span>
+        <div><span>启程</span><small>NEW JOURNEY</small></div><i>›</i>
+      </button>
+      <button class="journey-button ghost" id="continueJourneyButton" hidden>
+        <span class="button-flower">◇</span>
+        <div><span>续写此世</span><small>CONTINUE JOURNEY</small></div><i>↗</i>
+      </button>
+      <button class="journey-button ghost" id="loadJourneyButton"><span class="button-flower">印</span><div><span>读取命簿</span><small>LOAD JOURNEY</small></div></button><button class="journey-button ghost" id="titleSettingsButton"><span class="button-flower">◇</span><div><span>天地设定</span><small>SETTINGS</small></div></button>
+      <button class="journey-button exit-journey" id="exitGameButton">
+        <span class="button-flower">退</span>
+        <div><span>退出游戏</span><small>EXIT GAME · BETA III</small></div><i>×</i>
+      </button>
+    </div>
+
+    <div class="title-feature-row">
+      <span><i>山</i><b>山河万象</b><small>地点与世界持续记录</small></span>
+      <span><i>忆</i><b>因果长忆</b><small>人物记忆随命簿延续</small></span>
+      <span><i>灵</i><b>山海长歌</b><small>一字一念，皆有回响</small></span>
+      <span><i>言</i><b>言出法随</b><small>愿望兑现并留下代价</small></span>
+    </div>
+  </section>
+
+  <main class="game-shell" id="gameShell" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">仙</div>
+        <div><strong>落仙</strong><small>IMMORTAL JOURNEY · 天阙</small></div>
+      </div>
+      <div class="top-center">
+        <span class="chapter-kicker">命途正卷 · 此世山河</span>
+        <strong id="sceneTitle">赵府柴房</strong>
+      </div>
+      <div class="top-actions"><button class="icon-btn" id="gameSettingsButton" title="设置"><span>设</span></button>
+        <button class="icon-btn audio-toggle" id="audioButton" title="音乐 / 音效"><span>音</span></button>
+        <button class="icon-btn" data-panel="world" title="世界脉络"><span>卷</span></button>
+        <button class="icon-btn" id="saveButton" title="保存"><span>印</span></button>
+        <button class="icon-btn" id="titleButton" title="返回标题"><span>归</span></button>
+      </div>
+    </header>
+
+    <section class="hud-ribbon">
+      <div class="hud-main">
+        <span class="portrait-sigil">顾</span>
+        <div><small>宿主</small><strong id="playerName">顾长生</strong></div>
+      </div>
+      <div class="hud-stat"><small>境界</small><strong id="realmValue">凡人</strong></div>
+      <div class="resource hp"><div><small>气血</small><b id="hpValue">100 / 100</b></div><span><i id="hpBar"></i></span></div>
+      <div class="resource spirit"><div><small>灵力</small><b id="spiritValue">30 / 30</b></div><span><i id="spiritBar"></i></span></div>
+      <div class="hud-stat"><small>灵气</small><strong id="qiValue">0</strong></div>
+      <div class="hud-stat"><small>灵石</small><strong id="goldValue">0</strong></div>
+      <div class="hud-stat time"><small>天时</small><strong id="timeValue">第 1 日 · 清晨</strong></div>
+    </section>
+
+    <section class="game-grid">
+      <aside class="left-rail">
+        <section class="xian-card identity-card">
+          <div class="card-corner tl"></div><div class="card-corner br"></div>
+          <div class="card-heading"><span>命格</span><b>异世来客</b></div>
+          <div class="identity-art"><span>顾</span><small>前世未灭 · 今生初醒</small></div>
+          <div class="law-orbit">
+            <div class="law-core">言</div>
+            <div><strong>言出法随</strong><small id="lawCount">已兑现 0 条</small></div>
+          </div>
+          <p class="system-line" id="systemLine">雨落旧瓦，柴门之外，命途尚未展开。</p>
+        </section>
+
+        <section class="xian-card system-dock">
+          <div class="card-corner tl"></div><div class="card-corner br"></div>
+          <div class="system-dock-head"><button id="expandSystem" type="button" title="展开系统记录" aria-label="展开系统记录">展开 ↗</button><div><small>伴行系统 · REALTIME</small><b>系统一直在这里</b></div><span class="system-online-dot" title="系统在线"></span></div>
+          <div class="system-world-strip">
+            <span><small>位置</small><b id="locationValue">赵府柴房</b></span>
+            <span><small>天气</small><b id="weatherValue">细雨</b></span>
+            <span><small>回合</small><b id="turnValue">0</b></span>
+          </div>
+          <div class="danger-wrap compact-danger">
+            <div><small>当前威胁</small><b id="dangerText">尚未逼近</b></div>
+            <span class="danger-track"><i id="dangerBar"></i></span>
+          </div>
+          <div class="system-feed" id="systemFeed" aria-live="polite"><p class="sys-msg">系统在线。你继续说，我会盯着时间、人物和局势。</p></div>
+          <div class="system-dock-compose">
+            <textarea id="systemDockInput" rows="2" maxlength="1200" placeholder="随时问系统…"></textarea>
+            <button type="button" id="systemDockSend" title="发送给系统">↗</button>
+          </div>
+        </section>
+
+        <nav class="quick-nav">
+          <button data-panel="character"><span>身</span><b>人物</b><small>CHARACTER</small></button>
+          <button data-panel="quests"><span>卷</span><b>任务</b><small>QUEST</small></button>
+          <button data-panel="map"><span>山</span><b>地图</b><small>WORLD</small></button>
+          <button data-panel="inventory"><span>囊</span><b>背包</b><small>INVENTORY</small></button><button data-panel="causality"><span>缘</span><b>因果</b><small>CONSEQUENCES</small></button><button data-panel="memory"><span>忆</span><b>记忆</b><small>MEMORY</small></button>
+        </nav>
+      </aside>
+
+      <section class="story-stage">
+        <div class="story-photo-layer"></div>
+        <div class="story-vignette"></div>
+        <div class="stage-light"></div>
+        <div class="story-frame-corner c1"></div><div class="story-frame-corner c2"></div>
+        <header class="story-header">
+          <div>
+            <small id="scenePeriod">第 1 日 · 清晨</small>
+            <h2 id="storyLocation">赵府柴房</h2>
+            <span class="story-subtitle">山河有应 · 行止皆有回响</span>
+          </div>
+          <div class="scene-tags"><span id="sceneWeather">细雨</span><span id="sceneThreat">风平浪静</span></div>
+        </header>
+
+        <div class="chronicle-toolbar"><span>此世行记 <small>CHRONICLE</small></span><div class="reading-toolbar"><i class="reading-dot"></i><span id="readingStatus">静候你落笔</span><button id="skipText" type="button" hidden>展开全文</button></div></div>
+        <div class="story-scroll" id="storyScroll" role="log" aria-label="按发生顺序排列的剧情与对白" aria-live="off">
+          <div class="story-opening">
+            <span class="opening-rune">始</span>
+            <div>
+              <p>潮湿柴草扎着掌心。雨落在赵府旧瓦上，一段不属于这个时代的记忆在脑海里醒来。</p>
+              <p class="opening-system">【系统】宿主确认：顾长生。异世记忆完整。言出法随权限已绑定。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="suggestion-strip" id="suggestionStrip"></div>
+
+        <form class="composer" id="composer">
+          <div class="composer-ornament">◆</div>
+          <div class="composer-glow"></div>
+          <div class="composer-label"><span>开口 · 说话为主</span><small>一字落下，山河回响</small></div>
+          <div class="dual-reality-input speech-first">
+            <label class="reality-row speech-row primary-speech">
+              <span class="reality-mark">言</span>
+              <span class="reality-copy"><b>说话</b><small>默认输入 · 逐字属于顾长生 · AI 不可改写或代说</small></span>
+              <textarea id="speechInput" maxlength="1200" rows="3" placeholder="直接说你想说的话…"></textarea>
+            </label>
+            <details class="action-details" id="actionDetails">
+              <summary><span>行</span><b>动作（可选）</b><small>需要时再展开</small></summary>
+              <label class="reality-row action-row">
+                <span class="reality-mark">行</span>
+                <span class="reality-copy"><b>动作</b><small>只补充你正在做什么；世界会判断结果</small></span>
+                <textarea id="actionInput" maxlength="1800" rows="2" placeholder="例：靠在门边听外面的脚步。"></textarea>
+              </label>
+            </details>
+          </div>
+          <div class="composer-footer">
+            <div class="input-hints"><span>Enter 发送 · Shift+Enter 换行</span><span>默认焦点永远回到“说话”</span><span>系统在左侧常驻</span></div>
+            <div class="composer-actions">
+              <button type="button" class="system-chat-button" id="systemChatButton"><span>问系统</span></button>
+              <button type="button" class="law-invoke-button" id="lawInvokeButton" aria-label="开启言出法随">
+                <span class="law-dust" aria-hidden="true"></span>
+                <i class="law-sigil">敕</i><span>言出法随</span><b>✦</b>
+              </button>
+              <button type="submit" id="sendButton"><span>落笔</span><i>➤</i></button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <aside class="right-rail">
+        <section class="xian-card world-card">
+          <div class="card-corner tl"></div><div class="card-corner br"></div>
+          <div class="card-heading"><span>此刻</span><b>世界脉络</b></div>
+          <div class="mini-landscape"><div></div><span>山河为卷</span></div>
+          <div class="world-item"><small>主线</small><strong id="questHeadline">柴门之外</strong><p id="questDetail">离开赵府，真正踏入此世。</p></div>
+          <div class="world-item"><small>在场 / 已知人物</small><div class="chip-list" id="characterChips"><span>尚未确认</span></div></div>
+          <div class="world-item"><small>最近记忆</small><p id="memoryPreview">醒来于赵府柴房；前世记忆与系统仍在。</p></div>
+        </section>
+
+        <section class="xian-card timeline-card">
+          <div class="card-heading"><span>时序</span><b>最近回响</b></div>
+          <ol id="echoList"><li><i></i><p>此世开始</p><small>第 1 日 · 清晨</small></li></ol>
+        </section>
+      </aside>
+    </section>
+
+    
+  </main>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="world-drawer" id="worldDrawer" hidden>
+    <div class="drawer-photo"></div>
+    <header><div><small>命簿 · WORLD LEDGER</small><h2 id="drawerTitle">世界脉络</h2></div><button id="closeDrawer">×</button></header>
+    <nav class="drawer-tabs">
+      <button data-drawer-tab="world" class="active">此刻</button>
+      <button data-drawer-tab="character">人物</button>
+      <button data-drawer-tab="quests">任务</button>
+      <button data-drawer-tab="map">地图</button>
+      <button data-drawer-tab="inventory">背包</button><button data-drawer-tab="causality">因果</button><button data-drawer-tab="memory">记忆</button>
+    </nav>
+    <div class="drawer-content" id="drawerContent"></div>
+  </aside>
+
+  <div class="system-chat-layer" id="systemChatLayer" hidden>
+    <section class="system-chat-card">
+      <header><div><small>META SYSTEM · 时间冻结</small><h2>系统对话</h2></div><button type="button" id="closeSystemChat">×</button></header>
+      <p>这里的对话不会推进世界时间，也不会被当成顾长生在现实中说出口的话。</p>
+      <textarea id="systemInput" maxlength="1600" rows="4" placeholder="问系统，例如：我现在在哪里？赵天霸还有多久会到？"></textarea>
+      <div class="system-chat-response" id="systemChatResponse">系统在此。外界时间已冻结。</div>
+      <footer><button type="button" id="sendSystemButton">询问系统</button></footer>
+    </section>
+  </div>
+
+  <div class="law-layer" id="lawLayer" hidden>
+    <div class="law-cosmos" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <section class="law-card">
+      <button type="button" class="law-close" id="lawCloseButton">×</button>
+      <div class="law-halo" aria-hidden="true"></div>
+      <div class="law-emblem"><span>言</span><i>天命敕令</i></div>
+      <header>
+        <small>HEAVENLY DECREE · 言灵绝对成立</small>
+        <h2>言出法随</h2>
+        <p>写下结果。世界引擎会把它完整实现；愿望越大，因果代价越重，代价会在对应等级内随机落定。</p>
+      </header>
+      <div class="law-input-frame">
+        <span class="law-input-rune left">敕</span>
+        <textarea id="lawInput" maxlength="320" rows="3" placeholder="例如：我现在直接筑基。"></textarea>
+        <span class="law-input-rune right">成</span>
+      </div>
+      <div class="law-scale-row">
+        <span><b>凡愿</b><small>轻微代价</small></span>
+        <i></i>
+        <span><b>重愿</b><small>明显代价</small></span>
+        <i></i>
+        <span><b>逆命</b><small>高因果代价</small></span>
+        <i></i>
+        <span><b>天命</b><small>世界级愿望</small></span>
+      </div>
+      <div class="law-cost-hint" id="lawCostHint">代价未结算 · 结果必定实现 · 不会直接以死亡抵消愿望</div>
+      <footer>
+        <button type="button" class="law-cancel" id="lawCancelButton">收回此念</button>
+        <button type="button" class="law-submit" id="lawSubmitButton"><i>✦</i><span>敕令此世</span><i>✦</i></button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div><script type="module" src="./v4.js"></script>
+</body>
+</html>

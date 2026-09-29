@@ -1,0 +1,31 @@
+/* 万象因果 ornament layer. Decoration only; layout is owned by chronicle.css. */
+:root{--gilt:#d5b77c;--jade-line:#789c88;--carved-frame:url('../assets/ui/jade-frame.svg');--cloud-scroll:url('../assets/ui/cloud-scroll.svg');--sword-seal:url('../assets/ui/sword-sigil.svg')}
+.xian-card,.b3-dialog,.world-drawer,.ai-config-card,.system-chat-card,.law-card{border-color:#bfa16780;border-radius:3px;box-shadow:0 12px 38px #0004,inset 0 0 0 4px #b9a3650a}
+.xian-card{position:relative;background:linear-gradient(135deg,#17333de8,#0a1c2af5)}
+.xian-card:before,.b3-dialog:before{content:'';position:absolute;inset:0;width:auto;height:auto;background:none;border:24px solid transparent;border-image:var(--carved-frame) 40 / 29px / 0 stretch;pointer-events:none;opacity:.78;z-index:1}
+.b3-dialog:after{display:none}.b3-dialog{background:radial-gradient(ellipse at top right,#52796222,transparent 55%),linear-gradient(135deg,#193542,#0b1a29)}
+.b3-dialog>header{background:var(--cloud-scroll) right 28px top -18px/280px auto no-repeat,linear-gradient(100deg,#24483a40,transparent 65%);border-bottom-color:#c4a46e66}
+.b3-dialog footer{border-top-color:#bfa36744;background:linear-gradient(90deg,#122e32aa,transparent)}
+.card-heading{border-bottom-color:#b89f6355}.card-heading span{color:#e2c58b}.card-heading:after{content:'◆';color:#b59b68;font-size:8px;opacity:.8}
+.portrait-sigil,.opening-rune{background:radial-gradient(circle,#426e5c,#112d34);border-color:#c3a367;box-shadow:0 0 0 3px #b69f6520,inset 0 0 0 3px #112938;outline:1px solid #b69f6530;outline-offset:4px}
+.hud-ribbon{border-color:#bea46c77;background:linear-gradient(90deg,#1b373c,#0e2532 55%,#183239);box-shadow:inset 0 0 0 3px #0a1e2c66}
+.icon-btn,.quick-nav button,.drawer-tabs button,.suggestion-strip button,.reading-toolbar button{background:linear-gradient(135deg,#26493f99,#142c3b);border-color:#bca16770;box-shadow:inset 0 0 0 3px #0a1c2840;border-radius:2px}
+.quick-nav button{position:relative}.quick-nav button:after{content:'';position:absolute;right:4px;top:4px;width:10px;height:10px;border-top:1px solid #c9b17c77;border-right:1px solid #c9b17c77;pointer-events:none}
+.quick-nav span{color:#e4c486;text-shadow:0 0 16px #d0b27440}.quick-nav button:hover,.icon-btn:hover,.suggestion-strip button:hover{border-color:#efd49b;background:linear-gradient(135deg,#395e4e,#1b3645);box-shadow:0 3px 15px #b4986220,inset 0 0 0 3px #0a1c2840}
+.story-stage{border-color:#c5a86d99;box-shadow:0 15px 42px #0004,inset 0 0 0 3px #d2b7770d}.story-header{border-bottom-color:#d4b47780}.story-header h2{color:#f0dfb9}.scene-tags span{border-color:#b6a37066;background:#102f34d9;box-shadow:inset 0 0 0 2px #071b2466}
+.composer{border-color:#c1a46c80;box-shadow:inset 0 0 0 3px #bc9b6610}.composer-actions #sendButton{background:linear-gradient(125deg,#a34232,#b96542 50%,#843727);border-color:#eac18a;box-shadow:inset 0 0 0 3px #561e1833,0 3px 12px #0003}.composer-actions .law-invoke-button{border-color:#c4a66c99;background:linear-gradient(120deg,#305745,#142e3a);box-shadow:inset 0 0 0 3px #0c212f55}
+.journey-button{position:relative;border:1px solid #bca36c88!important;border-radius:2px!important;background:linear-gradient(110deg,#183831e6,#0b2134cc)!important;box-shadow:inset 0 0 0 3px #091d2980!important;overflow:visible}
+.journey-button:before{content:'';display:block;position:absolute;inset:0;border:20px solid transparent;border-image:var(--carved-frame) 40 / 23px / 0 stretch;pointer-events:none;opacity:.7}
+.journey-button .button-flower{display:block;width:25px;height:25px;flex-shrink:0;color:transparent!important;background:var(--sword-seal) center/contain no-repeat;opacity:.95;filter:drop-shadow(0 0 5px #d7bd7460)}
+.journey-button.primary{border-color:#e6c681!important;background:linear-gradient(110deg,#3e6146eb,#193d3fda)!important;box-shadow:inset 0 0 0 3px #091d2955,0 0 25px #c3a56b18!important}.journey-button div span{color:#f3e1b8}.journey-button div small{color:#c8c7b0}.journey-button:hover{background:linear-gradient(110deg,#446447,#173740)!important;transform:translateX(4px);border-color:#ffe3a2!important}
+.gold-button{background:linear-gradient(115deg,#e9d19b,#c7ab70 70%,#ead29b)!important;border:1px solid #f2dfb3!important;border-radius:2px!important;box-shadow:inset 0 0 0 3px #836b3933,0 3px 13px #0003}
+.b3-dialog button{border-radius:2px}.settings-nav button.selected{border-color:#c5a56980;background:linear-gradient(95deg,#53705666,#16303a55);box-shadow:inset 0 0 0 3px #0a1d274d}.settings-nav button.selected small{color:#d2c39c}
+.music-card,.now-playing{border-color:#b59c6588;background:var(--cloud-scroll) center right/260px auto no-repeat,linear-gradient(105deg,#173936,#102837);box-shadow:inset 0 0 0 3px #0b1f2955;border-radius:2px}
+.music-card .track-disc{border-color:#d9be81;box-shadow:inset 0 0 0 4px #0e2533,0 0 0 4px #c7af6b13;background:radial-gradient(circle,#41694d,#152e37)}
+.now-playing{background-image:linear-gradient(110deg,#24433be8,#102634ef)}
+.event-card{border:1px solid #bc9f6766;background:radial-gradient(ellipse at 50% 20%,#294d4255,transparent 65%),linear-gradient(145deg,#0c2634eb,#0b1928f5);box-shadow:0 30px 90px #0008,inset 0 0 0 7px #c9af7510}
+.event-card:before{content:'';position:absolute;inset:0;border:35px solid transparent;border-image:var(--carved-frame) 40 / 42px / 0 stretch;pointer-events:none}.event-card:after{content:'';position:absolute;bottom:12px;left:15%;width:70%;height:48px;background:var(--cloud-scroll) center/contain no-repeat;opacity:.45;pointer-events:none}
+.event-orbit{background:var(--sword-seal) center/contain no-repeat;border:0;box-shadow:0 0 65px #c9ae7910;opacity:.4}.event-orbit:after{inset:15px;border-style:dashed;border-color:#c9ae7960;border-radius:50%;transform:none}.event-rune{position:relative;color:#ffdfa2;text-shadow:0 0 30px #e1bf6977}
+.dialog-emblem{border-color:#ceae7177;background:var(--sword-seal) center/contain no-repeat;color:transparent;box-shadow:0 0 30px #be9c4e20}
+.event-layer[data-kind=death] .event-card{background:radial-gradient(ellipse at top,#692e2a44,transparent 60%),linear-gradient(145deg,#251b25f2,#0c1422f5)}
+@media(prefers-reduced-motion:reduce){.event-orbit{animation:none!important}.journey-button:hover{transform:none}}

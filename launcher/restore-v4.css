@@ -1,0 +1,123 @@
+/* Ink landscape launcher layout for Beta v4. */
+.launcher-shell{grid-template-columns:minmax(0,65%) minmax(420px,35%)}
+.hero-pane{grid-template-rows:auto 1fr;user-select:none;-webkit-user-select:none}
+.hero-copy{padding-left:5.5vw;align-self:center}
+.hero-quote{left:6.7%;bottom:13px}
+.hero-quote p{font-size:22px;font-weight:600;letter-spacing:.1em}
+.hero-quote small{font-size:16px;margin-top:9px}
+.edition-pill{font-size:13px;padding:11px 16px;letter-spacing:.12em}
+.round-seal{width:72px;height:72px;font-size:45px}
+.brand-lockup strong{font-size:24px}
+.brand-lockup small{font-size:12px}
+.kicker{font-size:15px}
+.title-stack h1{font-size:clamp(120px,9.5vw,185px)}
+.english-title{font-size:16px}
+.vertical-verse{font-size:34px}
+.red-seal{font-size:23px}
+
+.control-pane{padding:0 40px 22px}
+.control-nav{height:98px;gap:48px}
+.control-nav button{font-size:18px}
+.window-controls button{font-size:19px}
+.status-card{margin-top:22px;min-height:225px;padding:28px 30px}
+.section-label{font-size:15px}
+.status-card h2{font-size:46px;margin:13px 0 15px}
+.health{font-size:17px;margin-bottom:17px}
+.health i{width:19px;height:19px;margin-right:10px}
+.status-card small{font-size:18px}
+.medallion-photo{width:113px;height:113px}
+.medallion span{font-size:22px}
+.update-card{margin-top:16px;min-height:143px;padding:22px 28px}
+.update-card strong{font-size:22px;margin:8px 0 5px}
+.update-card p{font-size:14px}
+.update-card button{font-size:24px;padding:17px 25px}
+.start-game{height:115px;margin-top:17px}
+.start-copy b{font-size:46px}
+.start-copy small{font-size:14px}
+.blossom-a{font-size:45px;left:20px;top:18px}
+.blossom-b{font-size:20px;left:69px;top:41px}
+.tool-grid{gap:14px;margin-top:16px}
+.tool-grid button{min-height:96px;padding:18px;gap:17px}
+.tool-icon{width:56px;height:56px;font-size:27px;flex-shrink:0}
+.tool-grid b{font-size:18px}
+.tool-grid small{font-size:13px}
+.news-card{margin-top:16px;padding:18px 28px}
+.model-card{margin-top:16px;padding:18px 28px;color:#e6dfd3}
+.model-card header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.model-card header b{color:#e9c777;font-size:20px}
+.model-card header span,.model-card p,.model-choice small{color:#9aabae;font-size:12px;line-height:1.5}
+.model-card p{margin:9px 0}
+.model-card #modelProgress:not(:empty){color:#76d4b3}
+.model-choices{display:grid;gap:8px;margin-top:12px}
+.model-choice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #d7b16a3a;border-radius:9px;background:#07131caa}
+.model-choice b,.model-choice small{display:block}
+.model-choice b{font-size:13px}
+.model-choice-actions,.model-actions{display:flex;gap:7px;flex-wrap:wrap}
+.model-card button{padding:7px 11px;border:1px solid #d7b16a88;border-radius:7px;background:#10222b;color:#efd69b;cursor:pointer}
+.model-card button:disabled{opacity:.42;cursor:default}
+.model-actions{margin-top:12px}
+.news-card header b{font-size:22px}
+.news-card header span{font-size:13px}
+.news-card li{grid-template-columns:120px 160px 1fr}
+.news-card time,.news-card li strong,.news-card li span{font-size:13px}
+.news-card li span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
+.update-confirm-card>p{margin-top:18px}
+
+.launcher-music{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 16px;border:1px solid #d7b16a4c;border-radius:9px;background:#09151ddd}
+.launcher-music>span{color:#e9c777;font-size:22px}
+.launcher-music>div{flex:1;min-width:0}
+.launcher-music small,.launcher-music b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.launcher-music small{color:#879895;font-size:10px}
+.launcher-music b{color:#e6dfd3;font-size:13px;margin-top:3px}
+.launcher-music button{width:32px;height:32px;border:1px solid #d7b16a66;border-radius:50%;background:#0b1720;color:#efd69b;cursor:pointer}
+.launcher-music button:disabled{opacity:.45;cursor:default}
+
+@media(max-width:1600px){
+  .control-pane{padding-inline:26px}
+  .control-nav{height:76px;gap:25px}
+  .control-nav button{font-size:14px}
+  .status-card{min-height:170px;padding:20px}
+  .status-card h2{font-size:34px}
+  .status-card small{font-size:14px}
+  .health{font-size:13px;margin-bottom:9px}
+  .medallion-photo{width:80px;height:80px}
+  .medallion span{font-size:16px}
+  .update-card{min-height:110px;padding:16px 20px}
+  .update-card strong{font-size:17px}
+  .update-card button{font-size:17px;padding:12px 16px}
+  .start-game{height:91px}
+  .start-copy b{font-size:36px}
+  .tool-grid button{min-height:76px;padding:12px}
+  .tool-icon{width:40px;height:40px;font-size:20px}
+  .tool-grid b{font-size:14px}
+  .tool-grid small{font-size:10px}
+  .news-card header b{font-size:17px}
+  .model-card header{display:block}
+  .model-card header b{font-size:16px}
+  .news-card header span{font-size:10px}
+  .news-card li{grid-template-columns:70px 120px 1fr}
+  .news-card time,.news-card li strong,.news-card li span{font-size:10px}
+}
+@media(max-width:1200px){
+  .launcher-shell{grid-template-columns:minmax(0,60%) minmax(390px,40%)}
+  .hero-copy{padding-left:2vw}
+  .title-stack h1{font-size:clamp(95px,9vw,130px)}
+  .round-seal{width:53px;height:53px;font-size:33px}
+  .brand-lockup strong{font-size:19px}
+  .brand-lockup small{font-size:9px}
+  .edition-pill{font-size:9px}
+  .vertical-verse{font-size:25px}
+  .hero-quote p{font-size:18px}
+  .hero-quote small{font-size:12px}
+}
+@media(max-width:980px){
+  .launcher-shell{grid-template-columns:1fr}
+  .control-pane{padding-inline:5vw}
+  .control-nav{gap:18px}
+}
+@media(max-height:760px){
+  .status-card{min-height:118px}
+  .start-game{height:77px}
+  .tool-grid button{min-height:64px}
+  .hero-quote{bottom:24px}
+}

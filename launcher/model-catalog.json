@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "id": "qwen3-8b-q4",
+      "label": "Qwen3 8B · Balanced Q4_K_M",
+      "fileName": "Qwen3-8B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf",
+      "sha256": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785",
+      "estimatedBytes": 5030000000,
+      "minimumRamGiB": 12,
+      "recommendedRamGiB": 16,
+      "contextSize": 8192,
+      "minimumLlamaBuild": 5000,
+      "source": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/blob/main/Qwen3-8B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3-14b-q4",
+      "label": "Qwen3 14B · Recommended Q4_K_M",
+      "fileName": "Qwen3-14B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/Qwen/Qwen3-14B-GGUF/resolve/main/Qwen3-14B-Q4_K_M.gguf",
+      "sha256": "500a8806e85ee9c83f3ae08420295592451379b4f8cf2d0f41c15dffeb6b81f0",
+      "estimatedBytes": 9000000000,
+      "minimumRamGiB": 20,
+      "recommendedRamGiB": 24,
+      "contextSize": 8192,
+      "minimumLlamaBuild": 5000,
+      "source": "https://huggingface.co/Qwen/Qwen3-14B-GGUF/blob/main/Qwen3-14B-Q4_K_M.gguf"
+    },
+    {
+      "id": "qwen3.8-27b-q4",
+      "label": "Qwen3.8 27B · Ultra Q4_K_M",
+      "fileName": "Qwen3.8-27B-Q4_K_M.gguf",
+      "url": "https://huggingface.co/ggml-org/Qwen3.8-27B-GGUF/resolve/main/Qwen3.8-27B-Q4_K_M.gguf",
+      "sha256": "c600de0300ae8a0eb3a6c0b8b5561b8b96f16bd2c863c2a66c42de29d391a747",
+      "estimatedBytes": 19000000000,
+      "minimumRamGiB": 32,
+      "recommendedRamGiB": 40,
+      "contextSize": 8192,
+      "minimumLlamaBuild": 10419,
+      "source": "https://huggingface.co/ggml-org/Qwen3.8-27B-GGUF/blob/main/Qwen3.8-27B-Q4_K_M.gguf"
+    }
+  ]
+}

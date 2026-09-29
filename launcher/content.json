@@ -1,0 +1,52 @@
+{
+  "brand": {
+    "chinese": "落仙 · 启程",
+    "english": "LUO XIAN · IMMORTAL JOURNEY"
+  },
+  "hero_image": "../game/assets/celestial-gate.png",
+  "medallion_image": "assets/medallion.webp",
+  "hero": {
+    "kicker": "GAME BETA III · 山海长歌",
+    "verse": "此世山河\n由你落笔",
+    "quote": "世界照常运行。你可以用嘴改变命运，也可能真正死在其中。",
+    "seal": "落仙"
+  },
+  "features": [
+    {
+      "subtitle": "修仙原画与动态开场",
+      "title": "山海长歌"
+    },
+    {
+      "subtitle": "对白与剧情独立呈现",
+      "title": "言语有声"
+    },
+    {
+      "subtitle": "持续保存人物、地点与因果",
+      "title": "此世长忆"
+    }
+  ],
+  "navigation": [
+    {
+      "label": "启程"
+    },
+    {
+      "label": "状态"
+    },
+    {
+      "label": "工具"
+    }
+  ],
+  "announcements": [
+    {
+      "date": "2026-09-29",
+      "detail": "修正开场线索与在场人物的关联；常见问话由世界状态直接作答，减少本地模型复读和云端请求；封面菜单下移。",
+      "title": "Beta v4.0.1 · 山河有答"
+    },
+    {
+      "date": "2026-09-25",
+      "detail": "独立窗口、天地设定、对白重构与未来补丁支持。",
+      "title": "Beta v4"
+    }
+  ],
+  "footer": "凡心所向 · 皆是仙途"
+}

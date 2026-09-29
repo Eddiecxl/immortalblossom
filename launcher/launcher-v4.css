@@ -1,0 +1,187 @@
+:root{
+  color-scheme:dark;
+  --ink:#050b11;--ink2:#09131b;--panel:#071018e8;--panel2:#0b1620df;
+  --gold:#d7b16a;--gold2:#f0d89e;--gold3:#8f6a2b;--line:#d7b16a55;
+  --red:#9d231f;--red2:#c83a30;--jade:#63d2a2;--text:#f3eee3;--muted:#8c999d;
+  --shadow:0 24px 70px #0008;--soft:0 0 34px #d7b16a20;
+}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--text);
+  font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+button{font:inherit;color:inherit}button:focus-visible{outline:2px solid #e9cb8b;outline-offset:2px}
+[hidden]{display:none!important}
+
+.launcher-bg{position:fixed;inset:0;overflow:hidden;background:#03080d}
+.launcher-photo{position:absolute;inset:-3%;background:
+  linear-gradient(90deg,transparent 0 53%,#061019bd 65%,#061019f5 78%),
+  url("./assets/hero.webp") center/cover no-repeat;
+  filter:saturate(1.08) contrast(1.08) brightness(.82);
+  transform:scale(1.045);animation:slowZoom 22s ease-in-out infinite alternate;will-change:transform}
+.photo-vignette{position:absolute;inset:0;background:
+  radial-gradient(circle at 39% 24%,#fff2c513,transparent 18%),
+  linear-gradient(180deg,#02070b05 0,#02070b18 48%,#02070bc4 100%),
+  linear-gradient(90deg,#02070b38 0,transparent 17%,transparent 54%,#02070be8 74%,#02070bf7)}
+.moon-aura{position:absolute;left:26%;top:-14%;width:44vw;height:44vw;border-radius:50%;
+  background:radial-gradient(circle,#fff7d82b 0,#d8e6ff16 36%,transparent 68%);filter:blur(16px);animation:moonPulse 8s ease-in-out infinite}
+.mist{position:absolute;left:-25%;width:160%;height:18%;filter:blur(30px);
+  background:linear-gradient(90deg,transparent,#e6eff51b,transparent);transform:skewX(-10deg);animation:mistDrift 34s linear infinite}
+.mist-one{bottom:5%}.mist-two{bottom:29%;opacity:.44;animation-duration:46s;animation-direction:reverse}.mist-three{top:7%;opacity:.22;animation-duration:56s}
+.film-grain{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;opacity:.13;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E")}
+.petal-field{position:absolute;inset:0;pointer-events:none}
+.petal{position:absolute;top:-20px;width:10px;height:7px;border-radius:90% 0 90% 0;
+  background:linear-gradient(135deg,#ffd8df,#df7382 60%,#a43e55);box-shadow:0 0 12px #ef839840;
+  opacity:.75;animation:petalFall var(--dur,12s) linear var(--delay,0s) infinite}
+
+.launcher-shell{position:relative;z-index:2;width:100%;height:100%;display:grid;grid-template-columns:minmax(650px,65%) minmax(420px,35%)}
+.hero-pane{position:relative;padding:24px 30px 20px;display:grid;grid-template-rows:auto 1fr auto auto;min-width:0}
+.hero-top{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.brand-lockup{display:flex;align-items:center;gap:13px;text-shadow:0 2px 18px #000}
+.round-seal{width:47px;height:47px;border:1px solid #d6b165;border-radius:50%;display:grid;place-items:center;
+  color:#f4d99c;font:30px/1 "KaiTi","STKaiti",serif;background:#08121acb;box-shadow:0 0 0 5px #d7b16a0b,0 0 26px #d7b16a22}
+.round-seal:before{content:"";position:absolute}
+.brand-lockup strong{display:block;font-size:19px;letter-spacing:.1em;font-family:"STKaiti","KaiTi",serif}
+.brand-lockup small{display:block;margin-top:3px;color:#c3b493;font:9px/1.2 Georgia,serif;letter-spacing:.24em}
+.edition-pill{padding:7px 11px;border:1px solid #d7b16a4d;border-radius:999px;background:#0610188c;color:#d8c69e;font-size:9px;letter-spacing:.18em;backdrop-filter:blur(10px)}
+
+.hero-copy{align-self:center;display:flex;align-items:flex-end;gap:27px;padding:3vh 4vw 1vh;max-width:760px}
+.title-stack{position:relative}.kicker{color:#d9bf87;font-size:11px;letter-spacing:.28em;margin:0 0 8px;text-shadow:0 2px 12px #000}
+.title-stack h1{margin:0;font-family:"STKaiti","KaiTi",serif;font-size:clamp(88px,8vw,142px);font-weight:500;line-height:.9;
+  letter-spacing:.07em;color:#f7e3b3;text-shadow:0 4px 18px #000,0 0 32px #d8ad5630;
+  background:linear-gradient(180deg,#fff0c8 0,#d6a85c 67%,#9f7335 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.red-seal{position:absolute;right:-28px;top:51%;padding:6px 5px;border:1px solid #f0937d;color:#ffe1d7;background:#a32623d9;font:16px "KaiTi",serif;box-shadow:0 6px 20px #0005}
+.english-title{margin:15px 0 0;color:#e7d6ae;font:11px Georgia,serif;letter-spacing:.23em}
+.vertical-verse{display:flex;gap:16px;padding-bottom:6px;font:26px/1.7 "KaiTi","STKaiti",serif;color:#f4e6c6;text-shadow:0 3px 16px #000}
+.vertical-verse span{writing-mode:vertical-rl;letter-spacing:.2em;border-left:1px solid #d7b16a55;padding-left:7px}
+
+.hero-quote{position:absolute;left:5.4%;bottom:206px;max-width:530px;display:grid;grid-template-columns:28px 1fr;gap:0 12px;align-items:center;
+  text-shadow:0 2px 13px #000}
+.hero-quote i{width:24px;height:1px;background:#d7b16a}.hero-quote p{margin:0;font:18px/1.5 "KaiTi",serif;color:#f4ead6}.hero-quote small{grid-column:2;color:#d2aa62;margin-top:5px}
+
+.feature-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 8px 12px}
+.feature-card{position:relative;height:112px;overflow:hidden;border:1px solid #d7b16a57;border-radius:8px;background:#07111a;box-shadow:0 12px 26px #0005;transition:.28s ease}
+.feature-card:hover{transform:translateY(-4px);border-color:#e4c77e;box-shadow:0 18px 36px #0007,0 0 26px #d7b16a18}
+.feature-photo{position:absolute;inset:0;background-image:linear-gradient(180deg,transparent 25%,#050b11e8 100%),url("./assets/feature-journey.webp");background-size:cover;transition:transform .5s ease}
+.f1 .feature-photo{background-position:20% 42%}.f2 .feature-photo{background-position:48% 35%;filter:hue-rotate(320deg) saturate(1.15)}
+.f3 .feature-photo{background-position:78% 44%;filter:saturate(.75) brightness(.9)}.f4 .feature-photo{background-position:55% 70%;filter:contrast(1.1)}
+.feature-card:hover .feature-photo{transform:scale(1.06)}
+.feature-card>div:last-child{position:absolute;left:12px;right:10px;bottom:10px}.feature-card strong{display:block;font:15px "KaiTi",serif;color:#f8ead0}
+.feature-card span{display:block;margin-top:3px;color:#b7c0be;font-size:9px}
+.hero-footer{display:flex;align-items:center;gap:11px;color:#bfa56c;letter-spacing:.19em;font-size:9px;padding:0 7px}
+.hero-footer .square-seal{border:1px solid #b88939;padding:5px 4px;color:#dcb86a;font:10px "KaiTi",serif}.hero-footer em{margin-left:auto;color:#7f8d8f;font-style:normal;letter-spacing:.07em}
+
+.control-pane{min-width:0;height:100%;padding:0 26px 18px;background:linear-gradient(155deg,#061018f2,#040a0ff8 70%);
+  border-left:1px solid #d7b16a28;box-shadow:-30px 0 90px #0006;overflow:auto}
+.control-pane::-webkit-scrollbar{width:5px}.control-pane::-webkit-scrollbar-thumb{background:#d7b16a33;border-radius:6px}
+.control-nav{height:66px;display:flex;align-items:center;gap:27px;border-bottom:1px solid #d7b16a1d;position:sticky;top:0;z-index:5;
+  background:#061018e8;backdrop-filter:blur(16px)}
+.control-nav button{height:100%;border:0;background:none;color:#aab2b1;font-size:12px;cursor:pointer;position:relative;padding:0 2px}
+.control-nav button:hover,.control-nav button.active{color:#e9cd91}.control-nav button.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:#d7b16a;box-shadow:0 0 8px #d7b16a}
+.window-spacer{margin-left:auto}
+.window-controls{display:flex;align-items:center;height:100%;gap:2px}
+.window-controls button{width:34px;height:32px;padding:0;border:0;border-radius:5px;background:transparent;color:#aeb8b5;font-size:15px;cursor:pointer;transition:.18s}
+.window-controls button:hover{background:#d8b36c12;color:#f0d89e;transform:none}
+.window-controls button:last-child:hover{background:#9e2722;color:#fff}
+
+.ornate-card{position:relative;border:1px solid #d7b16a4c;border-radius:12px;background:linear-gradient(145deg,#09151ddd,#061018d4);
+  box-shadow:0 16px 45px #00035,inset 0 0 0 1px #fff2;overflow:hidden}
+.ornate-card:before,.ornate-card:after{content:"";position:absolute;width:26px;height:26px;pointer-events:none;border-color:#c9a454}
+.ornate-card:before{left:7px;top:7px;border-left:1px solid;border-top:1px solid}.ornate-card:after{right:7px;bottom:7px;border-right:1px solid;border-bottom:1px solid}
+.status-card{margin-top:15px;padding:19px 20px;display:flex;justify-content:space-between;align-items:center;min-height:145px}
+.section-label{color:#9ca8a5;font-size:10px;letter-spacing:.08em}.status-card h2{font-size:31px;font-weight:500;margin:6px 0 8px}
+.health{margin:0 0 8px;font-size:12px}.health i{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:7px;vertical-align:-2px}
+.health.good{color:#68daa8}.health.good i{background:#4eca92;box-shadow:0 0 14px #54dc9a77}.health.bad{color:#e88978}.health.bad i{background:#c65143;box-shadow:0 0 14px #e05b4c77}
+.status-card small{color:#84928f}.medallion{display:flex;align-items:center;gap:12px}.medallion-photo{width:76px;height:76px;border-radius:50%;
+  border:2px solid #d5ae61;background:url("./assets/medallion.webp") center/cover no-repeat;box-shadow:0 0 0 5px #d7b16a0b,0 0 28px #d7b16a20}
+.medallion span{font:15px/1.6 "KaiTi",serif;color:#e8ce93;text-align:right}
+
+.update-card{margin-top:11px;padding:16px 19px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.update-card strong{display:block;margin:4px 0 3px;color:#6cd9a9;font-size:14px}.update-card p{margin:0;color:#869491;font-size:10px;line-height:1.5}
+.update-card button{border:1px solid #d7b16a66;background:#0b1720;padding:10px 17px;border-radius:8px;color:#efd69b;cursor:pointer;transition:.22s}
+.update-card button:hover{border-color:#e7ca84;background:#d7b16a11;transform:translateY(-1px)}
+
+.start-game{width:100%;height:92px;margin-top:12px;border:2px solid #e08b69;border-radius:10px;cursor:pointer;position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:18px;padding:0 24px;background:
+  radial-gradient(circle at 28% 38%,#e6504530,transparent 28%),
+  linear-gradient(110deg,#8f211e,#be332b 55%,#821b1a);
+  box-shadow:0 14px 35px #871f1f45,inset 0 0 0 2px #f8d39a18,inset 0 -10px 30px #4c08092b;transition:.28s}
+.start-game:before{content:"";position:absolute;inset:5px;border:1px solid #f4c98b55;border-radius:7px;pointer-events:none}
+.start-game:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,#fff3 48%,transparent);transform:translateX(-115%);animation:buttonSweep 4.5s ease-in-out infinite}
+.start-game:hover{transform:translateY(-3px);filter:brightness(1.08);box-shadow:0 19px 46px #871f1f5a,0 0 28px #d3514130}
+.start-copy{margin:auto;text-align:center;z-index:1}.start-copy b{display:block;font:34px/1 "KaiTi","STKaiti",serif;letter-spacing:.12em;color:#fff0d0;text-shadow:0 2px 14px #5c0c0c}
+.start-copy small{display:block;margin-top:8px;color:#f0bd91;letter-spacing:.32em;font:9px Georgia,serif}.start-game>i{font-style:normal;font-size:40px;color:#f3d18c;z-index:1}
+.blossom{position:absolute;color:#f0a0ad;text-shadow:0 0 13px #f59aaa;z-index:1}.blossom-a{left:14px;top:8px;font-size:27px}.blossom-b{left:45px;top:25px;font-size:12px;color:#efc6a1}
+
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.tool-grid button{min-height:75px;border:1px solid #d7b16a2d;border-radius:9px;background:linear-gradient(145deg,#0b1720d9,#071018d9);
+  display:flex;align-items:center;gap:12px;padding:12px;text-align:left;cursor:pointer;transition:.22s}
+.tool-grid button:hover{border-color:#d7b16a77;background:#d7b16a0a;transform:translateY(-2px);box-shadow:0 11px 25px #0004}
+.tool-icon{width:38px;height:38px;border:1px solid #d7b16a66;border-radius:50%;display:grid;place-items:center;color:#e9c777;font:17px "KaiTi",serif;background:#d7b16a08;box-shadow:inset 0 0 15px #d7b16a0a}
+.tool-grid b{display:block;font-size:12px;font-weight:600}.tool-grid small{display:block;margin-top:3px;color:#7f8d8b;font-size:9px}
+
+.news-card{margin-top:10px;padding:15px 19px}.news-card header{display:flex;justify-content:space-between;align-items:center;padding-bottom:9px;border-bottom:1px solid #d7b16a1b}
+.news-card header b{color:#e3c175;font:15px "KaiTi",serif}.news-card header span{color:#6f7f7d;font-size:9px;letter-spacing:.1em}
+.news-card ul{list-style:none;margin:0;padding:0}.news-card li{display:grid;grid-template-columns:78px 105px 1fr;gap:8px;padding:10px 0;border-bottom:1px solid #ffffff0a;align-items:center}
+.news-card li:last-child{border-bottom:0}.news-card time{color:#74837f;font-size:9px}.news-card li strong{font-size:10px;color:#e6dfd3}.news-card li span{font-size:9px;color:#7f8b89;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.control-footer{display:flex;justify-content:space-between;align-items:center;padding:14px 3px 0;color:#c19f5e}
+.control-footer span{font:15px "KaiTi",serif;letter-spacing:.18em}.control-footer small{color:#5f706e;font-size:8px}
+
+.toast{position:fixed;z-index:40;left:50%;bottom:20px;transform:translateX(-50%);padding:10px 16px;border:1px solid #d7b16a66;border-radius:8px;
+  background:#07131bed;box-shadow:var(--shadow);font-size:11px;animation:toastIn .23s ease both}
+
+@keyframes slowZoom{from{transform:scale(1.045) translate(0,0)}to{transform:scale(1.085) translate(-1.2%,.6%)}}
+@keyframes moonPulse{50%{opacity:.56;transform:scale(1.05)}}
+@keyframes mistDrift{from{transform:translateX(-12%) skewX(-10deg)}to{transform:translateX(17%) skewX(-10deg)}}
+@keyframes petalFall{0%{transform:translate3d(0,-8vh,0) rotate(0);opacity:0}10%{opacity:.76}55%{transform:translate3d(var(--drift,70px),54vh,0) rotate(260deg)}100%{transform:translate3d(calc(var(--drift,70px)*-.35),112vh,0) rotate(540deg);opacity:0}}
+@keyframes buttonSweep{0%,62%{transform:translateX(-115%)}86%,100%{transform:translateX(115%)}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+@media(max-width:1200px){
+  .launcher-shell{grid-template-columns:minmax(560px,62%) minmax(390px,38%)}.hero-copy{padding-inline:2vw}.feature-card{height:96px}.control-pane{padding-inline:20px}
+}
+@media(max-width:980px){
+  .launcher-shell{grid-template-columns:1fr}.hero-pane{display:none}.control-pane{border-left:0;padding:0 5vw 20px;background:
+    linear-gradient(180deg,#061018b8,#061018f5),url("./assets/hero.webp") center/cover no-repeat}.control-pane:before{content:"落仙";display:block;padding-top:20px;font:54px "KaiTi",serif;color:#f1d79e;text-shadow:0 4px 20px #000}
+}
+@media(max-height:760px){.status-card{min-height:118px;padding-block:13px}.start-game{height:77px}.tool-grid button{min-height:64px}.news-card li{padding:7px 0}.feature-gallery{display:none}.hero-quote{bottom:58px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.mist,.moon-aura,.petal-field{display:none}}
+
+
+/* Launcher 7.2 · player-confirmed update flow */
+.update-confirm-layer{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:#02070bd9;backdrop-filter:blur(13px);animation:updateFade .2s ease}
+.update-confirm-layer[hidden]{display:none!important}
+.update-confirm-card{position:relative;width:min(610px,calc(100vw - 32px));padding:24px 25px 20px;border:1px solid #d7b16a80;border-radius:16px;background:
+linear-gradient(150deg,#0a151df9,#050b10fc 62%,#0b110ff8);box-shadow:0 34px 110px #000d,0 0 75px #d7b16a1c,inset 0 0 0 1px #fff2;overflow:hidden;animation:updateCardIn .3s cubic-bezier(.2,.78,.2,1)}
+.update-confirm-card:before{content:"";position:absolute;inset:7px;border:1px solid #e3c26b17;border-radius:11px;pointer-events:none}
+.update-confirm-glow{position:absolute;left:50%;top:-115px;width:360px;height:240px;transform:translateX(-50%);background:radial-gradient(ellipse,#f2d07128,transparent 64%);filter:blur(3px);pointer-events:none;animation:updateGlow 3s ease-in-out infinite}
+.update-confirm-card header{position:relative;display:flex;align-items:center;gap:15px;padding-bottom:15px;border-bottom:1px solid #d7b16a2b}
+.update-rune{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;border:1px solid #e1bf6480;background:radial-gradient(circle,#624616,#211707 70%);box-shadow:0 0 26px #d7ae4a35,inset 0 0 18px #f6d37616;color:#f2d789;font:24px "KaiTi",serif;text-shadow:0 0 12px #ffd86c}
+.update-confirm-card header small{display:block;color:#a89157;font-size:8px;letter-spacing:.2em}
+.update-confirm-card h2{margin:4px 0 0;color:#f2dfb0;font:27px "KaiTi",serif}
+.update-version-route{display:grid;grid-template-columns:1fr 46px 1fr;align-items:center;margin:20px 0 15px;padding:13px;border:1px solid #d7b16a2f;border-radius:10px;background:#d7b16a07}
+.update-version-route span{display:grid;gap:4px;text-align:center}.update-version-route small{color:#758582;font-size:8px}.update-version-route b{color:#efe1bf;font-size:18px;font-weight:600}
+.update-version-route>i{text-align:center;font-style:normal;color:#dcbf70;font-size:24px;text-shadow:0 0 12px #dcbf70}
+.update-confirm-card>p{margin:0;color:#9da9a6;font-size:10px;line-height:1.75;white-space:pre-line}
+.update-progress-wrap{margin-top:16px;padding:12px 13px;border:1px solid #6bb89125;border-radius:8px;background:#2e8b7010}
+.update-progress-track{height:5px;border-radius:999px;background:#17251f;overflow:hidden;box-shadow:inset 0 0 5px #0008}
+.update-progress-track i{display:block;width:16%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7f6225,#e5c76f,#fff0ae);box-shadow:0 0 14px #ebce7a;animation:updateProgress 1.3s ease-in-out infinite}
+.update-progress-wrap span{display:block;margin-top:8px;color:#c2b27f;font-size:9px}
+.update-confirm-card footer{display:flex;justify-content:flex-end;gap:9px;margin-top:18px;position:relative;z-index:2}
+.update-confirm-card footer button{min-width:118px;padding:10px 15px;border-radius:8px;cursor:pointer;transition:.2s}
+.update-later{border:1px solid #6e7d7852;background:#081118;color:#91a09d}.update-later:hover{border-color:#9dad9f;color:#cad4d0}
+.update-confirm{position:relative;overflow:hidden;border:1px solid #e6c970;background:linear-gradient(110deg,#725016,#af7b21,#755015);color:#fff0bd;box-shadow:0 8px 24px #0006,0 0 22px #d5aa3c35;font-weight:700}
+.update-confirm:before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent,#fff7c585,transparent);transform:translateX(-120%);animation:updateSweep 3.2s ease-in-out infinite}
+.update-confirm span,.update-confirm i{position:relative;z-index:1}.update-confirm i{font-style:normal;margin-left:7px}
+.update-confirm:hover{transform:translateY(-2px);box-shadow:0 11px 30px #0007,0 0 30px #e0bb5150}
+.update-confirm-card button:disabled{cursor:default;opacity:.55;transform:none!important}
+body.update-lock .control-pane,body.update-lock .hero-pane{pointer-events:none;user-select:none;filter:saturate(.9)}
+@keyframes updateFade{from{opacity:0}to{opacity:1}}
+@keyframes updateCardIn{from{opacity:0;transform:translateY(12px) scale(.975);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+@keyframes updateGlow{0%,100%{opacity:.38;transform:translateX(-50%) scale(.95)}50%{opacity:.85;transform:translateX(-50%) scale(1.08)}}
+@keyframes updateProgress{0%{transform:translateX(-120%);width:18%}55%{width:42%}100%{transform:translateX(620%);width:18%}}
+@keyframes updateSweep{0%,64%{transform:translateX(-120%)}90%,100%{transform:translateX(120%)}}
+
+/* BETA V1 · ordinary-PC rendering profile */
+.low-spec-ui .mist,.low-spec-ui .petal-field,.low-spec-ui .film-grain,.low-spec-ui .moon-aura{display:none!important}
+.low-spec-ui .launcher-photo,.low-spec-ui .photo-vignette{animation:none!important}
+.low-spec-ui .ornate-card{backdrop-filter:none!important}

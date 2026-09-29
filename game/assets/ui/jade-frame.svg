@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
+<defs><linearGradient id="gold" x2="1" y2="1"><stop stop-color="#f9e5ab"/><stop offset=".45" stop-color="#a7864d"/><stop offset=".72" stop-color="#dbc187"/><stop offset="1" stop-color="#6c5837"/></linearGradient><g id="corner" stroke="url(#gold)" stroke-width="1"><path d="M2 40V20L20 2H40M7 40V23L23 7H40M13 40V28L28 13H40"/><path d="M3 30H16V17H30V3M9 26V10H26M16 37C25 37 34 30 30 23C26 17 19 23 23 27C25 29 29 27 28 25M37 16C37 25 30 34 23 30"/><path d="M11 11L17 5L23 11L17 17Z" fill="#c0a76c"/><path d="M5 18L11 12L17 18L11 24Z" fill="#527e72"/><path d="M31 12L34 9L37 12L34 15Z" fill="#c0a76c"/></g></defs>
+<path d="M40 2H120M158 40V120M120 158H40M2 120V40" stroke="#b69a61" stroke-opacity=".7"/><path d="M40 7H120M153 40V120M120 153H40M7 120V40" stroke="#748b7c" stroke-opacity=".45"/>
+<use href="#corner"/><use href="#corner" transform="translate(160) rotate(90)"/><use href="#corner" transform="translate(160 160) rotate(180)"/><use href="#corner" transform="translate(0 160) rotate(270)"/>
+</svg>

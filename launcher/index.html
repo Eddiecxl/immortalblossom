@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070d14">
+  <title>落仙 · 启程</title>
+  <link rel="stylesheet" href="./launcher-v4.css">
+  <link rel="stylesheet" href="./restore-v4.css">
+</head>
+<body>
+  <div class="launcher-bg" aria-hidden="true">
+    <div class="launcher-photo" id="launcherPhoto"></div>
+    <div class="photo-vignette"></div>
+    <div class="moon-aura"></div>
+    <div class="mist mist-one"></div>
+    <div class="mist mist-two"></div>
+    <div class="mist mist-three"></div>
+    <div class="petal-field" id="petals"></div>
+    <div class="film-grain"></div>
+  </div>
+
+  <main class="launcher-shell">
+    <section class="hero-pane">
+      <header class="hero-top">
+        <div class="brand-lockup">
+          <div class="round-seal">仙</div>
+          <div><strong>落仙 · 启程</strong><small>LUO XIAN · IMMORTAL JOURNEY</small></div>
+        </div>
+        <span class="edition-pill">一念落笔 · 万象成仙</span>
+      </header>
+
+      <section class="hero-copy">
+        <div class="title-stack">
+          <p class="kicker">一念落笔 · 万象成仙</p>
+          <h1>落仙</h1>
+          <div class="red-seal">启程</div>
+          <p class="english-title">LUO XIAN · IMMORTAL JOURNEY</p>
+        </div>
+        <div class="vertical-verse"><span>此世山河</span><span>由你落笔</span></div>
+      </section>
+
+      <div class="hero-quote">
+        <i></i>
+        <p>不是结束，而是另一段旅程的开始。</p>
+        <small>—— 落仙</small>
+      </div>
+
+    </section>
+
+    <section class="control-pane">
+      <header class="control-nav">
+        <button class="active" data-scroll="statusCard">首页</button>
+        <button data-scroll="tools">工具</button>
+        <button data-scroll="newsPanel">更新日志</button>
+        <button id="aiHintButton">AI 设置</button>
+        <button data-scroll="modelPanel">本地模型</button>
+        <span class="window-spacer"></span>
+        <div class="window-controls" aria-label="窗口控制">
+          <button type="button" data-native-action="minimize" title="最小化">—</button>
+          <button type="button" data-native-action="maximize" title="最大化">□</button>
+          <button type="button" data-native-action="close" title="关闭">×</button>
+        </div>
+      </header>
+
+      <section class="status-card ornate-card" id="statusCard">
+        <div>
+          <span class="section-label">当前版本</span>
+          <h2 id="gameVersion">Game Beta v4</h2>
+          <p class="health good" id="healthText"><i></i>正在检查游戏完整性</p>
+        </div>
+        <div class="medallion">
+          <div class="medallion-photo"></div>
+          <span>踏入山河<br>再续前缘</span>
+        </div>
+      </section>
+
+      <section class="update-card ornate-card">
+        <div>
+          <span class="section-label">更新状态</span>
+          <strong id="updateTitle">游戏已就绪</strong>
+          <p id="updateText">一念落笔，墨起因果。山河、人物与此世记忆，随你前行。</p>
+        </div>
+        <button id="checkButton">检查更新</button>
+      </section>
+
+      <button class="start-game" id="startButton">
+        <span class="blossom blossom-a" aria-hidden="true">✿</span><span class="blossom blossom-b" aria-hidden="true">✦</span>
+        <span class="start-copy"><b>开始游戏</b><small>START JOURNEY</small></span>
+        <i>›</i>
+      </button>
+
+      <section class="tool-grid" id="tools">
+        <button id="updatesButton"><span class="tool-icon">▱</span><div><b>打开 Patches</b><small>查看与安装未来更新</small></div></button>
+        <button id="repairButton"><span class="tool-icon">◇</span><div><b>修复游戏</b><small>检查并恢复游戏文件</small></div></button>
+        <button id="saveButton"><span class="tool-icon">印</span><div><b>打开存档目录</b><small>查看本地旅程与记忆</small></div></button>
+        <button id="gameFolderHint"><span class="tool-icon">灵</span><div><b>AI 与游戏核心</b><small>叙事连贯 · 因果长忆</small></div></button>
+      </section>
+
+      <section class="model-card ornate-card" id="modelPanel" aria-labelledby="modelHeading">
+        <header><b id="modelHeading">本地 AI 模型</b><span id="modelHardware">正在检测电脑配置…</span></header>
+        <p id="modelCurrent">正在读取已选模型…</p>
+        <p id="modelProgress" role="status" aria-live="polite"></p>
+        <div id="modelChoices" class="model-choices"></div>
+        <div class="model-actions">
+          <button type="button" id="modelCustomButton">使用自选 GGUF</button>
+          <button type="button" id="modelBundledButton">恢复随包模型</button>
+          <button type="button" id="modelRefreshButton">刷新状态</button>
+        </div>
+      </section>
+
+      <section class="news-card ornate-card" id="newsPanel">
+        <header><b>更新公告</b><span>山河新事 · 2026-09-29</span></header>
+        <ul>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · v4 完整版</strong><span>当前文件夹和完整包已统一到 v4；修复旧 SQLite 存档造成的 Logo 载入错误，旧存档保持原样。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 回合优化</strong><span>最近回响显示摘要；说话与动作分离，重复台词修正，回合处理与短冷却更清楚。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 山河进程</strong><span>开局即有事件；每回合世界继续运行，冷场会形成真实传闻。言灵创造的破境丹可入囊、服用并提升实际境界。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 本地存档</strong><span>已增加每个旅程的 SQLite 数据库与逐回合续玩检查点；旧浏览器存档首次运行时迁入。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>启动器 · 本地 AI</strong><span>新增电脑配置检测、模型下载与切换入口；本地 AI 优先，云端服务可选。模型文件不包含在补丁内。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 开场</strong><span>Logo 后改用新循环影片；主菜单按钮位于右侧并带入场动画。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 世界引擎</strong><span>凡人开局；NPC、势力、任务、事件与传闻由持久世界状态推进。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>游戏 · 存档</strong><span>存档格式升级前保留原始记录；旧格式 SQLite 数据库不会被新版读取过程改写。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>启动器 · 界面</strong><span>恢复水墨山河界面；今后启动器更新内容也在这里逐项公告。</span></li>
+          <li><time datetime="2026-09-29">09-29</time><strong>更新 · 补丁</strong><span>后续把对应的 .lxpatch 放入 Patches，点击检查更新即可安装。</span></li>
+        </ul>
+      </section>
+
+      <section class="launcher-music" aria-label="音乐播放器"><span aria-hidden="true">♫</span><div><small>山海乐章 · ORIGINAL SCORE</small><b id="launcherTrack">点击播放，聆听山河</b></div><button id="launcherMusicToggle" aria-label="播放音乐" title="播放 / 暂停">▶</button><button id="launcherMusicNext" aria-label="下一首" title="下一首">↠</button></section>
+
+      <footer class="control-footer">
+        <span>凡心所向 · 皆是仙途</span>
+        <small>游戏与启动器更新详见公告</small>
+      </footer>
+    </section>
+  </main>
+
+  <div class="update-confirm-layer" id="updateConfirmLayer" hidden>
+    <section class="update-confirm-card" role="dialog" aria-modal="true" aria-labelledby="updateConfirmTitle">
+      <div class="update-confirm-glow" aria-hidden="true"></div>
+      <header>
+        <span class="update-rune">更</span>
+        <div>
+          <small>LUOXIAN UPDATE · VERIFIED PATCH</small>
+          <h2 id="updateConfirmTitle">发现可用更新</h2>
+        </div>
+      </header>
+
+      <p id="updateConfirmText">已检测到可安装补丁。确认后才会开始安装；完成后会自动关闭并重新打开启动器。更新内容请查看公告。</p>
+
+      <div class="update-progress-wrap" id="updateProgressWrap" hidden>
+        <div class="update-progress-track"><i id="updateProgressBar"></i></div>
+        <span id="updateProgressText">准备更新…</span>
+      </div>
+
+      <footer>
+        <button type="button" class="update-later" id="updateLaterButton">稍后再说</button>
+        <button type="button" class="update-confirm" id="updateConfirmButton"><span>确认更新</span><i>✦</i></button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="./launcher-v4.js"></script>
+  <script type="module" src="./v4-audio.js"></script>
+</body>
+</html>
+
+
