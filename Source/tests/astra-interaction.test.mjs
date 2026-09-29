@@ -60,3 +60,16 @@ test('direct dialogue commits without a cloud or local model request', async () 
   assert.equal(result.turn.provider, 'engine');
   assert.ok(result.blocks.some(block => block.type === 'dlg' && block.name === npc.name));
 });
+
+test('an NPC explains only a rumor they know, without reading Engine risk numbers aloud', () => {
+  const world = createGameState('顾长生', 'ai', () => 'known-rumor').astraWorld;
+  const npc = world.characters['npc:lin-xiaoman'];
+  npc.locationId = world.player.locationId;
+  world.rumors.push({ id: 'rumor:road', locationId: world.player.locationId,
+    knownBy: [npc.id], summary: '东岭关道路危险程度为65/100。' });
+  const answer = resolveAstraInteraction(world, '发生什么了', []);
+  assert.match(answer.blocks[0].text, /东岭关/);
+  assert.doesNotMatch(answer.blocks[0].text, /65\/100/);
+  world.rumors[0].knownBy = [];
+  assert.doesNotMatch(resolveAstraInteraction(world, '发生什么了', []).blocks[0].text, /东岭关/);
+});

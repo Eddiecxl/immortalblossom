@@ -34,15 +34,19 @@ export function resolveAstraInteraction(world, rawSpeech, recentTurns = []) {
     ['available', 'active', 'mutated'].includes(quest.state)
     && quest.targetLocationId === world.player.locationId
     && (!quest.giverId || quest.giverId === npc.id));
-  const publicEvent = [...(world.history || [])].reverse().find(event => event.playerWitnessed
+  const knownRumor = [...(world.rumors || [])].reverse().find(rumor => rumor.locationId === world.player.locationId
+    && (rumor.knownBy || []).includes(npc.id) && rumor.summary);
+  const knownEvent = [...(world.history || [])].reverse().find(event => (event.actors || []).includes(npc.id)
     && event.locationId === world.player.locationId
     && !['player_speech', 'opening_cue', 'scene_director'].includes(event.type)
     && event.summary);
+  const knownSituation = String(knownRumor?.summary || knownEvent?.summary || '')
+    .replace(/危险程度为\d+\/100/gu, '路上有险');
   const text = identity ? `我是${npc.name}，在此料理手头的事。你找我有什么事？`
     : healerQuestion ? `你找的是谁？先说清楚，我才能帮你打听。`
       : offer ? (localQuest ? `多谢。眼下${localQuest.title}还没了结；先把这件事问清，再决定如何动手。`
         : '多谢。先听我把眼前的情况说清楚，我们再决定从哪里着手。')
-        : eventQuestion ? (publicEvent ? `${publicEvent.summary}你若想弄清缘由，可以再问我。`
+        : eventQuestion ? (knownSituation ? `${knownSituation}你若想弄清缘由，可以再问我。`
           : '我也只看见眼前这些动静；要弄清缘由，还得继续打听。')
           : '我在。你想问什么？';
   return { targetId: npc.id, blocks: [{ type: 'dlg', name: npc.name, text }] };
