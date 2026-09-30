@@ -22,6 +22,8 @@
 .status-card{margin-top:22px;min-height:225px;padding:28px 30px}
 .section-label{font-size:15px}
 .status-card h2{font-size:46px;margin:13px 0 15px}
+.release-number{font-size:20px}
+.release-success{font-size:18px;padding:16px 20px}
 .health{font-size:17px;margin-bottom:17px}
 .health i{width:19px;height:19px;margin-right:10px}
 .status-card small{font-size:18px}

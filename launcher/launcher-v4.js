@@ -6,6 +6,7 @@ let snoozedUpdateKey = '';
 let installingUpdate = false;
 let latestUpdateState = null;
 let modelStatus = null;
+const pendingVersionKey = 'luoxian_pending_update_version';
 const lowSpecUI = Number(navigator.hardwareConcurrency || 8) <= 8 || (Number(navigator.deviceMemory || 0) > 0 && Number(navigator.deviceMemory || 0) <= 8);
 if (lowSpecUI) document.documentElement.classList.add('low-spec-ui');
 
@@ -20,6 +21,7 @@ function formatGiB(bytes) { return (Number(bytes || 0) / 1073741824).toFixed(1) 
 
 function renderModelStatus(status) {
   modelStatus = status;
+  try { localStorage.setItem('luoxian_active_local_model', status.active || ''); } catch (_) {}
   const hardware = status.hardware || {};
   $('modelHardware').textContent = `${hardware.totalRamGiB ?? '?'} GiB RAM（可用 ${hardware.availableRamGiB ?? '?'}）· ${hardware.cpu || 'CPU 未识别'} · GPU ${hardware.gpu || '未知'} / ${hardware.vramGiB ?? '?'} GiB · ${hardware.freeDiskGiB ?? '?'} GiB 磁盘`;
   const active = (status.models || []).find(model => model.fileName === status.active);
@@ -175,10 +177,12 @@ async function applyConfirmedUpdate() {
   $('updateText').textContent = '补丁已由玩家确认，正在交给安全更新器处理。';
 
   try {
+    try { localStorage.setItem(pendingVersionKey, latestUpdateState.target_version); } catch (_) {}
     const result = await window.nativeAction('apply-patches',{name:latestUpdateState?.patch_ids?.[0]});
     result.applied = result.applied || ['pending-restart'];
     const applied = Array.isArray(result.applied) ? result.applied : [];
     if (!applied.length) {
+      try { localStorage.removeItem(pendingVersionKey); } catch (_) {}
       installingUpdate = false;
       document.body.classList.remove('update-lock');
       $('updateConfirmButton').disabled = false;
@@ -192,6 +196,7 @@ async function applyConfirmedUpdate() {
     $('updateConfirmTitle').textContent = '更新完成 · 正在重启';
     $('updateConfirmButton').querySelector('span').textContent = '正在重启';
   } catch (error) {
+    try { localStorage.removeItem(pendingVersionKey); } catch (_) {}
     installingUpdate = false;
     document.body.classList.remove('update-lock');
     $('updateLaterButton').hidden = false;
@@ -207,15 +212,26 @@ async function refresh() {
   try {
     const status = await api('/api/status');
     let gameDisplayVersion = 'Game Beta v4';
+    let installedVersion = '';
     try {
       const response = await fetch('/game/version.json', { cache: 'no-store' });
       if (response.ok) {
         const gameVersion = await response.json();
         if (/^Game Beta v4(?:\.\d+\.\d+)?$/.test(gameVersion.display_version || '')) gameDisplayVersion = gameVersion.display_version;
+        if (/^4\.\d+\.\d+$/.test(gameVersion.version || '')) installedVersion = gameVersion.version;
       }
     } catch (_) { /* Keep the bundled display version if metadata cannot be read. */ }
     $('gameVersion').textContent = gameDisplayVersion;
+    $('releaseVersion').textContent = installedVersion ? `当前安装 · v${installedVersion}` : '暂时无法读取安装版本';
+    $('launcherRelease').textContent = installedVersion ? `GAME · v${installedVersion}` : '落仙 · 启程';
     const bad = Array.isArray(status.bad_files) ? status.bad_files.length : 0;
+    let pendingVersion = '';
+    try { pendingVersion = localStorage.getItem(pendingVersionKey) || ''; } catch (_) {}
+    if (status.healthy && installedVersion && pendingVersion === installedVersion) {
+      $('updateSuccess').textContent = `更新成功 · 当前版本 v${installedVersion}，游戏文件已校验完整。`;
+      $('updateSuccess').hidden = false;
+      try { localStorage.removeItem(pendingVersionKey); } catch (_) {}
+    }
     $('healthText').innerHTML = status.healthy
       ? '<i></i>游戏文件完整'
       : `<i></i>发现 ${bad} 个文件需要修复`;

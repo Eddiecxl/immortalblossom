@@ -1,6 +1,6 @@
 # Game Beta v4 continuation
 
-Original full ZIP: `Luoxian-Beta-v4-Full.zip`, root version `4.0.0`. Working release folder is now `4.0.2`; direct 4.0.0-to-4.0.2 patch belongs in `Luoxian-v4.0.2-Patches`. Players on 4.0.0 must not need to install 4.0.1 first. Player-facing display remains `Game Beta v4`. Old v3.4 patches are not v4 inputs. Read `docs/ENGINE_CONTRACT.md` and `AGENTS.md` before future engine changes.
+Original full ZIP: `Luoxian-Beta-v4-Full.zip`, root version `4.0.0`. Working release folder is now `4.0.3`; direct 4.0.0-to-4.0.3 and 4.0.2-to-4.0.3 patches belong in `Luoxian-v4.0.3-Patches`. Player-facing Launcher reads the exact installed version from `game/version.json` and confirms a successful patch after health validation. Old v3.4 patches are not v4 inputs. Read `docs/ENGINE_CONTRACT.md` and `AGENTS.md` before future engine changes.
 
 Implemented systems: Astra persistent world Engine, scheduler, context compiler, validator, quest anchors, per-turn story progression and SQLite checkpoints; recent echoes summaries, speech/action separation, bounded cooldown, local-first AI routing, model manager, MP4 title loop, Launcher news and native patch updater.
 

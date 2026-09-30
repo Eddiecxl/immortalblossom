@@ -55,6 +55,19 @@ test('context includes only secrets and rumors known by an eligible local speake
   assert.equal(JSON.stringify(packet).includes('宗主藏有天命玉玺'), false);
 });
 
+test('present NPC context retains identity and occupation across different world roles', () => {
+  const w = world();
+  w.characters.lin.role = 'independent guard';
+  w.characters.lin.occupation = 'guard';
+  w.characters.lin.factionId = 'faction:free';
+  w.rumors[0].text = '一位医者正在寻找帮手';
+  const packet = compileAstraContext({ astraWorld: w }, '林小满，你是谁？', []);
+  assert.equal(packet.presentNpcs[0].role, 'independent guard');
+  assert.equal(packet.presentNpcs[0].occupation, 'guard');
+  assert.equal(packet.presentNpcs[0].factionId, 'faction:free');
+  assert.equal(packet.presentNpcs[0].name, '林小满');
+});
+
 test('old matching local history and NPC memory survive the recent-context window', () => {
   const w = world();
   w.history.push({ id: 'old-gift', locationId: 'market', summary: '林小满交给我一枚保命符', playerWitnessed: true });
@@ -135,6 +148,21 @@ test('substantial exact repetition from recent narration is rejected', () => {
   const result = validateAstraNarration(w, [{ type: 'narr', text: repeated }], packet);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(x => x.code === 'repetition'));
+});
+
+test('narration cannot repeat the player speech or address the protagonist as you', () => {
+  const w = world();
+  const packet = compileAstraContext({ astraWorld: w }, '我来帮你', []);
+  packet.playerTurn = { speech: '我来帮你', action: '' };
+  const checked = validateAstraNarration(w, [
+    { type: 'narr', text: '我来帮你。' },
+    { type: 'narr', text: '林小满抬头看向你。' },
+    { type: 'dlg', name: '林小满', text: '我听到了。' }
+  ], packet);
+  assert.equal(checked.ok, false);
+  assert.deepEqual(checked.blocks.map(block => block.type), ['dlg']);
+  assert.ok(checked.errors.some(error => error.code === 'player-speech-echo'));
+  assert.ok(checked.errors.some(error => error.code === 'second-person-protagonist'));
 });
 
 test('context remains capped when individual saved fields are very large', () => {

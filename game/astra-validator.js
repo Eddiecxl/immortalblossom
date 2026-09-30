@@ -54,6 +54,11 @@ export function validateAstraNarration(world, blocks, packet = {}) {
     const prose = block.text;
     const speaker = block.type === 'dlg' ? speakerOf(block, characters) : null;
     const reject = (code, message) => errors.push({ index, code, message });
+    if (block.type === 'narr' && /你/u.test(prose))
+      reject('second-person-protagonist', 'Narration addresses the player in second person instead of first person.');
+    const playerSpeech = normalized(packet?.playerTurn?.speech);
+    if (block.type === 'narr' && playerSpeech.length >= 4 && normalized(prose).includes(playerSpeech))
+      reject('player-speech-echo', 'Narration repeats the player line already displayed by the Engine.');
     if (block.type === 'narr' && /(?:我说|我问|我开口问道)[，,]\s*(?:$|[。！？])/u.test(prose))
       reject('unfinished-player-line', 'Narration leaves an empty player speech line.');
     if (block.type === 'narr' && list(packet?.presentNpcs).length

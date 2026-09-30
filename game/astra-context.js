@@ -83,7 +83,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
     && (locationOf(npc) === locationId || locationOf(npc) === current?.name)).slice(0, 8);
   const npcIds = npcs.map(idOf);
   const presentNpcs = npcs.map(npc => ({
-    ...compact(npc, ['id', 'name', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
+    ...compact(npc, ['id', 'name', 'role', 'occupation', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
     memories: recall(npc.memories, query, 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
       .map(x => typeof x === 'string' ? text(x, 140) : compact(x, ['id', 'summary', 'text'], { summary: 140, text: 140 })),
     allowedSecrets: secrets.filter(secret => knownBy(secret).some(id => id === npc.id || id === npc.name))

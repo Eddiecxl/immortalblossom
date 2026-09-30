@@ -13,7 +13,7 @@ powershell -ExecutionPolicy Bypass -File .\Source\native\test.ps1
 
 修改游戏后，运行 `Source/Rebuild-GameBaseline.ps1` 重建清单和修复包。未来发布者需要按版本更改该脚本的版本字符串。制作补丁时必须同时包含对应版本的游戏清单、游戏版本文件和修复包，详见 `native/README.md`。
 
-根目录 `version.json` 是补丁安装匹配用的版本，不显示为 Launcher 版本。`game/version.json` 保留世界服务内部版本及玩家可见的 `display_version`。更新游戏时同步修改 `Source/Rebuild-GameBaseline.ps1`、Launcher 游戏版本文案和公告；只更新 Launcher 时保留游戏版本文案，在 `launcher/index.html` 的“更新公告”列出改动。不要在 Launcher 界面或窗口标题放 Launcher 版本号。
+根目录 `version.json` 是补丁安装匹配用的版本。Launcher 从 `game/version.json` 读取实际安装的精确版本；安装补丁后须校验版本与文件健康状态，再显示更新成功和当前版本。`game/version.json` 也保留世界服务内部版本及玩家可见的 `display_version`。更新游戏时同步修改 `Source/Rebuild-GameBaseline.ps1`、Launcher 游戏版本文案和公告；只更新 Launcher 时在“更新公告”列出改动。
 
 当前完整包与文件夹统一为 Game Beta v4；根版本为 `4.0.0`。以后制作补丁时，把 v4 完整包作为 `Source/Build-AstraPatch.ps1` 的 `BaselineZip`，目标版本设为更高的 `4.x.y`。补丁只适用于与基线版本相同的安装。
 

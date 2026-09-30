@@ -12,8 +12,20 @@ import { summarizeWorldTurn } from './turn-summary.js';
 import { directAstraScene } from './astra-director.js';
 import { consumeGeneratedItem } from './astra-effects.js';
 import { resolveAstraConversation, validateAstraConversation, fallbackAstraConversation, conversationEvidence } from './astra-interaction.js';
+import { buildAstraLocalMessages } from './astra-local-prompt.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
+let localModelNamePromise;
+async function localModelName(settings) {
+  if (settings?.localModelName) return String(settings.localModelName);
+  if (!localModelNamePromise) localModelNamePromise = (async () => {
+    if (globalThis.lxNative && typeof globalThis.nativeAction === 'function') {
+      try { return String((await globalThis.nativeAction('model-status'))?.active || ''); } catch {}
+    }
+    try { return globalThis.localStorage?.getItem('luoxian_active_local_model') || ''; } catch { return ''; }
+  })();
+  return localModelNamePromise;
+}
 const itemNames = Object.fromEntries(ITEM_TEMPLATES.map(item => [item.id, item.name]));
 const periodAt = minute => minute < 360 ? '夜晚' : minute < 600 ? '清晨' : minute < 1020 ? '白昼' : minute < 1200 ? '黄昏' : '夜晚';
 const questVerbs = {
@@ -244,6 +256,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         { role: 'system', content: '你是《落仙》的叙事作者。Game Engine 世界状态是唯一事实来源。只写主角第一人称所见所闻，不替玩家说话，不生成物品、修行、移动、死亡或任务效果。NPC 只能在场且存活才可发言，只能知道其已知事实。世界事件已经结算，不可倒退。conversation.targetId 是本轮真实在场的说话对象：若非空，必须让该人物针对玩家本轮话语作出有内容的新回应；不知情就明确说不知情，不要复读上一轮或空泛应声。若 absentName 非空，此人缺席，不得让其发言。传闻不等于人在眼前。不要重述上一轮景物或留下“我说，”一类空句。数值只供引擎计算，不作为人物口中的刻度。仅返回严格 JSON：{"blocks":[{"type":"narr","text":"..."},{"type":"dlg","name":"...","text":"..."}]}。不可填 effects。' },
         { role: 'user', content: `世界事实：${JSON.stringify(packet)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。叙事末段自然承接 directorHook，让玩家看见下一步可做的事；勿强迫选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
       ];
+      const localName = settings.mode === 'local' ? await localModelName(settings) : '';
       let raw = '';
       let errors = [];
       const attempts = settings.mode === 'hybrid-assist' ? 3 : 2;
@@ -251,9 +264,12 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         if (signal?.aborted) throw new Error('本回合已取消。');
         onProgress(attempt ? 'repair' : 'generating');
         try {
+          const requestMessages = settings.mode === 'local'
+            ? buildAstraLocalMessages(packet, visibleEvents, localName, attempt ? errors : [])
+            : attempt ? [...messages, { role: 'user', content: `上一候选违反世界事实：${errors.join('；')}。仅修正内容，勿改变世界。` }] : messages;
           raw = await aiClient.narrate(attempt === 2 ? { ...settings, forceCloudAssist: true } : settings,
             { requestType: attempt ? 'repair' : 'world', transactionId: txId,
-              messages: attempt ? [...messages, { role: 'user', content: `上一候选违反世界事实：${errors.join('；')}。仅修正内容，勿改变世界。` }] : messages,
+              messages: requestMessages,
               signal, protectBudget: true });
         } catch (error) {
           if (!conversation?.targetId || signal?.aborted) throw error;

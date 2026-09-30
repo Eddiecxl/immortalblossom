@@ -1,8 +1,8 @@
 # Game Beta v4 continuation
 
-Read `../AGENTS.md` and `ENGINE_CONTRACT.md` first. They are the persistent map of actual v4 world rules, SQLite storage, AI routing, preservation constraints and known gaps. In `4.0.2`, interactions use world-backed, model-first conversation planning and validation across seeds; generic deterministic fallback is limited to existing facts. Avoid seed-specific dialogue scripts. Keep the 4.0.1 title menu layout change.
+Read `../AGENTS.md` and `ENGINE_CONTRACT.md` first. They are the persistent map of actual v4 world rules, SQLite storage, AI routing, preservation constraints and known gaps. In `4.0.3`, local narration uses a compact Engine packet that includes NPC role/occupation, separates rumor from presence, and disables Qwen3 thinking. Cloud narration remains unchanged. Interactions use world-backed, model-first conversation planning and validation across seeds; generic deterministic fallback is limited to existing facts. Avoid seed-specific dialogue scripts. Keep the 4.0.1 title menu layout change.
 
-Current working release folder: `Luoxian-Beta-v4-Full/Luoxian Beta v4`, root version `4.0.2`. Original baseline ZIP `Luoxian-Beta-v4-Full.zip` remains `4.0.0`; its player can update directly to 4.0.2. Player-facing version is `Game Beta v4`; old v3.4 patches are not v4 inputs.
+Current working release folder: `Luoxian-Beta-v4-Full/Luoxian Beta v4`, root version `4.0.3`. Original baseline ZIP `Luoxian-Beta-v4-Full.zip` remains `4.0.0`; its player can update directly to 4.0.3. An installed 4.0.2 release has a separate 4.0.2-to-4.0.3 patch. Launcher reads `game/version.json` to show the precise installed version. Old v3.4 patches are not v4 inputs.
 
 Implemented systems: Astra persistent world Engine, scheduler, context compiler, validator, quest anchors, per-turn story progression and SQLite checkpoints; recent echoes summaries, speech/action separation, bounded cooldown, local-first AI routing, model manager, MP4 title loop, Launcher news and native patch updater.
 

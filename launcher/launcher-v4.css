@@ -89,6 +89,9 @@ button{font:inherit;color:inherit}button:focus-visible{outline:2px solid #e9cb8b
 .ornate-card:before{left:7px;top:7px;border-left:1px solid;border-top:1px solid}.ornate-card:after{right:7px;bottom:7px;border-right:1px solid;border-bottom:1px solid}
 .status-card{margin-top:15px;padding:19px 20px;display:flex;justify-content:space-between;align-items:center;min-height:145px}
 .section-label{color:#9ca8a5;font-size:10px;letter-spacing:.08em}.status-card h2{font-size:31px;font-weight:500;margin:6px 0 8px}
+.release-number{margin:-2px 0 10px;color:#e6c778;font-size:14px;font-weight:700;letter-spacing:.08em;text-shadow:0 0 16px #dbb15155}
+.release-success{margin:11px 0 0;padding:12px 16px;border:1px solid #d9bb6a77;border-radius:9px;background:linear-gradient(100deg,#5e461a55,#13362b88);color:#f4dfaa;font-size:13px;box-shadow:0 0 23px #d3ad4a22;animation:updateCardIn .35s ease}
+.release-success[hidden]{display:none}
 .health{margin:0 0 8px;font-size:12px}.health i{display:inline-block;width:13px;height:13px;border-radius:50%;margin-right:7px;vertical-align:-2px}
 .health.good{color:#68daa8}.health.good i{background:#4eca92;box-shadow:0 0 14px #54dc9a77}.health.bad{color:#e88978}.health.bad i{background:#c65143;box-shadow:0 0 14px #e05b4c77}
 .status-card small{color:#84928f}.medallion{display:flex;align-items:center;gap:12px}.medallion-photo{width:76px;height:76px;border-radius:50%;
