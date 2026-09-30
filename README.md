@@ -4,4 +4,4 @@
 
 当前源码版本为 `4.0.4`。原始 `4.0.0` 完整包可直接安装 `Luoxian-Update-4.0.0-to-4.0.4.lxpatch`；已是 `4.0.3` 的安装可使用 `Luoxian-Update-4.0.3-to-4.0.4.lxpatch`。旧 v3 补丁不适用。发布包包含闭源 `RuntimeHost.exe`、运行时、音画资源和 repair bundle，这些大文件未放入此源码仓库。源码仓库不是可直接启动的完整游戏；完整包与对应补丁应一起分发。
 
-维护世界逻辑先看 [引擎与存档契约](docs/ENGINE_CONTRACT.md) 和 [AGENTS.md](AGENTS.md)。源代码在 `game/`、`launcher/`、`Source/native/`；回归测试在 `Source/tests/`。运行 `node --test Source/tests/*.test.mjs`。改动游戏文件后用 `Source/Rebuild-GameBaseline.ps1` 更新清单和修复包，再用 `Source/Build-AstraPatch.ps1` 从原始完整 ZIP 生成补丁。不要提交用户存档、API Key 或下载的模型。
+维护世界逻辑先看 [引擎与存档契约](docs/ENGINE_CONTRACT.md)、[AI 世界模拟长期需求](docs/AI_WORLD_SIMULATION_VISION.md) 和 [AGENTS.md](AGENTS.md)。长期目标包括 AI 理解与后果提案、动态剧情、人物社会认知和系统主动反馈；该目标文档不代表当前版本已经实现。源代码在 `game/`、`launcher/`、`Source/native/`；回归测试在 `Source/tests/`。运行 `node --test Source/tests/*.test.mjs`。改动游戏文件后用 `Source/Rebuild-GameBaseline.ps1` 更新清单和修复包，再用 `Source/Build-AstraPatch.ps1` 从原始完整 ZIP 生成补丁。不要提交用户存档、API Key 或下载的模型。
