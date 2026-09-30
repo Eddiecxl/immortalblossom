@@ -83,6 +83,7 @@ test('actual faction dissolution retains an observer former affiliation as evide
   const { world, people: [affiliate] } = cast('former-membership');
   const faction = Object.values(world.factions).find(group => group.active);
   affiliate.factionId = faction.id;
+  affiliate.locationId = faction.homeId;
   const before = structuredClone(world);
   applyNumericMutation(world, { kind: 'faction', id: faction.id, field: 'power', operation: 'set', value: 0 });
   causal.captureWorldChanges(before, world, { turnId: 'tx:fall', actorId: 'player' });

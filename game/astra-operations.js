@@ -1,5 +1,5 @@
-import { assertSafeData, worldEntity, validateCondition, evaluateCondition } from './astra-expression.js';
-import { ensureSimulation, recordCausalEvent, captureWorldChanges, companionNotification } from './astra-causality.js';
+import { assertSafeData, worldEntity, validateCondition, validateConditionReferences, evaluateCondition } from './astra-expression.js';
+import { ensureSimulation, recordCausalEvent, captureWorldChanges, companionNotification, isSpeculativeInput } from './astra-causality.js';
 import { applyNumericMutation } from './astra-variables.js';
 import { resolveStructuredEffect, consumeGeneratedItem } from './astra-effects.js';
 import { killNpc } from './astra-reality.js';
@@ -23,10 +23,33 @@ function inputAction(context) {
   const action = context.input?.action || '';
   return /假如|如果|假设|不要|不想|开玩笑|「|“|"/u.test(action) ? '' : action;
 }
-function effectsValid(effects) {
+const worldScope = value => /天下|全世界|整个世界|世界规则|世界法则|所有(?:人|生命|人物|势力|地点)|全部(?:人|生命|人物|势力|地点)/u.test(value);
+function authorizeScope(world, op, context) {
+  if (!context.enforceScope || context.mode !== 'reality' || op.type === 'concept.defer') return;
+  const input = String(context.input?.action || context.input?.speech || '');
+  if (isSpeculativeInput(input)) fail('假设或询问不授权执行言灵。');
+  if (worldScope(input)) return;
+  const creative = /创造|诞生|变出|制造|炼成|出现|召唤|生成|造出/u.test(input);
+  if (op.type === 'entity.create' && !creative) fail('本轮没有授权创造新实体。');
+  if (op.type === 'quest.create' && !/任务|委托|目标/u.test(input)) fail('本轮没有授权创造委托。');
+  const targetIds = op.type === 'entity.update' ? [op.targetId]
+    : op.type.startsWith('relation.') ? [op.fromId, op.toId]
+      : op.type === 'resource.transfer' ? [op.fromId, op.toId, op.itemId]
+        : op.type === 'effect.apply' ? [op.itemId] : [];
+  if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟/u.test(input)) fail('本轮没有授权改写关系。');
+  for (const id of targetIds) {
+    const entity = requireEntity(world, id);
+    if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name))) fail('言灵超出了明确指令中的目标范围。');
+  }
+  const remoteLocation = op.type === 'entity.create' ? op.entity.locationId || op.entity.homeId
+    : op.type === 'quest.create' ? op.quest.targetLocationId : null;
+  if (remoteLocation && remoteLocation !== world.player.locationId
+    && !input.includes(world.locations[remoteLocation]?.name || '\u0000')) fail('未指定新实体的远处落点。');
+}
+function effectsValid(effects, world) {
   if (!Array.isArray(effects) || !effects.length || effects.length > 8) fail('效果列表无效。');
   for (const effect of effects) {
-    if (effect.condition) validateCondition(effect.condition);
+    if (effect.condition) validateConditionReferences(world, effect.condition);
     if (!['cultivation.advance_major_realm', 'heal', 'stat.delta'].includes(effect?.type)
       || effect.target !== 'player') fail('效果没有可结算的类型或目标。');
     if (effect.type === 'stat.delta' && (!['health', 'wealth', 'safety'].includes(effect.field)
@@ -54,7 +77,7 @@ function createEntity(world, operation, context) {
       inventory: [], relationships: {}, knowledge: [], memories: [], family: {}, goals: (entity.goals || []).map(x => clean(x, 100)).slice(0, 8),
       currentGoals: [], travel: null, simulationImportance: 'local' };
   } else if (kind === 'item') {
-    effectsValid(entity.effects);
+    effectsValid(entity.effects, world);
     const owner = requireEntity(world, entity.ownerId || 'player');
     if (!Array.isArray(owner.inventory) || owner.alive === false) fail('物品所有者无效。');
     const quantity = entity.quantity ?? 1;
@@ -78,7 +101,7 @@ function updateEntity(world, op, context) {
   const kind = target.id === 'player' ? 'player' : Object.entries(domains).find(([, domain]) => world[domain]?.[target.id])?.[0];
   if (context.enforceScope) {
     const input = String(context.input?.action || context.input?.speech || '');
-    const global = /天下|全世界|整个世界|所有|全部|世界规则/u.test(input);
+    const global = worldScope(input);
     if (!global && !(target.id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(target.name)))
       fail('言灵提案超出了玩家明确指定的目标范围。');
   }
@@ -152,9 +175,9 @@ function createQuest(world, op, context) {
   const giver = world.characters[q.giverId];
   if (!giver?.alive || !world.locations[q.targetLocationId] || world.locations[q.targetLocationId].destroyed) fail('任务来源或地点无效。');
   if (context.mode !== 'reality' && !present(world, giver.id)) fail('普通委托须由真实在场人物提出。');
-  validateCondition(q.condition);
+  validateConditionReferences(world, q.condition);
   if (context.mode !== 'reality' && evaluateCondition(world, q.condition)) fail('新委托不能用当前已满足的无关事实直接领取奖励。');
-  effectsValid(q.reward);
+  effectsValid(q.reward, world);
   if (context.mode !== 'reality') {
     // A gift of money cannot be minted by narration; reserve a real giver budget.
     if (q.reward.some(effect => effect.type !== 'stat.delta' || effect.field !== 'wealth' || effect.magnitude <= 0))
@@ -165,7 +188,7 @@ function createQuest(world, op, context) {
     if (budget + reserved > giver.wealth) fail('委托人无力兑现这些任务奖励。');
   }
   world.quests[q.id] = { id: q.id, title: clean(q.title, 80), summary: clean(q.summary), generated: true,
-    originEventId: context.turnId, giverId: giver.id, targetId: null, targetLocationId: q.targetLocationId,
+    originEventId: context.turnId, giverId: giver.id, offerLocationId: giver.locationId, targetId: null, targetLocationId: q.targetLocationId,
     condition: structuredClone(q.condition), rewardEffects: structuredClone(q.reward), state: 'available',
     participants: [giver.id], primaryGoals: [clean(q.summary || q.title)], optionalGoals: [], hiddenGoals: [],
     deadline: world.minute + Math.max(60, Math.min(365 * 1440, Number(q.durationMinutes) || 1440)),
@@ -201,11 +224,18 @@ export function applyWorldPlan(source, plan, context) {
   if (!context?.turnId || !['ordinary', 'reality'].includes(context.mode)) fail('提案缺少回合或执行范围。');
   if (JSON.stringify(plan).length > 18000 || !Array.isArray(plan?.operations) || plan.operations.length > 24)
     fail('提案超出本轮有界预算。');
-  const world = structuredClone(source), sim = ensureSimulation(world);
+  const world = structuredClone(source);
+  let sim = ensureSimulation(world);
   if (sim.transactions[context.turnId]) return { world, events: [] };
   const eventStart = new Set(Object.keys(sim.events));
+  const consumed = new Set();
   for (const op of plan.operations) {
-    if (op.condition && !evaluateCondition(world, op.condition)) fail('操作前置条件尚未满足。');
+    sim = ensureSimulation(world);
+    authorizeScope(world, op, context);
+    if (op.condition) {
+      validateConditionReferences(world, op.condition);
+      if (!evaluateCondition(world, op.condition)) fail('操作前置条件尚未满足。');
+    }
     switch (op.type) {
       case 'entity.create': createEntity(world, op, context); break;
       case 'entity.update': updateEntity(world, op, context); break;
@@ -214,20 +244,23 @@ export function applyWorldPlan(source, plan, context) {
       case 'quest.create': createQuest(world, op, context); break;
       case 'social.observe': social(world, op, context); break;
       case 'effect.apply': {
+        if (consumed.has(op.itemId) || context.settledAction === 'use_generated_item'
+          && (!context.settledItemId || context.settledItemId === op.itemId)) fail('这件物品的本轮使用已经结算，不能重复消费。');
+        consumed.add(op.itemId);
         const item = world.items[op.itemId];
         if (context.mode !== 'reality' && (!item || !inputAction(context).includes(item.name)
           || !/用|服|吞|吃/u.test(inputAction(context)))) fail('物品使用未获动作授权。');
-        const consumed = consumeGeneratedItem(world, op.itemId);
-        Object.assign(world, consumed.world); break;
+        const used = consumeGeneratedItem(world, op.itemId);
+        Object.assign(world, used.world); break;
       }
       case 'rule.upsert': {
         if (context.mode !== 'reality') fail('世界规则改写需要明确的言出法随。');
-        if (context.enforceScope && !/天下|全世界|整个世界|所有|全部|世界规则/u.test(context.input?.action || context.input?.speech || ''))
+        if (context.enforceScope && !worldScope(context.input?.action || context.input?.speech || ''))
           fail('个人言灵不能暗中改写整个世界规则。');
         const rule = op.rule;
         if (!rule?.id || !rule.trigger || !clean(rule.trigger, 60)) fail('规则缺少事件触发条件。');
         validId(rule.id);
-        validateCondition(rule.condition); effectsValid(rule.effects);
+        validateConditionReferences(world, rule.condition, ['actor', 'target']); effectsValid(rule.effects, world);
         world.simulation.rules[rule.id] = { ...structuredClone(rule), version: Number(world.simulation.rules[rule.id]?.version || 0) + 1,
           sourceId: context.turnId, minute: world.minute };
         break;

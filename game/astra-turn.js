@@ -15,7 +15,7 @@ import { resolveAstraConversation, validateAstraConversation, fallbackAstraConve
 import { buildAstraLocalMessages } from './astra-local-prompt.js';
 import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
 import { applyWorldPlan, settleWorldRules } from './astra-operations.js';
-import { ensureSimulation, captureWorldChanges, propagateCausality, assessIntent, companionNotification } from './astra-causality.js';
+import { ensureSimulation, captureWorldChanges, propagateCausality, assessIntent, companionNotification, isSpeculativeInput } from './astra-causality.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -50,6 +50,8 @@ const questVerbs = {
 function mechanicalAction(world, input) {
   const action = clean(input.action, 1800);
   const speech = clean(input.speech, 1200);
+  if ((action || /^言出法随\s*[:：]/u.test(speech)) && isSpeculativeInput(action || speech))
+    return { type: 'speech', minutes: 5 };
   if (/^言出法随\s*[:：]/u.test(speech)) return { type: 'reality', statement: speech };
   if (/^言出法随\s*[:：]/u.test(action)) return { type: 'reality', statement: action };
   if (/(?:服下|服用|吃下|吞下|使用)/u.test(action)) {
@@ -71,7 +73,7 @@ function mechanicalAction(world, input) {
   }
   if (/(?:接取|接受|承接)/u.test(action)) {
     const quest = Object.values(world.quests || {}).find(entry => entry.state === 'available'
-      && entry.targetLocationId === world.player.locationId
+      && (entry.offerLocationId || world.characters[entry.giverId]?.locationId || entry.targetLocationId) === world.player.locationId
       && (action.includes(entry.title) || action.includes(entry.id) || /委托|任务/u.test(action)));
     if (quest) return { type: 'accept_quest', questId: quest.id, minutes: 5 };
   }
@@ -207,6 +209,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     if (state.astraWorld.terminal?.ended || !state.astraWorld.player.alive) throw new Error('此世已经终结。');
     const recent = await transcriptStore.recentTurns(state.journeyId, 6);
+    const previousCausalIds = new Set(Object.keys(state.astraWorld.simulation?.events || {}));
     const action = mechanicalAction(state.astraWorld, turnInput);
     let knownRealityPlan = null;
     if (action.type === 'reality') {
@@ -220,6 +223,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       world = applyRealityMutation(state.astraWorld, plan);
       captureWorldChanges(state.astraWorld, world, { turnId: txId, action: 'rewrite' });
       ({ world, events } = advanceAstraWorld(world, 1));
+      settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => !previousCausalIds.has(event.id)));
       const outcome = world.history.find(entry => entry.id === plan.id);
       narration = { blocks: [
         { type: 'narr', text: `言出法随落定：${outcome?.summary || plan.request}` },
@@ -248,7 +252,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       } else settleOrdinaryAction(world, action);
       captureWorldChanges(beforeAction, world, { turnId: txId + ':mechanical', action: action.type });
       propagateCausality(world);
-      settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => event.sourceId === txId + ':mechanical'));
+      settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => !previousCausalIds.has(event.id)));
       const directed = directAstraScene(world, events);
       if (directed.event) events.push(directed.event);
       const projected = projectAstraWorld(state, world);
@@ -266,6 +270,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       packet.directorHook = directed.hook;
       packet.planMode = action.type === 'reality' ? 'reality' : 'ordinary';
       packet.settledAction = action.type;
+      packet.settledItemId = action.itemId || null;
       packet.intent = intent;
       if (conversation) {
         packet.playerTurn.targetId = conversation.targetId;
@@ -316,7 +321,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           if (parsed.worldPlan) {
             const applied = applyWorldPlan(baseDraft, parsed.worldPlan, { turnId: txId,
               mode: action.type === 'reality' ? 'reality' : 'ordinary', input: turnInput,
-              settledAction: action.type, enforceScope: true });
+              settledAction: action.type, settledItemId: action.itemId, enforceScope: true });
             candidateWorld = applied.world;
             settleWorldRules(candidateWorld, applied.events);
             propagateCausality(candidateWorld);

@@ -49,8 +49,8 @@ function observe(world, npc, event, mode, confidence) {
   npc.knowledge.push(event.id);
   npc.knowledge = [...new Set(npc.knowledge)].slice(-80);
   npc.memories ||= [];
-  npc.memories.push({ id: 'memory:' + key, minute: world.minute, summary: event.summary,
-    locationId: event.locationId, source: mode });
+  npc.memories.push({ id: 'memory:' + key, eventId: event.id, minute: world.minute, summary: event.summary,
+    locationId: event.locationId, source: mode, confidence });
   npc.memories = npc.memories.slice(-40);
   let appraisal = 0;
   for (const impact of event.impacts) {
@@ -115,11 +115,17 @@ export function propagateCausality(world) {
   return world;
 }
 
+export function isSpeculativeInput(content) {
+  const value = String(content || '').replace(/^言出法随\s*[:：]/u, '');
+  if (/假如|假设|要是|能否|是否|会不会|会怎样|怎么办|吗[？?]?$|[？?]$/u.test(value)) return true;
+  if (/如果/u.test(value) && !/规则|法则|自动|每当|一旦/u.test(value)) return true;
+  return /「|“|"/u.test(value);
+}
 export function assessIntent(world, input, targetId) {
   const spoken = String(input?.speech || '');
   const action = String(input?.action || '');
   const content = action || spoken;
-  const hypothetical = /假如|如果|假设|要是|开玩笑|不是要|不要|不想|「|“|"/u.test(content);
+  const hypothetical = isSpeculativeInput(content) || /开玩笑|不是要|不想/u.test(content);
   const target = world.characters[targetId];
   const aggressive = /杀|挑衅|袭击|攻击|灭|威胁|去死/u.test(content);
   const gap = target ? realmRank(world, target.cultivation?.realm) - realmRank(world, world.player.cultivation?.realm) : 0;
@@ -142,8 +148,8 @@ export function captureWorldChanges(before, after, context) {
   const put = (suffix, targetId, dimension, delta, summary) => {
     const prior = before.characters[targetId] || before.factions[targetId] || before.locations[targetId];
     const event = recordCausalEvent(after, { id: id + ':' + suffix, actorId: context.actorId || 'player',
-      action: context.action || 'change', locationId: context.locationId || (context.actorId && context.actorId !== 'player'
-        ? prior?.locationId || prior?.homeId || before.player.locationId : before.player.locationId),
+      action: context.action || 'change', locationId: context.locationId || prior?.locationId || prior?.lastKnownLocationId
+        || prior?.homeId || before.player.locationId,
       sourceId: id, targetIds: [targetId], impacts: [{ entityId: targetId, dimension, delta }], summary,
       affiliations: Object.fromEntries(Object.values(before.characters).filter(npc => npc.factionId).map(npc => [npc.id, npc.factionId])) });
     result.push(event);

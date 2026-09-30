@@ -31,6 +31,32 @@ export function validateCondition(condition, depth = 0) {
     }
   }
 }
+export function validateConditionReferences(world, condition, allowedBindings = []) {
+  validateCondition(condition);
+  const readPath = (entity, field) => {
+    let value = entity;
+    for (const part of field.split('.')) {
+      if (!value || !Object.hasOwn(value, part)) return false;
+      value = value[part];
+    }
+    return true;
+  };
+  const visit = node => {
+    for (const spec of [node.left, node.right]) if (spec && typeof spec === 'object') {
+      if (spec.entityId.startsWith('$')) {
+        if (!allowedBindings.includes(spec.entityId.slice(1))
+          || ![world.player, ...Object.values(world.characters), ...Object.values(world.factions)].some(entity => readPath(entity, spec.field)))
+          throw new Error('条件的运行时绑定或字段未注册。');
+      } else {
+        const entity = worldEntity(world, spec.entityId);
+        if (!entity || !readPath(entity, spec.field)) throw new Error('条件引用了不存在的实体或字段。');
+      }
+    }
+    if (node.conditions) node.conditions.forEach(visit);
+    if (node.condition) visit(node.condition);
+  };
+  visit(condition);
+}
 export function evaluateCondition(world, condition, bindings = {}) {
   validateCondition(condition);
   const read = spec => {

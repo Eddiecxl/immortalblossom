@@ -86,12 +86,18 @@ export function compileAstraContext(state, input, recentTurns = []) {
   const presentNpcs = npcs.map(npc => ({
     ...compact(npc, ['id', 'name', 'gender', 'role', 'occupation', 'cultivation', 'wealth', 'physicalCondition', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'currentPlan', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
     memories: recall(npc.memories, query, 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
-      .map(x => typeof x === 'string' ? text(x, 140) : compact(x, ['id', 'summary', 'text'], { summary: 140, text: 140 })),
+      .map(x => {
+        if (typeof x === 'string') return text(x, 140);
+        const belief = Object.values(world.simulation?.beliefs || {}).find(row => row.holderId === npc.id && row.eventId === x.eventId);
+        return compact({ ...x, source: x.source || belief?.mode, confidence: x.confidence ?? belief?.confidence },
+          ['id', 'eventId', 'summary', 'text', 'source', 'confidence'], { summary: 140, text: 140 });
+      }),
     allowedSecrets: secrets.filter(secret => knownBy(secret).some(id => id === npc.id || id === npc.name))
       .slice(0, 4).map(secret => compact(secret, ['id', 'text', 'summary'], { text: 140, summary: 140 }))
   }));
-  const activeQuests = list(world.quests).filter(quest => ['active', 'available', 'in-progress', 'accepted'].includes(String(quest?.state ?? quest?.status)))
-    .filter(quest => !locationOf(quest) || locationOf(quest) === locationId || query.includes(text(quest?.title ?? quest?.name, 60)))
+  const activeQuests = list(world.quests).filter(quest => ['active', 'available', 'mutated', 'in-progress', 'accepted'].includes(String(quest?.state ?? quest?.status)))
+    .filter(quest => ['active', 'mutated'].includes(quest.state) || npcIds.includes(quest.giverId)
+      || !locationOf(quest) || locationOf(quest) === locationId || query.includes(text(quest?.title ?? quest?.name, 60)))
     .slice(0, 8).map(quest => compact(quest, ['id', 'title', 'name', 'giverId', 'targetLocationId', 'primaryGoals', 'condition', 'state', 'status', 'stage', 'deadline', 'locationId', 'summary'], { summary: 120 }));
   const dueEvents = list(world.eventQueue).filter(event => Number(event?.dueAt ?? event?.minute) <= minute)
     .sort((a, b) => Number(a.dueAt ?? a.minute) - Number(b.dueAt ?? b.minute)).slice(0, 8)

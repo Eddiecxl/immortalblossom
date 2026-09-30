@@ -15,3 +15,17 @@ Local probe: isolated Qwen3 14B Q4_K_M, two seeds/four dialogues passed (~8 seco
 Task 2: Ruling: unsupported mechanisms become explicit unresolved concepts instead of executable model code — maintains truth and an extensible vocabulary — cost if wrong: novel wishes need a later Engine operator.
 Task 5: Ruling: release as v4.1.0, adding simulation domains but retaining save schema 6 — Launcher shows an unambiguous version — cost if wrong: users need the matching versioned patch.
 Task 5: pending.
+
+Final: fixed all 9 Important findings — Source/tests/astra-review-regressions.test.mjs 0/9 RED → 9/9 GREEN, full suite 135/135.
+1. Hypothetical known/open invocations gated before execution.
+2. Mechanical and intra-plan item-use duplication rejected.
+3. Scope enforced for creation, relations, transfers, effects and quest creation.
+4. Remote causal facts witnessed at the affected entity's location.
+5. Known mechanical and scheduled events sent to the same rule dispatcher.
+6. Simulation reference reacquired after cloned item effect replacement.
+7. Condition entity/field references validated before accepting a plan.
+8. New quest offer location retained separately from objective location.
+9. Recalled memories retain report mode/confidence and event provenance.
+Final: Ruling: packaging and native runtime excluded from source review — verified separately with native build, updater self-tests, SQLite probe and trial installations before release — cost if wrong: Windows-specific failures may escape a source-only review.
+Final: Ruling: real-provider reliability is not absolute — isolated Qwen samples recorded, provider route/keys unchanged, quota protection remains — cost if wrong: a model may require repair or waiting.
+Task 5: Ruling: bundled Bash workflow helpers cannot resolve Windows native Git root paths under this sandbox (mkdir C:/Users/User fails); used the same direct test commands and a PowerShell-generated read-only diff/package instead — equivalent evidence retained here — cost if wrong: workflow metadata lacks the helper's formatting.
