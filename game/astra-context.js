@@ -84,7 +84,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
     && (locationOf(npc) === locationId || locationOf(npc) === current?.name)).slice(0, 8);
   const npcIds = npcs.map(idOf);
   const presentNpcs = npcs.map(npc => ({
-    ...compact(npc, ['id', 'name', 'role', 'occupation', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
+    ...compact(npc, ['id', 'name', 'gender', 'role', 'occupation', 'cultivation', 'wealth', 'physicalCondition', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'currentPlan', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
     memories: recall(npc.memories, query, 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
       .map(x => typeof x === 'string' ? text(x, 140) : compact(x, ['id', 'summary', 'text'], { summary: 140, text: 140 })),
     allowedSecrets: secrets.filter(secret => knownBy(secret).some(id => id === npc.id || id === npc.name))
@@ -92,7 +92,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
   }));
   const activeQuests = list(world.quests).filter(quest => ['active', 'available', 'in-progress', 'accepted'].includes(String(quest?.state ?? quest?.status)))
     .filter(quest => !locationOf(quest) || locationOf(quest) === locationId || query.includes(text(quest?.title ?? quest?.name, 60)))
-    .slice(0, 8).map(quest => compact(quest, ['id', 'title', 'name', 'state', 'status', 'stage', 'deadline', 'locationId', 'summary'], { summary: 120 }));
+    .slice(0, 8).map(quest => compact(quest, ['id', 'title', 'name', 'giverId', 'targetLocationId', 'primaryGoals', 'condition', 'state', 'status', 'stage', 'deadline', 'locationId', 'summary'], { summary: 120 }));
   const dueEvents = list(world.eventQueue).filter(event => Number(event?.dueAt ?? event?.minute) <= minute)
     .sort((a, b) => Number(a.dueAt ?? a.minute) - Number(b.dueAt ?? b.minute)).slice(0, 8)
     .map(event => compact(event, ['id', 'type', 'dueAt', 'locationId', 'summary', 'payload'], { summary: 120 }));
@@ -121,7 +121,16 @@ export function compileAstraContext(state, input, recentTurns = []) {
     },
     location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'population', 'risk', 'description'], { description: 140 }),
     nearbyLocations, nearbyEdges,
-    player: compact(player, ['name', 'locationId', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
+    player: compact(player, ['id', 'name', 'gender', 'locationId', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
+    items: list(world.items).filter(item => !item.destroyed && item.ownerId === 'player').slice(0, 8)
+      .map(item => compact(item, ['id', 'name', 'quantity', 'ownerId', 'effects', 'description'])),
+    simulationFacts: {
+      relations: list(world.simulation?.relations).filter(row => row.active !== false && [row.fromId, row.toId].some(id => npcIds.includes(id) || id === 'player')).slice(-8),
+      beliefs: list(world.simulation?.beliefs).filter(row => npcIds.includes(row.holderId)).slice(-8)
+        .map(row => compact(row, ['holderId', 'eventId', 'mode', 'confidence', 'appraisal', 'summary'])),
+      commitments: list(world.simulation?.commitments).filter(row => row.state === 'unresolved').slice(-3),
+      rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
+    },
     numericFacts, presentNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),
     recentTurns: turns.map(turn => ({ id: text(turn.id, 60), userText: text(turn.userText ?? turn.input, 220),
@@ -129,7 +138,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
   };
   // Long saves may contain unusually verbose individual facts. Keep the
   // packet capped even when the stored world was produced by an older build.
-  const trimOrder = ['history', 'memories', 'rumors', 'recentTurns', 'activeQuests', 'dueEvents', 'nearbyLocations', 'nearbyEdges', 'numericFacts', 'presentNpcs'];
+  const trimOrder = ['history', 'memories', 'rumors', 'recentTurns', 'activeQuests', 'dueEvents', 'nearbyLocations', 'nearbyEdges', 'numericFacts', 'items', 'presentNpcs'];
   while (JSON.stringify(packet).length > 12_000) {
     const field = trimOrder.find(key => packet[key].length > (key === 'presentNpcs' ? 1 : 0));
     if (!field) break;

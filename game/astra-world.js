@@ -348,5 +348,6 @@ export function normalizeAstraWorld(raw, seed = 'default', playerName = '无名�
     if (Array.isArray(base[key])) result[key] = Array.isArray(saved[key]) ? saved[key] : base[key];
     else result[key] = isRecord(saved[key]) ? saved[key] : base[key];
   }
+  if (saved.simulation !== undefined && !isRecord(saved.simulation)) result.simulation = {};
   return result;
 }

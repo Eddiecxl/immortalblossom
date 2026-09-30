@@ -14,6 +14,10 @@ export function inventoryRows(state){
  }).filter(r=>r.amount>0||Number(r.asset?.charges)>0);
 }
 export function questRows(state){
+ if(state.astraWorld?.quests)return Object.values(state.astraWorld.quests).map(q=>({
+  id:q.id,title:q.title,status:({available:'可接取',active:'进行中',mutated:'待重议',completed:'已完成',failed:'已失败',expired:'已过期',invalidated:'已失效',abandoned:'已放弃','resolved-by-other':'已由他人解决'})[q.state]||q.state,
+  description:q.summary||(q.primaryGoals||[]).join('；')||'任务状态已记入命簿。',progress:q.state==='completed'?'已完成':q.deadline?'期限：第'+(Math.floor(q.deadline/1440)+1)+'日':'等待条件达成'
+ }));
  const rows=[];
  for(const [key,status] of [['active','进行中'],['completed','已完成'],['failed','已失败']])for(const value of state.quests?.[key]||[]){
   const id=typeof value==='string'?value:value.id,history=state.quests?.history?.[id]||{},data=QUESTS[id]||{};

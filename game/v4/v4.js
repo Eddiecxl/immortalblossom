@@ -639,7 +639,8 @@ function setSystemLayer(open) {
   }
 }
 
-function systemArchive(turns){return turns.filter(t=>t.kind==='system').slice(-100).flatMap(t=>[...(t.userText?[{role:'player',text:t.userText}]:[]),{role:'system',text:(t.blocks||[]).map(b=>b.text).join('\n')}]);}
+function systemArchive(turns){return turns.slice(-100).flatMap(t=>t.kind==='system'?[...(t.userText?[{role:'player',text:t.userText}]:[]),{role:'system',text:(t.blocks||[]).map(b=>b.text).join('\n')}]:
+ (t.blocks||[]).filter(b=>b.type==='sys').map(b=>({role:'system',text:b.text}))); }
 function renderSystemArchive(){dom.systemChatResponse.replaceChildren();for(const entry of systemTranscript.length?systemTranscript:(state?.systemCompanion?.dialogueMemory||[])){dom.systemChatResponse.append(node('p',entry.role==='player'?'player-msg':'sys-msg',entry.text||''));}if(!dom.systemChatResponse.childNodes.length)dom.systemChatResponse.textContent='系统在此。外界时间已冻结。';dom.systemChatResponse.scrollTop=dom.systemChatResponse.scrollHeight;}
 
 async function submitSystemChat() {

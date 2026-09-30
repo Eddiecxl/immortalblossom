@@ -13,6 +13,10 @@ export function directAstraScene(world, events = []) {
   const local = (events || []).filter(event => event?.playerWitnessed && event.summary
     && !['player_speech', 'opening_cue', 'scene_director'].includes(event.type));
   const current = world.locations?.[world.player?.locationId];
+  const causalOpportunity = Object.values(world.characters || {}).find(npc => npc.alive && !npc.travel
+    && npc.locationId === world.player.locationId && npc.currentPlan?.causeEventId && npc.currentPlan?.type === 'support'
+    && ['pending', 'acting'].includes(npc.currentPlan.state));
+  if (causalOpportunity) return { hook: causalOpportunity.name + '记得此前的事情，有意相助；可以问问对方愿意提供什么。', event: null };
   if (local.length) {
     director.quietTurns = 0;
     return { hook: local.at(-1).summary, event: null };

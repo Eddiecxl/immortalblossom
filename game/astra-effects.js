@@ -1,6 +1,7 @@
 // Small, explicit effect vocabulary. Unknown effects fail the whole transaction.
 import { advanceRealm, realmLabel } from './astra-rules.js';
 import { applyNumericMutation } from './astra-variables.js';
+import { evaluateCondition } from './astra-expression.js';
 
 export function parseGeneratedItem(request) {
   const match = String(request).match(/(?:创造|变出|制造|炼成)\s*(?:一[颗枚件把])?([^：:，。；\s]{2,30})\s*[:：]\s*(.{4,120})/u);
@@ -19,6 +20,8 @@ export function parseGeneratedItem(request) {
 
 export function resolveStructuredEffect(world, effect) {
   if (!effect || effect.target !== 'player') throw new Error('效果目标不受 Engine 支持。');
+  if (effect.condition && !evaluateCondition(world, effect.condition))
+    return { applied: false, summary: '当前状态不满足这项效果的生效条件。' };
   const player = world.player;
   switch (effect.type) {
     case 'cultivation.advance_major_realm': {

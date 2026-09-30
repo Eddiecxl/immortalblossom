@@ -13,6 +13,29 @@ export function runNpcPlans(world, minute = world.minute) {
     const bucket = Math.floor(minute / cadence);
     if (npc.lastPlanBucket === bucket) continue;
     npc.lastPlanBucket = bucket;
+    const plan = npc.currentPlan;
+    if (plan?.state === 'pending' && plan.causeEventId) {
+      const target = plan.targetId === 'player' ? world.player : world.characters[plan.targetId];
+      if (!target?.alive) { plan.state = 'invalidated'; }
+      else if (target.locationId === npc.locationId) {
+        if (plan.type === 'support') {
+          npc.currentGoals = ['协助' + target.name + '，回应此前的恩义'];
+          npc.flags ||= {};
+          npc.flags.willingToHelp = { actorId: target.id, sourceId: plan.causeEventId, minute };
+          outcomes.push({ actorId: npc.id, type: 'social_support', text: npc.name + '开始主动提供相助的机会。' });
+          plan.state = 'acting'; plan.actedAt = minute;
+        } else {
+          const edge = world.edges.find(row => row.from === npc.locationId && !row.closed && !world.locations[row.to]?.destroyed);
+          if (edge) {
+            npc.travel = { from: npc.locationId, to: edge.to, departAt: minute, arriveAt: minute + edge.minutes };
+            npc.locationId = null;
+            outcomes.push({ actorId: npc.id, type: 'depart', destinationId: edge.to, arriveAt: minute + edge.minutes });
+            plan.state = 'acting'; plan.actedAt = minute;
+          }
+        }
+        continue;
+      }
+    }
     const year = Math.floor(minute / (360 * DAY));
     if (npc.lastAgeYear === undefined) npc.lastAgeYear = year;
     if (year > npc.lastAgeYear) { npc.age = Number(npc.age || 20) + year - npc.lastAgeYear; npc.lastAgeYear = year; }

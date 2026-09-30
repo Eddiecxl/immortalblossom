@@ -5,6 +5,7 @@ import { runFactionTick } from './astra-faction.js';
 import { resolveDueAnchors } from './astra-anchors.js';
 import { createQuestArc, reconcileQuestArcs } from './astra-quests.js';
 import { clampNumeric } from './astra-variables.js';
+import { causalSnapshot, captureWorldChanges } from './astra-causality.js';
 
 const DAY = 1440;
 const queueCache = new WeakMap();
@@ -252,11 +253,16 @@ export function advanceAstraWorld(source, elapsedMinutes, action = null) {
     idsFor(queueCache, world, 'eventQueue').delete(event.id);
     if (idsFor(historyCache, world, 'history').has(event.id)) continue;
     world.minute = Math.max(world.minute, event.dueAt);
+    const causalBefore = world.simulation ? causalSnapshot(world) : null;
     events.push(resolve(world, event));
+    if (causalBefore) captureWorldChanges(causalBefore, world, { turnId: event.id,
+      actorId: event.payload?.actorId || event.payload?.factionId || 'world:' + event.id,
+      action: event.type, locationId: event.payload?.locationId });
     if (events.length > 100_000) throw new Error('世界事件链超出安全上限。');
   }
   world.minute = target;
   if (action?.type === 'speech') {
+    const causalBefore = world.simulation ? causalSnapshot(world) : null;
     for (const [index, outcome] of runNpcPlans(world, target).entries()) {
       if (outcome.type === 'depart') scheduleEvent(world, {
         id: `arrival:${outcome.actorId}:${outcome.arriveAt}`, dueAt: outcome.arriveAt, priority: 20,
@@ -268,6 +274,8 @@ export function advanceAstraWorld(source, elapsedMinutes, action = null) {
         playerWitnessed: npc?.locationId === world.player.locationId });
       archiveRoutineHistory(world);
     }
+    if (causalBefore) captureWorldChanges(causalBefore, world, { turnId: 'npc-plans:' + target,
+      actorId: 'world:npc-plans', action: 'npc_action' });
   }
   resolveDueAnchors(world);
   return { world, events };

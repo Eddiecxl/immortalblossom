@@ -27,6 +27,8 @@
 
 ## AI 与记忆
 
+v4.1.0 新增 AI 结构化世界提案、因果信念、延迟消息、真实 NPC 反应计划、条件任务和系统主动提醒。维护时必须阅读 [ENGINE_SIMULATION_V410.md](ENGINE_SIMULATION_V410.md) 的实际行为与边界；它扩展旧版回合链。提案先执行于副本、再校验叙事；不能将“模型只是作者”的旧限制当成永久产品目标，也不能跳过 Engine 执行模型任意效果。
+
 `game/v4-hybrid-client.js` 管理 local、hybrid-assist 或固定云提供商、模型、短时 sticky 路由与请求门控。hybrid 通常先用本地模型，失败时云辅助；校验失败也可能再请求修复，因此每次重试都消耗时间/配额。`game/token-budget.js` 的额度保护和 429 等待不能绕过服务商限额。`astra-interaction.js` 按当局在场 NPC、明确称呼/身份、会话焦点、最近说话者和已知事件/传闻/任务建立通用会话契约；AI 优先生成，验证要求被问者给出新回答。连续失败才允许有限的世界事实兜底。改进本地 Qwen 时应减少无关上下文、给明确本轮目标和在场事实、校验复读/空句，再考虑云修复；不能靠更大的模型掩盖状态错误。
 
 `astra-context.js` 提供当前地点、道路、在场人物的身份/职业/势力、可见事件、知识、任务、最近回合和有限记忆，大小有上限。当前会保留最近事实，并按中文双字重合从本地世界中补回与问题相关的较早事件及在场人物记忆；这是查询候选，不会将未发生的事变成事实。`astra-local-prompt.js` 从这份权威事实编译较短的本地叙事请求，区分在场人物与传闻；对 Qwen3 使用 `/no_think`，以免思考内容耗尽短回复预算。该提示词不能保证小模型不编造事实，Engine 校验仍须保留。Native `Source/native/WorldDatabase.cs` 给每个 journey 建独立 SQLite `world.db`，把完整 checkpoint、修订号、角色/关系/物品/任务/锚点/事件等投影表和 `turn_summaries` 放入事务，`memory_fts` 用 FTS5 检索摘要。`game/beta4/save-session.js` 管理自动 checkpoint、三个手动槽和读取时的分叉。不要把全部历史每回合送给云：以 ID 和关联查询召回需要的事实，保留完整资料在本地；FTS 查不到时会回退最近摘要。旧版 `world_state.state_json` 数据库不能直接覆盖，必须迁移或拒写。

@@ -3,7 +3,7 @@ import { createGameState } from '../../game/game-state.js';
 import { createAstraOpening } from '../../game/astra-opening.js';
 import { createAiTurnRunner } from '../../game/ai-turn.js';
 
-const endpoint = 'http://127.0.0.1:27183/v1/chat/completions';
+const endpoint = process.argv.find(arg => arg.startsWith('--endpoint='))?.slice('--endpoint='.length) || 'http://127.0.0.1:27183/v1/chat/completions';
 const output = [];
 const structured = process.argv.includes('--structured');
 const compact = process.argv.includes('--compact');

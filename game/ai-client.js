@@ -175,6 +175,7 @@ export function parseNarration(text, requestType = 'world') {
   }
   return {
     blocks,
+    ...(data.worldPlan !== undefined ? { worldPlan: data.worldPlan } : {}),
     ...(data.recovered ? { recovered: true } : {}),
     reaction: data.reaction && typeof data.reaction === 'object' ? { result: cleanText(data.reaction.result, 140) } : null,
     cast: Array.isArray(data.cast) ? data.cast.slice(0, 4).map(c => ({ name: cleanText(c?.name, 32),
