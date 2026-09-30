@@ -1,11 +1,11 @@
 /* The supplied film owns the cover artwork and its upper-right logo. */
-.video-era #titleScreen{isolation:isolate;background:#101923 url('../assets/tianque-sword.png') center/cover no-repeat!important;overflow:hidden}
+.video-era #titleScreen{isolation:isolate;background:#101923 url('../assets/video/luoxian-cover-poster.png') center/cover no-repeat!important;overflow:hidden}
 .video-era #titleScreen .menu-loop-video{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transition:opacity .7s ease;pointer-events:none}
 .video-era #titleScreen.video-ready .menu-loop-video{opacity:1}
 .video-era #titleScreen.video-failed .menu-loop-video{display:none}
 .video-era #titleScreen::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,transparent 42%,#07171d16 66%,#07151e68 100%)}
 .video-era #titleScreen .title-brand,.video-era #titleScreen .title-stage,.video-era #titleScreen .title-feature-row{display:none!important}
-.video-era #titleScreen .title-actions{position:absolute!important;z-index:2!important;top:43%!important;right:5.4%!important;left:auto!important;transform:none!important;width:clamp(290px,22vw,385px)!important;max-width:38vw!important;padding:0!important;gap:8px!important;background:none!important;border:0!important;display:flex;flex-direction:column}
+.video-era #titleScreen .title-actions{position:absolute!important;z-index:2!important;top:52%!important;right:5.4%!important;left:auto!important;transform:none!important;width:clamp(290px,22vw,385px)!important;max-width:38vw!important;padding:0!important;gap:8px!important;background:none!important;border:0!important;display:flex;flex-direction:column}
 .video-era #titleScreen .title-actions::before,.video-era #titleScreen .title-actions::after{display:none}
 .video-era #titleScreen .journey-button{position:relative;min-height:55px!important;height:auto;padding:9px 17px!important;border-radius:4px!important;border:1px solid #ddc99f95!important;background:linear-gradient(110deg,#0a1c24c9,#1b3335b8 70%,#102229c9)!important;box-shadow:inset 0 1px #fff4ce20,0 6px 22px #06101455!important;backdrop-filter:blur(11px);color:#f7e9c7!important;text-align:left;transition:background .3s,border-color .3s,box-shadow .3s,translate .3s!important}
 .video-era #titleScreen .journey-button.primary{border-color:#edd39bbc!important;background:linear-gradient(110deg,#563627e0,#8b593dbb 65%,#4f3027d8)!important}
@@ -21,7 +21,7 @@
 .video-era .cinematic .subtle-button{z-index:4}
 @keyframes videoMenuEnter{from{opacity:0;transform:translate(20px,10px);filter:blur(3px)}to{opacity:1;transform:translate(0,0);filter:blur(0)}}
 @keyframes videoLogoReveal{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
-@media(max-height:750px){.video-era #titleScreen .title-actions{top:39%!important;gap:5px!important}.video-era #titleScreen .journey-button{min-height:43px!important;padding:6px 12px!important}.video-era #titleScreen .journey-button>div>span{font-size:18px}}
+@media(max-height:750px){.video-era #titleScreen .title-actions{top:51%!important;gap:5px!important}.video-era #titleScreen .journey-button{min-height:43px!important;padding:6px 12px!important}.video-era #titleScreen .journey-button>div>span{font-size:18px}}
 @media(max-width:800px){.video-era #titleScreen .title-actions{right:4%!important;max-width:48vw!important;width:310px!important}.video-era #titleScreen::after{background:linear-gradient(90deg,transparent 25%,#0818219c)}}
 @media(max-width:560px){.video-era #titleScreen .title-actions{top:auto!important;bottom:4%!important;right:4%!important;width:92%!important;max-width:92%!important}.video-era #titleScreen .journey-button{min-height:42px!important}.video-era #titleScreen::after{background:linear-gradient(0deg,#071821c9,transparent 72%)}}
 @media(prefers-reduced-motion:reduce){.video-era #titleScreen.menu-ready .journey-button,.video-era .cinematic .studio-scene{animation:none!important}.video-era #titleScreen .menu-loop-video{transition:none}}

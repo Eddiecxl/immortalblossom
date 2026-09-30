@@ -5,7 +5,7 @@ export function createScore(getSettings, options = {}) {
  const doc=options.document||globalThis.document;
  const tracks=options.tracks||SOUNDTRACK, listeners=new Set(), cache=new Map();
  const every=options.setInterval||globalThis.setInterval, cancel=options.clearInterval||globalThis.clearInterval;
- let ctx,master,music,effects,timer,scene=options.initialScene||'title',enabled=true,current=null,loading=null,disposed=false,unlocked=false,blocked=Boolean(options.blocked),generation=0;
+ let ctx,master,music,effects,timer,scene=options.initialScene||'title',enabled=true,current=null,loading=null,disposed=false,unlocked=false,blocked=Boolean(options.blocked),generation=0,restartPending=false;
  const active=new Set(),crossfade=3;
  const clamp=value=>Math.max(0,Math.min(100,Number(value)||0))/100;
  function ensure(){
@@ -87,11 +87,15 @@ export function createScore(getSettings, options = {}) {
    source.buffer=buffer;source.connect(gain);gain.connect(music);
    const overlap=Math.min(crossfade,buffer.duration/3);
    if(current){fade(gain.gain,0,1,at,overlap);for(const previous of active){
-     if(previous!==current){try{previous.source.stop(at+.05);}catch{}continue;}
+     if(previous!==current){
+      if(options.smoothManual){const tail=Math.min(.55,overlap);fade(previous.gain.gain,Math.max(0,Math.min(1,previous.gain.gain.value)),0,at,tail);try{previous.source.stop(at+tail+.02);}catch{}}
+      else{try{previous.source.stop(at+.05);}catch{}}
+      continue;
+     }
      fade(previous.gain.gain,Math.max(0,Math.min(1,previous.gain.gain.value)),0,at,overlap);try{previous.source.stop(at+overlap+.02);}catch{}
    }}else{gain.gain.setValueAtTime(0,at);gain.gain.setTargetAtTime(1,at,.45);}
    const entry={track,buffer,source,gain,start:at,end:at+buffer.duration,overlap};
-   active.add(entry);current=entry;
+   active.add(entry);current=entry;restartPending=false;
    source.onended=()=>{active.delete(entry);source.disconnect();gain.disconnect();};
    source.start(at);announce();
    const successor=nextCandidate();for(const id of cache.keys())if(id!==track.id&&id!==successor?.id)cache.delete(id);
@@ -100,14 +104,14 @@ export function createScore(getSettings, options = {}) {
   loading=task;
   try{return await task;}finally{if(loading===task)loading=null;}
  }
- function tick(){if(!disposed&&!blocked&&enabled&&ctx?.state==='running'&&!loading&&(!current||ctx.currentTime>=current.end-current.overlap))void advance();}
+ function tick(){if(!disposed&&!blocked&&enabled&&ctx?.state==='running'&&!loading&&(restartPending||!current||ctx.currentTime>=current.end-current.overlap))void advance(false,restartPending);}
  async function unlock(){
   if(blocked||!enabled||disposed)return false;
   ensure();if(!ctx)return false;unlocked=true;
   if(!(doc?.hidden&&getSettings().muteBackground))await ctx.resume().catch(()=>{});
   if(blocked||!enabled||disposed){apply();return false;}
   apply();if(!timer)timer=every(tick,250);
-  if(!current)await advance();return ctx.state==='running';
+  if(!current||restartPending)await advance(false,restartPending);return ctx.state==='running';
  }
  function note(freq,duration,volume,delay=0){
   if(!ctx||ctx.state!=='running')return;
@@ -125,7 +129,7 @@ export function createScore(getSettings, options = {}) {
   if(scene===value||!['intro','title','game','danger'].includes(value))return;
   const previousPool=pool().map(track=>track.id).join('|');
   scene=value;
-  if(options.playlists&&previousPool!==pool().map(track=>track.id).join('|')){generation++;loading=null;if(ctx)void advance(false,true);return;}
+  if(options.playlists&&previousPool!==pool().map(track=>track.id).join('|')){generation++;loading=null;restartPending=true;if(ctx)void advance(false,true);return;}
   if(current&&!current.track.scenes.includes(scene))void advance();else if(ctx)prefetch();
  }
  function onVisibility(){apply();}
@@ -133,7 +137,7 @@ export function createScore(getSettings, options = {}) {
  return {
   unlock,sfx,apply,setScene,setBlocked,
   setIntensity:level=>{if(scene==='game'||scene==='danger')setScene(level>=2?'danger':'game');},
-  setEnabled:value=>{enabled=Boolean(value);apply();if(enabled&&!current)void unlock();return enabled;},
+  setEnabled:value=>{enabled=Boolean(value);apply();if(enabled&&(!current||restartPending))void unlock();return enabled;},
   isEnabled:()=>enabled,
   nextTrack:async()=>{if(blocked||!enabled||disposed)return null;if(!ctx){await unlock();return metadata();}return advance(true);},
   getNowPlaying:metadata,

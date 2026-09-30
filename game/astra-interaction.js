@@ -1,8 +1,9 @@
 // World-backed conversation planning. Names, presence and knowledge come from
 // the active seed's instances; no opening scene or specific NPC is hard-coded.
+import { sceneAffordances, isOrientationSpeech } from './astra-affordances.js';
 const clean = value => String(value ?? '').trim();
 const present = world => Object.values(world.characters || {})
-  .filter(npc => npc.alive && npc.locationId === world.player.locationId && !npc.travel);
+  .filter(npc => !world.player.travel && npc.alive && npc.locationId === world.player.locationId && !npc.travel);
 const sayable = value => clean(value).replace(/危险程度为\d+\/100/gu, '路上有险');
 const normalized = value => clean(value).replace(/[\s\p{P}\p{S}]/gu, '');
 const subjectGrams = value => {
@@ -53,7 +54,7 @@ export function resolveAstraConversation(world, rawSpeech, recentTurns = []) {
   const prior = (recentTurns || []).slice(-2).flatMap(turn => turn.blocks || [])
     .filter(block => block.type === 'dlg').at(-1);
   const lastSpeaker = people.find(npc => npc.name === prior?.name);
-  const callout = /有人|谁在|喂/u.test(speech);
+  const callout = /有人|谁在|喂/u.test(speech) || isOrientationSpeech(speech);
   const target = named || byRole || focused || lastSpeaker || (people.length === 1 || callout ? people[0] : null);
   return { targetId: target?.id || null, targetName: target?.name || null,
     facts: target ? knownFacts(world, target) : [], speech };
@@ -78,7 +79,7 @@ export function validateAstraConversation(blocks, plan, recentTurns = []) {
 
 export function fallbackAstraConversation(world, plan) {
   const npc = world.characters?.[plan?.targetId];
-  if (!npc?.alive || npc.locationId !== world.player.locationId || npc.travel) return null;
+  if (world.player.travel || !npc?.alive || npc.locationId !== world.player.locationId || npc.travel) return null;
   const speech = plan.speech || '';
   const grams = subjectGrams(speech);
   const fact = [...(plan.facts || [])].reverse().map(entry => ({ entry,
@@ -89,10 +90,12 @@ export function fallbackAstraConversation(world, plan) {
   const identity = /(?:你|您).*(?:是谁|叫什么|名字)|(?:你|您)谁/u.test(speech);
   const offer = /(?:我|让).*?(?:帮|协助|助你)/u.test(speech);
   const question = /[?？]|(?:什么|为何|怎么|哪里|何时|谁)/u.test(speech);
-  const answer = identity ? `我是${npc.name}。你想知道哪件事？`
+  const view = sceneAffordances(world,npc.id);
+  const orientation = `这里是${view.locationName}。我是${npc.name}，${view.role}。${view.goal ? `我眼下想${view.goal}。` : ''}${quest ? `${quest.summary}，可以先听听具体要求。` : '刚听到的消息还须核实，你可以问我知道哪一条。'}`;
+  const answer = identity || isOrientationSpeech(speech) ? orientation
     : offer && quest ? `多谢。${quest.summary}，你愿意先听我说明吗？`
       : known ? `${known}。我知道的就这些；你还想问哪一处？`
-        : offer ? '多谢你的好意。眼下我还没有能请你接下的明确委托。'
+        : offer ? `多谢。${view.goal ? `我眼下想${view.goal}。` : `这里是${view.locationName}。`}尚没有约定委托；你想怎么相助，我们可以先商量。`
           : question ? '这件事我眼下不清楚；你能说得具体些吗？'
             : '我记下你说的话了。眼下还有什么要紧的事？';
   return { targetId: npc.id, blocks: [{ type: 'dlg', name: npc.name, text: answer }] };

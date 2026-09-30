@@ -13,6 +13,7 @@ import { directAstraScene } from './astra-director.js';
 import { consumeGeneratedItem } from './astra-effects.js';
 import { resolveAstraConversation, validateAstraConversation, fallbackAstraConversation, conversationEvidence } from './astra-interaction.js';
 import { buildAstraLocalMessages } from './astra-local-prompt.js';
+import { sceneAffordances } from './astra-affordances.js';
 import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
 import { applyWorldPlan, settleWorldRules } from './astra-operations.js';
 import { ensureSimulation, captureWorldChanges, propagateCausality, assessIntent, companionNotification, isSpeculativeInput } from './astra-causality.js';
@@ -61,17 +62,20 @@ function mechanicalAction(world, input) {
   }
   if (/(?:等待|休息|睡|闭关)/u.test(action)) {
     const match = action.match(/(\d+)\s*(分钟|小时|天|日)/u);
-    const amount = match ? Math.min(365, Math.max(1, Number(match[1]))) : 1;
     const unit = match?.[2];
+    const maximum = unit === '分钟' ? 365*1440 : unit === '小时' ? 365*24 : 365;
+    const amount = match ? Math.min(maximum, Math.max(1, Number(match[1]))) : 1;
     return { type: 'wait', minutes: unit === '天' || unit === '日' ? amount * 1440 : unit === '小时' ? amount * 60 : unit === '分钟' ? amount : 60 };
   }
   if (/(?:前往|去往|前去|走向|赶往|旅行|出发|前往)/u.test(action)) {
+    if(world.player.travel)throw new Error('当前仍在旅途中；请继续赶路或等待抵达，不能从原地再次出发。');
     const possibilities = world.edges.filter(edge => edge.from === world.player.locationId && !edge.closed && !world.locations[edge.to]?.destroyed);
     const edge = possibilities.find(candidate => action.includes(world.locations[candidate.to]?.name));
     if (edge) return { type: 'travel', destinationId: edge.to, minutes: 5 };
     if (action) throw new Error('目的地不在当前可通行道路上；请先查看地图。');
   }
   if (/(?:接取|接受|承接)/u.test(action)) {
+    if(world.player.travel)throw new Error('当前仍在旅途中，不能向出发地或目的地的人接取任务。');
     const quest = Object.values(world.quests || {}).find(entry => entry.state === 'available'
       && (entry.offerLocationId || world.characters[entry.giverId]?.locationId || entry.targetLocationId) === world.player.locationId
       && (action.includes(entry.title) || action.includes(entry.id) || /委托|任务/u.test(action)));
@@ -80,8 +84,9 @@ function mechanicalAction(world, input) {
   const quest = Object.values(world.quests || {}).find(entry => ['active','mutated'].includes(entry.state)
     && entry.targetLocationId === world.player.locationId
     && questVerbs[entry.templateId?.split(':')[1]]?.test(action));
-  if (quest) return { type: 'quest_work', questId: quest.id, minutes: 90 };
+  if (quest) {if(world.player.travel)throw new Error('当前仍在旅途中，尚不能在任务地点开展行动。');return { type: 'quest_work', questId: quest.id, minutes: 90 };}
   if (/(?:杀死|击杀|刺杀)/u.test(action)) {
+    if(world.player.travel)throw new Error('当前仍在旅途中，不能攻击留在出发地或目的地的人物。');
     const npc = Object.values(world.characters || {}).find(entry => entry.alive && entry.locationId === world.player.locationId && action.includes(entry.name));
     if (npc) return { type: 'attack', actorId: npc.id, minutes: 15 };
   }
@@ -131,7 +136,7 @@ function settleOrdinaryAction(world, action) {
 function recordHeardSpeech(world, speech, targetId = null) {
   const spoken = clean(speech, 1200);
   if (!spoken) return;
-  const present = Object.values(world.characters || {}).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId);
+  const present = Object.values(world.characters || {}).filter(npc => !world.player.travel && npc.alive && !npc.travel && npc.locationId === world.player.locationId);
   const addressed = present.filter(npc => spoken.includes(npc.name));
   const focus = present.find(npc => npc.id === targetId);
   const witnesses = addressed.length ? addressed : focus
@@ -161,7 +166,7 @@ export function projectAstraWorld(source, world) {
   state.story.day = Math.floor(world.minute / 1440) + 1;
   state.story.minuteOfDay = world.minute % 1440;
   state.story.period = periodAt(state.story.minuteOfDay);
-  state.story.location = location?.name || state.story.location;
+  state.story.location = world.player.travel ? sceneAffordances(world).locationName : location?.name || state.story.location;
   state.story.flags.playerDead = !world.player.alive || world.terminal?.ended;
   state.player.hp = Math.max(0, Math.floor(world.player.health));
   state.player.maxHp = Math.max(1, Math.floor(world.player.maxHealth));
@@ -170,7 +175,7 @@ export function projectAstraWorld(source, world) {
     nascent_soul: 17, spirit_transformation: 19, void_refining: 20, integration: 21, tribulation: 22 };
   state.player.realm = majorRealmLevels[world.player.cultivation?.realm] ?? state.player.realm;
   state.worldState.sceneLabel = state.story.location;
-  state.worldState.presentActorIds = Object.values(world.characters).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId).map(npc => npc.id);
+  state.worldState.presentActorIds = Object.values(world.characters).filter(npc => !world.player.travel && npc.alive && !npc.travel && npc.locationId === world.player.locationId).map(npc => npc.id);
   state.codex.locations = [...new Set([...(state.codex.locations || []), ...(world.flags.visitedLocations || []).map(id => world.locations[id]?.name).filter(Boolean)])].slice(-100);
   state.codex.characters = [...new Set([...(state.codex.characters || []), ...Object.values(world.characters).filter(npc => npc.metPlayer).map(npc => npc.name)])].slice(-100);
   state.inventory.items = {};
@@ -218,6 +223,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     let world, events, narration;
     let engineConversation = false;
+    let degradation = null;
     if (knownRealityPlan) {
       const plan = knownRealityPlan;
       world = applyRealityMutation(state.astraWorld, plan);
@@ -234,7 +240,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         ? resolveAstraConversation(state.astraWorld, turnInput.speech, recent) : null;
       const draft = structuredClone(state.astraWorld);
       ensureSimulation(draft);
-      const intentTarget = Object.values(draft.characters).find(npc => npc.alive && !npc.travel
+      const intentTarget = Object.values(draft.characters).find(npc => !draft.player.travel && npc.alive && !npc.travel
         && npc.locationId === draft.player.locationId && rawInput.includes(npc.name))?.id || conversation?.targetId;
       const intent = assessIntent(draft, turnInput, intentTarget);
       draft.simulation.intents[txId] = { ...intent, id: txId, minute: draft.minute };
@@ -257,6 +263,9 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       if (directed.event) events.push(directed.event);
       const projected = projectAstraWorld(state, world);
       const packet = compileAstraContext(projected, turnInput.action || turnInput.speech, recent);
+      packet.turnStart = {minute:state.astraWorld.minute,locationId:state.astraWorld.player.locationId,
+        locationName:state.astraWorld.locations[state.astraWorld.player.locationId]?.name||'',
+        travel:structuredClone(state.astraWorld.player.travel||null)};
       if (globalThis.lxNative && typeof globalThis.nativeAction === 'function') {
         try {
           packet.recalledSummaries = (await globalThis.nativeAction('world-memory-search', {
@@ -278,6 +287,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           absentName: conversation.absentName || null, presentAtStart: Boolean(conversation.targetId),
           startMinute: state.astraWorld.minute,
           knownFacts: conversationEvidence(conversation, 8) };
+        packet.affordances = sceneAffordances(world,conversation.targetId);
       }
       const visibleEvents = events.filter(event => event.playerWitnessed).slice(-6);
       const messages = [
@@ -285,6 +295,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         { role: 'user', content: `世界事实：${JSON.stringify(packet)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。叙事末段自然承接 directorHook，让玩家看见下一步可做的事；勿强迫选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
       ];
       messages[0].content += '\n' + WORLD_PLAN_PROMPT;
+      messages[0].content += '\n玩家表达困惑（如“？”）时，要帮助他理解所在地点、眼前人物与可行的下一步，不要把困惑当成未知具体事件。affordances 来自当局状态，供自然承接；围绕真实目标商量行动，提出新委托须经 quest.create 落账。';
       messages[0].content = messages[0].content.replace('不生成物品、修行、移动、死亡或任务效果。', '不在文字中直接生成物品、修行、移动、死亡或任务效果；新变化须经 worldPlan。');
       const baseDraft = structuredClone(world);
       const localName = settings.mode === 'local' ? await localModelName(settings) : '';
@@ -336,7 +347,9 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       if (!narration && conversation?.targetId && action.type !== 'reality') {
         const fallback = fallbackAstraConversation(state.astraWorld, conversation);
         const checked = fallback && validateAstraNarration(world, fallback.blocks, { ...packet, recentTurns: [] });
-        if (checked?.ok) { narration = { blocks: checked.blocks }; engineConversation = true; }
+        if (checked?.ok) { narration = { blocks: checked.blocks }; engineConversation = true;
+          degradation = { degraded: true, code: 'AI_GROUNDED_RECOVERY', reasons: errors.slice(0,3) };
+          narration.blocks.push({ type:'sys',text:'叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。' }); }
       }
       if (!narration) throw Object.assign(new Error(`叙事没有通过世界校验：${errors.join('；')}`), { code: 'AI_NARRATIVE_INVALID' });
       const continuingNpc = world.characters?.[conversation?.targetId];
@@ -372,6 +385,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       actionText: turnInput.action, provider: actualProvider,
       cloudAssist: settings.mode === 'hybrid-assist' && actualProvider !== 'local' && actualProvider !== 'engine',
       model: knownRealityPlan ? 'reality-mutation' : engineConversation ? 'grounded-interaction' : settings.model || '',
+      ...(degradation ? { diagnostics: degradation } : {}),
       summary, blocks: narration.blocks, createdAt: committed.updatedAt };
     onProgress('saving');
     if (stateStore) {

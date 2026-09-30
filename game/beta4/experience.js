@@ -1,6 +1,7 @@
 import {createScore} from './audio.js';
 import {GAME_SOUNDTRACK,GAME_PLAYLISTS} from './game-soundtrack.js';
 import {logoFilmMarkup,LOGO_FILM_DURATION} from './logo-film.js';
+import {bindMenuVideo} from './menu-video.js';
 import {projectTurnBlocks,detectEvents} from './presentation.js';
 const KEY='luoxian_beta3_settings';
 const defaults={master:75,music:60,sfx:65,muteBackground:true,quality:'high',motion:true,scale:100,brightness:100,textSpeed:38,requestInterval:8,mode:'windowed',resolution:'1600x900',intro:true};
@@ -73,8 +74,7 @@ export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImpor
  let introTimer,finishing=false,ready=false;
  document.body.classList.add('video-era');
  const coverVideo=el('menuLoopVideo');
- coverVideo?.addEventListener('error',()=>el('titleScreen')?.classList.add('video-failed'));
- coverVideo?.addEventListener('loadeddata',()=>el('titleScreen')?.classList.add('video-ready'));
+ bindMenuVideo(coverVideo,el('titleScreen'));
  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  function menu(){const title=el('titleScreen');if(!title)return;title.querySelectorAll('.journey-button').forEach((b,i)=>b.style.setProperty('--menu-index',i));title.classList.remove('menu-ready');void title.offsetWidth;title.classList.add('menu-ready');}
  async function finishIntro(){if(!ready||finishing)return;finishing=true;clearTimeout(introTimer);el('cinematic').classList.add('departing');audio.setScene(el('gameShell')&&!el('gameShell').hidden?'game':'title');coverVideo?.play().catch(()=>el('titleScreen')?.classList.add('video-failed'));await delay(reduced()?150:850);el('cinematic').hidden=true;menu();finishing=false;el('continueJourneyButton')?.hidden?el('newJourneyButton')?.focus():el('continueJourneyButton')?.focus();}

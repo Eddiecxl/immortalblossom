@@ -1,5 +1,7 @@
 import { normalizeAstraWorld } from './astra-world.js';
 import { advanceAstraWorld } from './astra-scheduler.js';
+import { sceneAffordances } from './astra-affordances.js';
+import { seedHash } from './astra-seed.js';
 
 const BACKGROUND = {
   'farming household': '农家子弟', 'merchant family': '商户子弟',
@@ -35,8 +37,9 @@ export function createAstraOpening(source) {
   const background = BACKGROUND[world.player.background] || world.player.background;
   const danger = DANGER[world.flags.earlyDanger] || '世道并不安宁';
   const chance = CHANCES[world.flags.earlyOpportunity] || '眼前也有新的机会';
-  const people = Object.values(world.characters || {}).filter(npc => npc.alive && npc.locationId === world.player.locationId);
-  const witnessed = people[0]?.name ? `${people[0].name}也在此地，正忙于自己的事情` : '眼前暂无可以直接问话的熟面孔';
+  const people = Object.values(world.characters || {}).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId);
+  const affordance = sceneAffordances(world);
+  const witnessed = people[0]?.name ? `${people[0].name}在这里；这位${affordance.role}${affordance.goal ? `眼下牵挂着${affordance.goal}` : '可以问话'}` : '眼前暂无可以直接问话的熟面孔';
   const cue = `${danger}；${chance}。${witnessed}。`;
   const rumorId = 'rumor:opening-opportunity';
   world.rumors.push({ id: rumorId, originEventId: 'opening:cue', locationId: world.player.locationId,
@@ -52,15 +55,21 @@ export function createAstraOpening(source) {
   state.story.minuteOfDay = world.minute % 1440;
   state.story.period = state.story.minuteOfDay < 360 ? '夜晚' : state.story.minuteOfDay < 600 ? '清晨'
     : state.story.minuteOfDay < 1020 ? '白昼' : state.story.minuteOfDay < 1200 ? '黄昏' : '夜晚';
-  state.worldState.origin = `我在${location.name}开始此世，原本是${background}。`;
+  state.worldState.origin = `我穿越后在${location.name}醒来，这具身体原本是${background}。`;
   state.worldState.sceneLabel = location.name;
   state.codex.locations = [...new Set([...(state.codex.locations || []), location.name])];
-  state.director.sceneGoal = '先弄清眼前人事，决定此世的第一步。';
+  state.director.sceneGoal = affordance.nextStep;
   state.story.flags.seededOpening = true;
+  world.flags.transmigrated = true;
+  const arrivals = [
+    `另一世的记忆还在，我却已在${location.name}醒来。这具身体原本是${background}，属于这里的牵挂与我一同醒来。我确实穿越了；该怎样活下去，还得亲自弄清。`,
+    `我先记起了另一段人生，然后才认出${location.name}。穿越没有给我现成的答案：此世的身份是${background}，眼前的人和事，需要从头认识。`,
+    `我在${location.name}睁开眼，记忆却来自另一世。此世我是${background}；身体记得这段生活，我仍需弄清它。穿越已成事实，第一步该往哪里走？`
+  ];
   const blocks = [
-    { type: 'narr', text: `清晨，我在${location.name}醒来。此世我是一名${background}；家人与生计各有牵挂，脚下的路也尚未写定。` },
-    { type: 'narr', text: `${cue}四周仍按自己的时辰运转，谁也不会因为我停下。` },
-    { type: 'sys', text: `宿主，我在。你身处${location.name}；这些线索有的尚只是传闻。${people.length ? '你想先问问在场的人，还是亲自查看？' : '你可以先查看眼前的环境，或循消息打听去向。'}接下来的事不会停等。` }
+    { type: 'narr', text: arrivals[seedHash(world.seed,'opening:arrival') % arrivals.length] },
+    { type: 'narr', text: cue },
+    { type: 'sys', text: `宿主，先别慌。你现在身处${location.name}。可以先${affordance.nextStep}。刚听到的消息尚是传闻，要核实才能行动；你也可以查看地图，另选去向。` }
   ];
   const turn = {
     id: 'opening:astra', kind: 'world', userText: '', speech: '', actionText: '',

@@ -1,0 +1,775 @@
+TAP version 13
+# Subtest: quest state machine supports the nine required states
+ok 1 - quest state machine supports the nine required states
+  ---
+  duration_ms: 12.5686
+  ...
+# Subtest: dead giver mutates an accepted quest and destroyed target invalidates it
+ok 2 - dead giver mutates an accepted quest and destroyed target invalidates it
+  ---
+  duration_ms: 1.3899
+  ...
+# Subtest: deadline and completion by another actor cause real loss of rewards
+ok 3 - deadline and completion by another actor cause real loss of rewards
+  ---
+  duration_ms: 1.8623
+  ...
+# Subtest: completion transfers an Engine reward and records a follow-up opportunity
+ok 4 - completion transfers an Engine reward and records a follow-up opportunity
+  ---
+  duration_ms: 1.543
+  ...
+# Subtest: an anchor chooses a seed and world dependent variant, then resolves offscreen
+ok 5 - an anchor chooses a seed and world dependent variant, then resolves offscreen
+  ---
+  duration_ms: 2.6618
+  ...
+# Subtest: causal events create witnessed beliefs and never double-apply a social reaction
+ok 6 - causal events create witnessed beliefs and never double-apply a social reaction
+  ---
+  duration_ms: 14.2657
+  ...
+# Subtest: the same loss is judged by actual known conduct and affiliation across seeds
+ok 7 - the same loss is judged by actual known conduct and affiliation across seeds
+  ---
+  duration_ms: 4.6658
+  ...
+# Subtest: news spreads only after travel time and persists through reload
+ok 8 - news spreads only after travel time and persists through reload
+  ---
+  duration_ms: 4.919
+  ...
+# Subtest: risk assessment warns proactively without applying quoted or hypothetical violence
+ok 9 - risk assessment warns proactively without applying quoted or hypothetical violence
+  ---
+  duration_ms: 0.9932
+  ...
+# Subtest: actual faction dissolution retains an observer former affiliation as evidence
+ok 10 - actual faction dissolution retains an observer former affiliation as evidence
+  ---
+  duration_ms: 3.6861
+  ...
+# Subtest: context is bounded and selects local graph, actors, knowledge and recent turns
+ok 11 - context is bounded and selects local graph, actors, knowledge and recent turns
+  ---
+  duration_ms: 9.248
+  ...
+# Subtest: context includes only secrets and rumors known by an eligible local speaker
+ok 12 - context includes only secrets and rumors known by an eligible local speaker
+  ---
+  duration_ms: 0.3954
+  ...
+# Subtest: present NPC context retains identity and occupation across different world roles
+ok 13 - present NPC context retains identity and occupation across different world roles
+  ---
+  duration_ms: 0.3184
+  ...
+# Subtest: old matching local history and NPC memory survive the recent-context window
+ok 14 - old matching local history and NPC memory survive the recent-context window
+  ---
+  duration_ms: 0.5144
+  ...
+# Subtest: dead and remote NPC dialogue is rejected without returning unsupported blocks
+ok 15 - dead and remote NPC dialogue is rejected without returning unsupported blocks
+  ---
+  duration_ms: 2.6261
+  ...
+# Subtest: prose cannot casually declare a dead NPC alive again
+ok 16 - prose cannot casually declare a dead NPC alive again
+  ---
+  duration_ms: 15.785
+  ...
+# Subtest: impossible location and intact destroyed place are rejected
+ok 17 - impossible location and intact destroyed place are rejected
+  ---
+  duration_ms: 0.4844
+  ...
+# Subtest: item and skill claims require recorded Engine provenance
+ok 18 - item and skill claims require recorded Engine provenance
+  ---
+  duration_ms: 0.4296
+  ...
+# Subtest: NPC cannot disclose a restricted secret or restart a completed quest
+ok 19 - NPC cannot disclose a restricted secret or restart a completed quest
+  ---
+  duration_ms: 0.9662
+  ...
+# Subtest: terminal extinction, stale ETA and reversed time are rejected
+ok 20 - terminal extinction, stale ETA and reversed time are rejected
+  ---
+  duration_ms: 1.1537
+  ...
+# Subtest: substantial exact repetition from recent narration is rejected
+ok 21 - substantial exact repetition from recent narration is rejected
+  ---
+  duration_ms: 0.5896
+  ...
+# Subtest: narration cannot repeat the player speech or address the protagonist as you
+ok 22 - narration cannot repeat the player speech or address the protagonist as you
+  ---
+  duration_ms: 0.4168
+  ...
+# Subtest: context remains capped when individual saved fields are very large
+ok 23 - context remains capped when individual saved fields are very large
+  ---
+  duration_ms: 6.7199
+  ...
+# Subtest: dialogue fact IDs must belong to the speaker knowledge set
+ok 24 - dialogue fact IDs must belong to the speaker knowledge set
+  ---
+  duration_ms: 0.2538
+  ...
+# Subtest: plain prose cannot award an unrecorded item or skill
+ok 25 - plain prose cannot award an unrecorded item or skill
+  ---
+  duration_ms: 0.2493
+  ...
+# Subtest: terminal extinction disallows ordinary NPC dialogue
+ok 26 - terminal extinction disallows ordinary NPC dialogue
+  ---
+  duration_ms: 0.1631
+  ...
+# Subtest: compiler and validator accept foundation world fields
+ok 27 - compiler and validator accept foundation world fields
+  ---
+  duration_ms: 1.7555
+  ...
+# Subtest: conversation targets are resolved from live world state across many seeds
+ok 28 - conversation targets are resolved from live world state across many seeds
+  ---
+  duration_ms: 71.838
+  ...
+# Subtest: a conversation remains with the same NPC only while that NPC is present
+ok 29 - a conversation remains with the same NPC only while that NPC is present
+  ---
+  duration_ms: 1.4397
+  ...
+# Subtest: the reply contract rejects generic echoes and accepts a grounded answer
+ok 30 - the reply contract rejects generic echoes and accepts a grounded answer
+  ---
+  duration_ms: 3.9105
+  ...
+# Subtest: fallback uses the addressed NPC and world facts when local model loops
+ok 31 - fallback uses the addressed NPC and world facts when local model loops
+  ---
+  duration_ms: 440.575
+  ...
+# Subtest: fallback never speaks for a missing NPC
+ok 32 - fallback never speaks for a missing NPC
+  ---
+  duration_ms: 0.7873
+  ...
+# Subtest: a departing NPC is absent afterward but can answer speech heard before departure
+ok 33 - a departing NPC is absent afterward but can answer speech heard before departure
+  ---
+  duration_ms: 5.146
+  ...
+# Subtest: opening advances the world and records a seeded live situation
+ok 34 - opening advances the world and records a seeded live situation
+  ---
+  duration_ms: 30.8321
+  ...
+# Subtest: anti-stall creates a persistent rumor and visible Engine event after quiet turns
+ok 35 - anti-stall creates a persistent rumor and visible Engine event after quiet turns
+  ---
+  duration_ms: 3.5555
+  ...
+# Subtest: spoken reality rewrite creates a persistent item with a structured effect
+ok 36 - spoken reality rewrite creates a persistent item with a structured effect
+  ---
+  duration_ms: 38.712
+  ...
+# Subtest: consuming the generated pill changes cultivation and removes the instance
+ok 37 - consuming the generated pill changes cultivation and removes the instance
+  ---
+  duration_ms: 7.3765
+  ...
+# Subtest: unknown generated effects cannot be silently ignored
+ok 38 - unknown generated effects cannot be silently ignored
+  ---
+  duration_ms: 2.8667
+  ...
+# Subtest: typed Action consumes a generated item and persists the major realm change
+ok 39 - typed Action consumes a generated item and persists the major realm change
+  ---
+  duration_ms: 65.4404
+  ...
+# Subtest: speech advances authoritative time while preserving exact player speech
+ok 40 - speech advances authoritative time while preserving exact player speech
+  ---
+  duration_ms: 88.556
+  ...
+# Subtest: bad model response cannot commit Engine world or transcript
+ok 41 - bad model response cannot commit Engine world or transcript
+  ---
+  duration_ms: 20.694
+  ...
+# Subtest: reality command is applied mechanically and remains terminal after save normalization
+ok 42 - reality command is applied mechanically and remains terminal after save normalization
+  ---
+  duration_ms: 25.7655
+  ...
+# Subtest: system companion reads world truth without advancing time
+ok 43 - system companion reads world truth without advancing time
+  ---
+  duration_ms: 11.4311
+  ...
+# Subtest: explicit quest work changes quest state and transfers a reward through Engine
+ok 44 - explicit quest work changes quest state and transfers a reward through Engine
+  ---
+  duration_ms: 32.5762
+  ...
+# Subtest: narrative loop is rejected before a second identical turn can be saved
+ok 45 - narrative loop is rejected before a second identical turn can be saved
+  ---
+  duration_ms: 61.4481
+  ...
+# Subtest: only present NPCs hear and remember player speech
+ok 46 - only present NPCs hear and remember player speech
+  ---
+  duration_ms: 42.9723
+  ...
+# Subtest: model echo of exact player speech is removed before the turn is stored
+ok 47 - model echo of exact player speech is removed before the turn is stored
+  ---
+  duration_ms: 30.2687
+  ...
+# Subtest: speech command remains speech, while explicit spoken reality invocation uses Engine
+ok 48 - speech command remains speech, while explicit spoken reality invocation uses Engine
+  ---
+  duration_ms: 44.3985
+  ...
+# Subtest: a rumor never turns into an unrecorded person at the opening
+ok 49 - a rumor never turns into an unrecorded person at the opening
+  ---
+  duration_ms: 332.5099
+  ...
+# Subtest: a missing named NPC is never replaced by a different speaker
+ok 50 - a missing named NPC is never replaced by a different speaker
+  ---
+  duration_ms: 2.7097
+  ...
+# Subtest: local prompt preserves speaker identity and separates rumor from presence
+ok 51 - local prompt preserves speaker identity and separates rumor from presence
+  ---
+  duration_ms: 1.0713
+  ...
+# Subtest: non-conversation local prompt stays in first-person narration
+ok 52 - non-conversation local prompt stays in first-person narration
+  ---
+  duration_ms: 0.2489
+  ...
+# Subtest: Qwen3 local prompt disables unbounded thinking without changing non-Qwen requests
+ok 53 - Qwen3 local prompt disables unbounded thinking without changing non-Qwen requests
+  ---
+  duration_ms: 0.2131
+  ...
+# Subtest: new saves begin with a deterministic mortal world and schema 6
+ok 54 - new saves begin with a deterministic mortal world and schema 6
+  ---
+  duration_ms: 29.2161
+  ...
+# Subtest: schema 5 migration preserves legacy progress and creates stable world
+ok 55 - schema 5 migration preserves legacy progress and creates stable world
+  ---
+  duration_ms: 16.9406
+  ...
+# Subtest: first schema 6 overwrite keeps the original schema 5 JSON exactly once
+ok 56 - first schema 6 overwrite keeps the original schema 5 JSON exactly once
+  ---
+  duration_ms: 35.5045
+  ...
+# Subtest: failed migration backup leaves the original save untouched
+ok 57 - failed migration backup leaves the original save untouched
+  ---
+  duration_ms: 11.7961
+  ...
+# Subtest: mortal opening describes the seeded place without forcing a Zhao escape or Lin meeting
+ok 58 - mortal opening describes the seeded place without forcing a Zhao escape or Lin meeting
+  ---
+  duration_ms: 31.3476
+  ...
+# Subtest: different seeds yield different real opening situations
+ok 59 - different seeds yield different real opening situations
+  ---
+  duration_ms: 100.62
+  ...
+# Subtest: typed changes preserve identity and rollback every earlier operation on failure
+ok 60 - typed changes preserve identity and rollback every earlier operation on failure
+  ---
+  duration_ms: 24.5197
+  ...
+# Subtest: resource transfers update both inventories and cannot duplicate ownership
+ok 61 - resource transfers update both inventories and cannot duplicate ownership
+  ---
+  duration_ms: 5.4354
+  ...
+# Subtest: speech threats cannot become mechanical kills; rule code and prototype writes are rejected
+ok 62 - speech threats cannot become mechanical kills; rule code and prototype writes are rejected
+  ---
+  duration_ms: 6.0098
+  ...
+# Subtest: generic conditions and rewards settle dynamic quests once with branch-safe state
+ok 63 - generic conditions and rewards settle dynamic quests once with branch-safe state
+  ---
+  duration_ms: 8.0103
+  ...
+# Subtest: declarative item effects obey current caps instead of a seed-specific special case
+ok 64 - declarative item effects obey current caps instead of a seed-specific special case
+  ---
+  duration_ms: 23.828
+  ...
+# Subtest: declarative rules run once per source event and reject unbounded recursion
+ok 65 - declarative rules run once per source event and reject unbounded recursion
+  ---
+  duration_ms: 6.4581
+  ...
+# Subtest: unknown effect conditions are validated at creation and duplicate event delivery runs a rule once
+ok 66 - unknown effect conditions are validated at creation and duplicate event delivery runs a rule once
+  ---
+  duration_ms: 7.6041
+  ...
+# Subtest: ordinary quests cannot complete immediately on unrelated facts and oversell one reward budget
+ok 67 - ordinary quests cannot complete immediately on unrelated facts and oversell one reward budget
+  ---
+  duration_ms: 3.5463
+  ...
+# Subtest: guidance respects unavailable quest givers and never substitutes faction business for a personal goal
+ok 68 - guidance respects unavailable quest givers and never substitutes faction business for a personal goal
+  ---
+  duration_ms: 27.0003
+  ...
+# Subtest: openings acknowledge transmigration and supply a real next step across seeds
+ok 69 - openings acknowledge transmigration and supply a real next step across seeds
+  ---
+  duration_ms: 348.7393
+  ...
+# Subtest: confusion prompts orient to current world instead of generic ignorance across seeds and changes
+ok 70 - confusion prompts orient to current world instead of generic ignorance across seeds and changes
+  ---
+  duration_ms: 111.0885
+  ...
+# Subtest: engine degradation is recorded and disclosed, with no invented quest
+ok 71 - engine degradation is recorded and disclosed, with no invented quest
+  ---
+  duration_ms: 23.1502
+  ...
+# Subtest: a traveler who dies retains a physical origin for dropped belongings
+ok 72 - a traveler who dies retains a physical origin for dropped belongings
+  ---
+  duration_ms: 21.9579
+  ...
+# Subtest: invincibility and NPC death are persistent Engine facts
+ok 73 - invincibility and NPC death are persistent Engine facts
+  ---
+  duration_ms: 9.5203
+  ...
+# Subtest: sect erasure changes factions, places and dependent quests
+ok 74 - sect erasure changes factions, places and dependent quests
+  ---
+  duration_ms: 4.9799
+  ...
+# Subtest: destroyed location closes roads, displaces residents and invalidates local quests
+ok 75 - destroyed location closes roads, displaces residents and invalidates local quests
+  ---
+  duration_ms: 4.0422
+  ...
+# Subtest: all-life extinction is terminal and scheduler cannot restore ordinary life
+ok 76 - all-life extinction is terminal and scheduler cannot restore ordinary life
+  ---
+  duration_ms: 4.1106
+  ...
+# Subtest: resurrection needs an explicit rewrite and remains in world history
+ok 77 - resurrection needs an explicit rewrite and remains in world history
+  ---
+  duration_ms: 4.0673
+  ...
+# Subtest: dead NPC remains dead after 500 turns and cannot speak in narration
+ok 78 - dead NPC remains dead after 500 turns and cannot speak in narration
+  ---
+  duration_ms: 786.6379
+  ...
+# Subtest: review: hypothetical known and open reality invocations cannot mutate
+ok 79 - review: hypothetical known and open reality invocations cannot mutate
+  ---
+  duration_ms: 152.3943
+  ...
+# Subtest: review: mechanically consumed pills are not consumed again by the AI proposal
+ok 80 - review: mechanically consumed pills are not consumed again by the AI proposal
+  ---
+  duration_ms: 51.6629
+  ...
+# Subtest: review: personal rewrite cannot secretly create or alter unrelated relations
+ok 81 - review: personal rewrite cannot secretly create or alter unrelated relations
+  ---
+  duration_ms: 5.1635
+  ...
+# Subtest: review: remote mutations are witnessed where the affected entity is
+ok 82 - review: remote mutations are witnessed where the affected entity is
+  ---
+  duration_ms: 4.033
+  ...
+# Subtest: review: known mechanical rewrite dispatches its causal event to declarative rules
+ok 83 - review: known mechanical rewrite dispatches its causal event to declarative rules
+  ---
+  duration_ms: 21.4968
+  ...
+# Subtest: review: deferred concepts after cloned item effects remain in the final simulation
+ok 84 - review: deferred concepts after cloned item effects remain in the final simulation
+  ---
+  duration_ms: 4.6082
+  ...
+# Subtest: review: conditions cannot reference nonexistent entities or mechanical fields
+ok 85 - review: conditions cannot reference nonexistent entities or mechanical fields
+  ---
+  duration_ms: 5.0955
+  ...
+# Subtest: review: an offered destination quest can be accepted at its giver
+ok 86 - review: an offered destination quest can be accepted at its giver
+  ---
+  duration_ms: 32.8764
+  ...
+# Subtest: review: recalled old reports retain provenance even after the belief window fills
+ok 87 - review: recalled old reports retain provenance even after the belief window fills
+  ---
+  duration_ms: 1.6409
+  ...
+# Subtest: queue order and replay are deterministic and do not mutate source
+ok 88 - queue order and replay are deterministic and do not mutate source
+  ---
+  duration_ms: 32.2562
+  ...
+# Subtest: Lin arrives and the first encounter persists even if the player waited
+ok 89 - Lin arrives and the first encounter persists even if the player waited
+  ---
+  duration_ms: 4.6282
+  ...
+# Subtest: travel is an Engine arrival, not an immediate teleport
+ok 90 - travel is an Engine arrival, not an immediate teleport
+  ---
+  duration_ms: 5.6331
+  ...
+# Subtest: 20 speech turns advance time and resolve a scheduled NPC arrival
+ok 91 - 20 speech turns advance time and resolve a scheduled NPC arrival
+  ---
+  duration_ms: 47.7498
+  ...
+# Subtest: a missed sect event resolves and its opportunity expires while the player sleeps
+ok 92 - a missed sect event resolves and its opportunity expires while the player sleeps
+  ---
+  duration_ms: 68.0395
+  ...
+# Subtest: faction leadership and territory follow autonomous state changes
+ok 93 - faction leadership and territory follow autonomous state changes
+  ---
+  duration_ms: 1.6049
+  ...
+# Subtest: rumors spread through real roads with decaying confidence
+ok 94 - rumors spread through real roads with decaying confidence
+  ---
+  duration_ms: 5.6866
+  ...
+# Subtest: ten thousand scheduled events resolve once inside a bounded save
+ok 95 - ten thousand scheduled events resolve once inside a bounded save
+  ---
+  duration_ms: 259.2499
+  ...
+# Subtest: a seed creates a bounded, linked world with absolute time
+ok 96 - a seed creates a bounded, linked world with absolute time
+  ---
+  duration_ms: 19.6802
+  ...
+# Subtest: the same seed recreates the same authoritative world
+ok 97 - the same seed recreates the same authoritative world
+  ---
+  duration_ms: 7.3395
+  ...
+# Subtest: different seeds change structural conditions rather than only names
+ok 98 - different seeds change structural conditions rather than only names
+  ---
+  duration_ms: 36.175
+  ...
+# Subtest: player starts mortal without inherited power or automatic sect protection
+ok 99 - player starts mortal without inherited power or automatic sect protection
+  ---
+  duration_ms: 26.3409
+  ...
+# Subtest: Lin Xiaoman has her own life and a guaranteed early encounter
+ok 100 - Lin Xiaoman has her own life and a guaranteed early encounter
+  ---
+  duration_ms: 16.6009
+  ...
+# Subtest: catalogs reach target scale with usable causal templates
+ok 101 - catalogs reach target scale with usable causal templates
+  ---
+  duration_ms: 0.7857
+  ...
+# Subtest: anchor subfamilies vary their causes and reference real events
+ok 102 - anchor subfamilies vary their causes and reference real events
+  ---
+  duration_ms: 0.596
+  ...
+# Subtest: people already dead at world creation are not present in a location
+ok 103 - people already dead at world creation are not present in a location
+  ---
+  duration_ms: 20.8728
+  ...
+# Subtest: first 20 hours vary background, local events, Lin role and quest opportunity
+ok 104 - first 20 hours vary background, local events, Lin role and quest opportunity
+  ---
+  duration_ms: 43.5486
+  ...
+# Subtest: normalization preserves committed world facts and isolates input
+ok 105 - normalization preserves committed world facts and isolates input
+  ---
+  duration_ms: 4.4189
+  ...
+# Subtest: twenty diverse worlds keep causal records across repeated reload and discarded futures
+ok 106 - twenty diverse worlds keep causal records across repeated reload and discarded futures
+  ---
+  duration_ms: 1118.323
+  ...
+# Subtest: causal NPC plans actually change goals and avoidance schedules real travel
+ok 107 - causal NPC plans actually change goals and avoidance schedules real travel
+  ---
+  duration_ms: 1.1227
+  ...
+# Subtest: rule and identity changes obey explicit personal scope
+ok 108 - rule and identity changes obey explicit personal scope
+  ---
+  duration_ms: 2.9989
+  ...
+# Subtest: one existing AI request carries a generic identity rewrite and persists the exact stable entity
+ok 109 - one existing AI request carries a generic identity rewrite and persists the exact stable entity
+  ---
+  duration_ms: 81.3611
+  ...
+# Subtest: narration rejection restores the same draft before retrying a social plan
+ok 110 - narration rejection restores the same draft before retrying a social plan
+  ---
+  duration_ms: 46.8995
+  ...
+# Subtest: the system proactively warns about an outmatched threat without waiting for a system query
+ok 111 - the system proactively warns about an outmatched threat without waiting for a system query
+  ---
+  duration_ms: 28.7548
+  ...
+# Subtest: a new AI-proposed character is committed as an engine entity across seeds
+ok 112 - a new AI-proposed character is committed as an engine entity across seeds
+  ---
+  duration_ms: 67.7607
+  ...
+# Subtest: a live speaker offers a dynamic quest whose giver and funds exist
+ok 113 - a live speaker offers a dynamic quest whose giver and funds exist
+  ---
+  duration_ms: 25.5277
+  ...
+# Subtest: 1000 speech turns keep NPC initiative, early meeting, bounded save and deterministic history
+ok 114 - 1000 speech turns keep NPC initiative, early meeting, bounded save and deterministic history
+  ---
+  duration_ms: 3046.3054
+  ...
+# Subtest: continue travelling honours a minute count longer than 365
+ok 115 - continue travelling honours a minute count longer than 365
+  ---
+  duration_ms: 79.3985
+  ...
+# Subtest: travel cannot attack or accept an origin commission through mechanical shortcuts
+ok 116 - travel cannot attack or accept an origin commission through mechanical shortcuts
+  ---
+  duration_ms: 24.0914
+  ...
+# Subtest: a journey in progress cannot converse with people left at the origin
+ok 117 - a journey in progress cannot converse with people left at the origin
+  ---
+  duration_ms: 119.4699
+  ...
+# Subtest: an ordinary cultivation effect is saturated by the current world cap across seeds
+ok 118 - an ordinary cultivation effect is saturated by the current world cap across seeds
+  ---
+  duration_ms: 48.6883
+  ...
+# Subtest: a personal rule rewrite changes only the player cap and survives save normalization
+ok 119 - a personal rule rewrite changes only the player cap and survives save normalization
+  ---
+  duration_ms: 10.3077
+  ...
+# Subtest: a world-scope rule rewrite changes the shared cap without instantly moving any actor
+ok 120 - a world-scope rule rewrite changes the shared cap without instantly moving any actor
+  ---
+  duration_ms: 5.6655
+  ...
+# Subtest: a raised cap is read by the same ordinary pill rule without changing the pill template
+ok 121 - a raised cap is read by the same ordinary pill rule without changing the pill template
+  ---
+  duration_ms: 9.6158
+  ...
+# Subtest: custom realm rule survives full game save migration and reaches narration context
+ok 122 - custom realm rule survives full game save migration and reaches narration context
+  ---
+  duration_ms: 29.1386
+  ...
+# Subtest: no-op rewrites and capped effects record actual changes rather than requested changes
+ok 123 - no-op rewrites and capped effects record actual changes rather than requested changes
+  ---
+  duration_ms: 4.354
+  ...
+# Subtest: numeric mutation resolves a current target, clamps linked values, and preserves the source
+ok 124 - numeric mutation resolves a current target, clamps linked values, and preserves the source
+  ---
+  duration_ms: 1.4712
+  ...
+# Subtest: natural-language numeric wishes use current entity IDs across seeds and survive save reload
+ok 125 - natural-language numeric wishes use current entity IDs across seeds and survive save reload
+  ---
+  duration_ms: 24.2635
+  ...
+# Subtest: zero faction strength closes its dependent territories and associations
+ok 126 - zero faction strength closes its dependent territories and associations
+  ---
+  duration_ms: 2.0144
+  ...
+# Subtest: mutable numeric bounds and no-op history are read at settlement time
+ok 127 - mutable numeric bounds and no-op history are read at settlement time
+  ---
+  duration_ms: 3.609
+  ...
+# Subtest: older saves acquire rules without losing their facts, and narration sees current numeric values
+ok 128 - older saves acquire rules without losing their facts, and narration sees current numeric values
+  ---
+  duration_ms: 4.8953
+  ...
+# Subtest: opening plays the requested songs in order and retains position at the cover
+ok 129 - opening plays the requested songs in order and retains position at the cover
+  ---
+  duration_ms: 3.5992
+  ...
+# Subtest: entering the game resets the gameplay playlist to loop even from a shared song
+ok 130 - entering the game resets the gameplay playlist to loop even from a shared song
+  ---
+  duration_ms: 1.6789
+  ...
+# Subtest: automatic game progression loops loop music battle without danger reordering
+ok 131 - automatic game progression loops loop music battle without danger reordering
+  ---
+  duration_ms: 2.4536
+  ...
+# Subtest: game manual next fades the outgoing recording and schedules its stop
+ok 132 - game manual next fades the outgoing recording and schedules its stop
+  ---
+  duration_ms: 0.6058
+  ...
+# Subtest: scene changes discard stale opening decode and never start the wrong recording
+ok 133 - scene changes discard stale opening decode and never start the wrong recording
+  ---
+  duration_ms: 0.5899
+  ...
+# Subtest: leaving gameplay starts the opening playlist while intro replay shares it with title
+ok 134 - leaving gameplay starts the opening playlist while intro replay shares it with title
+  ---
+  duration_ms: 0.5107
+  ...
+# Subtest: blocking audio during decoding prevents a late source from reviving
+ok 135 - blocking audio during decoding prevents a late source from reviving
+  ---
+  duration_ms: 0.4744
+  ...
+# Subtest: launcher keeps its original soundtrack and immediate manual stop behavior
+ok 136 - launcher keeps its original soundtrack and immediate manual stop behavior
+  ---
+  duration_ms: 1.0653
+  ...
+# Subtest: paused handoffs retain the first-track reset in both directions
+ok 137 - paused handoffs retain the first-track reset in both directions
+  ---
+  duration_ms: 0.9468
+  ...
+# Subtest: rapid skips fade every audible retiring source to silence before stopping
+ok 138 - rapid skips fade every audible retiring source to silence before stopping
+  ---
+  duration_ms: 0.8322
+  ...
+# Subtest: new settings prefer local and Local mode never sends a cloud generation
+ok 139 - new settings prefer local and Local mode never sends a cloud generation
+  ---
+  duration_ms: 3.5185
+  ...
+# Subtest: Cloud Only does not generate on local and records the chosen provider
+ok 140 - Cloud Only does not generate on local and records the chosen provider
+  ---
+  duration_ms: 0.646
+  ...
+# Subtest: already decoded native video is shown even when loadeddata preceded module startup
+ok 141 - already decoded native video is shown even when loadeddata preceded module startup
+  ---
+  duration_ms: 13.8953
+  ...
+# Subtest: every committed turn updates the continue checkpoint
+ok 142 - every committed turn updates the continue checkpoint
+  ---
+  duration_ms: 59.3851
+  ...
+# Subtest: native world database receives a committed state before the browser checkpoint
+ok 143 - native world database receives a committed state before the browser checkpoint
+  ---
+  duration_ms: 42.7038
+  ...
+# Subtest: native database restores a newer durable checkpoint on startup
+ok 144 - native database restores a newer durable checkpoint on startup
+  ---
+  duration_ms: 13.6069
+  ...
+# Subtest: existing browser checkpoint is imported into SQLite on first startup
+ok 145 - existing browser checkpoint is imported into SQLite on first startup
+  ---
+  duration_ms: 15.0389
+  ...
+# Subtest: v4 pages and JavaScript imports resolve to packaged files
+ok 146 - v4 pages and JavaScript imports resolve to packaged files
+  ---
+  duration_ms: 50.6004
+  ...
+# Subtest: a committed turn locks once and releases after a short cooldown
+ok 147 - a committed turn locks once and releases after a short cooldown
+  ---
+  duration_ms: 0.9863
+  ...
+# Subtest: failed generation unlocks without committing or cooldown
+ok 148 - failed generation unlocks without committing or cooldown
+  ---
+  duration_ms: 0.1862
+  ...
+# Subtest: provider spacing waits on the same request instead of failing a healthy turn
+ok 149 - provider spacing waits on the same request instead of failing a healthy turn
+  ---
+  duration_ms: 0.5004
+  ...
+# Subtest: player speech appears once even when narration embeds the same quoted line
+ok 150 - player speech appears once even when narration embeds the same quoted line
+  ---
+  duration_ms: 1.4799
+  ...
+# Subtest: turn summary is derived from Engine changes and survives as a stored field
+ok 151 - turn summary is derived from Engine changes and survives as a stored field
+  ---
+  duration_ms: 0.7726
+  ...
+# Subtest: legacy echo fallback does not copy a story block
+ok 152 - legacy echo fallback does not copy a story block
+  ---
+  duration_ms: 0.245
+  ...
+# Subtest: real transcript storage preserves the committed summary across reload
+ok 153 - real transcript storage preserves the committed summary across reload
+  ---
+  duration_ms: 2.1599
+  ...
+1..153
+# tests 153
+# suites 0
+# pass 153
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3410.5214

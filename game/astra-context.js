@@ -1,5 +1,6 @@
 // A bounded, read-only view of the authoritative world for one narration turn.
 import { realmRules, effectiveRealmCap, realmLabel } from './astra-rules.js';
+import { sceneAffordances } from './astra-affordances.js';
 const list = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const text = (value, max = 160) => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
 const idOf = value => typeof value === 'string' ? value : value?.id ?? value?.locationId ?? '';
@@ -80,7 +81,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
   const nearbyLocations = locations.filter(loc => nearbyIds.has(idOf(loc))).slice(0, 8)
     .map(loc => compact(loc, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'description'], { description: 100 }));
   const secrets = list(world.secrets);
-  const npcs = list(world.characters ?? world.npcs).filter(npc => active(npc) && !npc.travel
+  const npcs = list(world.characters ?? world.npcs).filter(npc => !player.travel && active(npc) && !npc.travel
     && (locationOf(npc) === locationId || locationOf(npc) === current?.name)).slice(0, 8);
   const npcIds = npcs.map(idOf);
   const presentNpcs = npcs.map(npc => ({
@@ -127,7 +128,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
     },
     location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'population', 'risk', 'description'], { description: 140 }),
     nearbyLocations, nearbyEdges,
-    player: compact(player, ['id', 'name', 'gender', 'locationId', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
+    player: compact(player, ['id', 'name', 'gender', 'locationId', 'travel', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
     items: list(world.items).filter(item => !item.destroyed && item.ownerId === 'player').slice(0, 8)
       .map(item => compact(item, ['id', 'name', 'quantity', 'ownerId', 'effects', 'description'])),
     simulationFacts: {
@@ -137,6 +138,7 @@ export function compileAstraContext(state, input, recentTurns = []) {
       commitments: list(world.simulation?.commitments).filter(row => row.state === 'unresolved').slice(-3),
       rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
     },
+    affordances: sceneAffordances(world),
     numericFacts, presentNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),
     recentTurns: turns.map(turn => ({ id: text(turn.id, 60), userText: text(turn.userText ?? turn.input, 220),

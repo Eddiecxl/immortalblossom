@@ -17,7 +17,7 @@ function validId(id) {
 function requireEntity(world, id) { return worldEntity(world, id) || fail('提案引用了不存在的实体：' + id); }
 function present(world, id) {
   const npc = world.characters[id];
-  return npc?.alive && !npc.travel && npc.locationId === world.player.locationId;
+  return !world.player.travel && npc?.alive && !npc.travel && npc.locationId === world.player.locationId;
 }
 function inputAction(context) {
   const action = context.input?.action || '';

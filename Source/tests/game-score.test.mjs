@@ -14,7 +14,7 @@ const playlists={intro:opening,title:opening,game:journey,danger:journey};
 function fixture(extra={}){
  const nodes=[],sources=[];let tick;
  const param=()=>({value:1,events:[],cancelScheduledValues(t){this.events.push(['cancel',t]);},setValueAtTime(v,t){this.value=v;this.events.push(['set',v,t]);},setTargetAtTime(v,t,c){this.value=v;this.events.push(['target',v,t,c]);},setValueCurveAtTime(v,t,d){this.events.push(['curve',Array.from(v),t,d]);}});
- const node=()=>({gain:param(),connect(){},disconnect(){this.disconnected=true;}});
+ const node=()=>({gain:param(),connect(destination){this.connection=destination;},disconnect(){this.disconnected=true;}});
  const ctx={state:'running',currentTime:0,createGain(){const n=node();nodes.push(n);return n;},createDynamicsCompressor:node,createBufferSource(){const n={...node(),stops:[],start(t){this.startTime=t;},stop(t=ctx.currentTime){this.stops.push(t);}};sources.push(n);return n;},async resume(){this.state='running';},async suspend(){this.state='suspended';},async close(){this.state='closed';}};
  const doc={hidden:false,addEventListener(){},removeEventListener(){},dispatchEvent(){}};
  const score=createScore(()=>({master:75,music:60,sfx:65}),{contextFactory:()=>ctx,document:doc,tracks,playlists,initialScene:'intro',smoothManual:true,setInterval(fn){tick=fn;return 1;},clearInterval(){},loadBuffer:async track=>({duration:40,id:track.id}),...extra});
@@ -63,4 +63,25 @@ test('launcher keeps its original soundtrack and immediate manual stop behavior'
  const f=fixture({tracks:undefined,playlists:undefined,initialScene:undefined,smoothManual:undefined});
  await f.score.unlock();assert.equal(f.score.getNowPlaying().id,'gate');assert.equal(f.score.getNowPlaying().total,6);
  f.ctx.currentTime=5;await f.score.nextTrack();assert.equal(f.score.getNowPlaying().id,'clouds');assert.equal(f.sources[0].stops[0],5);f.score.dispose();
+});
+
+test('paused handoffs retain the first-track reset in both directions',async()=>{
+ const f=fixture();await f.score.unlock();
+ for(const [scene,id] of [['game','loop'],['title','wish']]){
+  f.score.setEnabled(false);f.score.setScene(scene);await f.settle();
+  f.score.setEnabled(true);await f.score.unlock();await f.settle();
+  assert.equal(f.score.getNowPlaying().id,id);assert.equal(f.score.getNowPlaying().index,1);
+ }
+ f.score.dispose();
+});
+
+test('rapid skips fade every audible retiring source to silence before stopping',async()=>{
+ const f=fixture();await f.score.unlock();f.ctx.currentTime=5;await f.score.nextTrack();
+ const first=f.sources[0],gain=first.connection.gain;gain.value=.8;
+ f.ctx.currentTime=5.1;await f.score.nextTrack();
+ const curve= gain.events.filter(event=>event[0]==='curve').at(-1),stop=first.stops.at(-1);
+ assert.ok(stop-f.ctx.currentTime>.25,'audible old track needs a real fade tail');
+ assert.ok(curve[2]+curve[3]<=stop,'gain must reach silence before source stops');
+ assert.ok(Math.abs(curve[1].at(-1))<.000001);
+ f.ctx.currentTime=10;f.endOld();assert.equal(f.score.getPlaybackState().activeSources,1);f.score.dispose();
 });

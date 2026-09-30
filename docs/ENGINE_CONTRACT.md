@@ -2,6 +2,8 @@
 
 本文依据 v4 源码整理，描述**已经实现**的行为；“希望实现”的玩法不能被误写成当前事实。维护时请先定位下方对应模块，再修改，并用 `Source/tests` 中的场景验证。用户的核心要求是世界状态长久一致，人物、物品、任务、关系、时间和剧情互相影响；AI 不得替代引擎结算。
 
+v4.1.2 更新：开局明确主角穿越，并从当局在场人物、真实目标、有效任务和道路生成下一步建议。未知英文目标不猜成势力事务；死者或异地给予者不能成为直接问话建议。旅行中 player.locationId 保留记录用出发地，player.travel 才表示当前路途；不能让原地居民听见或回应玩家，也不能把途中叙述为已抵达。AI 无效而改用世界事实有限回应时，会记录 turn.diagnostics 并明确提示玩家；未承诺所有自然语言虚构均能被校验检测。实测及边界见 ACTUAL_PLAYTEST_V412.md。
+
 ## 状态与单次回合
 
 `game/game-state.js` 创建/迁移 UI 状态；`state.astraWorld` 是权威世界。`game/astra-world.js` 用 seed 创建地点、有向道路、人物、势力、物品、任务、锚点和事件队列。`game/astra-seed.js` 用带标签的随机流保证同 seed 可复现，而且加一处随机抽样不应连锁改掉其他流。角色开局是凡人，有背景、家庭、财富、安全、境界、健康、位置和行囊。`normalizeAstraWorld` 从保存的世界恢复，不要用新模板覆盖旧玩家选择和历史。
@@ -35,6 +37,6 @@ v4.1.0 新增 AI 结构化世界提案、因果信念、延迟消息、真实 NP
 
 ## 发布与验证
 
-`game/manifest.json` 和 `repair/game.bundle.zip` 必须匹配 `game/`。未来 patch 以 `Luoxian-Beta-v4-Full.zip` 原始 `4.0.0` 包为基线，目标版本递增；`Source/Build-AstraPatch.ps1` 会比较 SHA256，限制可改路径，并用 native probe 试装。不要把用户 save、密钥、本地模型或巨大的运行时放入源码仓库。Launcher 版本公告要同步描述更新。
+`game/manifest.json` 和 `repair/game.bundle.zip` 必须匹配 `game/`。以需要支持的实际较旧完整包为基线，目标版本递增；清理旧版本后，最新完整 ZIP 是后续补丁的基线。`Source/Build-AstraPatch.ps1` 会比较 SHA256，限制可改路径，并用 native probe 试装。不要把用户 save、密钥、本地模型或巨大的运行时放入源码仓库。Launcher 版本公告要同步描述更新。
 
 最低回归：seed 重现；人物在场与缺席；直问直答和原样主角台词；NPC 死亡/物品/任务因果；AI 无效回复不提交；重复情节拒收；SQLite 读写和旧库拒写；补丁能从原始基线试装。测试通过并不等于实际动画、字体及所有模型质量已经通过人工验收，必须单独在 Windows 游戏窗口检查。

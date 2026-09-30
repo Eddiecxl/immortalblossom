@@ -8,6 +8,7 @@ const dangerText = {
 };
 
 export function directAstraScene(world, events = []) {
+  if(world.player?.travel){const trip=world.player.travel,to=world.locations?.[trip.to]?.name||'目的地';return {hook:`我正在前往${to}的途中；还需${Math.max(1,Math.ceil(trip.arriveAt-world.minute))}分钟。可以继续赶路，尚不能与出发地或目的地的人交谈。`,event:null};}
   world.flags ||= {};
   const director = world.flags.sceneDirector ||= { quietTurns: 0, sequence: 0 };
   const local = (events || []).filter(event => event?.playerWitnessed && event.summary

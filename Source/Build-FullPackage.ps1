@@ -33,7 +33,10 @@ $files=@($included | Sort-Object FullName)
 $archive=[IO.Compression.ZipFile]::Open($output,[IO.Compression.ZipArchiveMode]::Create)
 try {
  foreach ($file in $files) {
-  $entry=$archive.CreateEntry(($prefix+$file.FullName.Substring($root.Length+1).Replace('\','/')),[IO.Compression.CompressionLevel]::Optimal)
+  # GGUF weights are already dense quantized data. Store them directly; ZIP64
+  # preserves large models without spending minutes on ineffective compression.
+  $compression=if($file.Extension -ieq '.gguf'){[IO.Compression.CompressionLevel]::NoCompression}else{[IO.Compression.CompressionLevel]::Optimal}
+  $entry=$archive.CreateEntry(($prefix+$file.FullName.Substring($root.Length+1).Replace('\','/')),$compression)
   $entry.LastWriteTime=[DateTimeOffset]::new(1980,1,1,0,0,0,[TimeSpan]::Zero)
   $input=[IO.File]::OpenRead($file.FullName)
   $stream=$entry.Open()

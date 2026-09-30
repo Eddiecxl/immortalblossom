@@ -181,6 +181,7 @@ function renderSuggestions(suggestions = []) {
       ...roads,
       { label: '等待片刻', command: '在此等待一小时' }
     ];
+    if(world.player.travel){const remaining=Math.max(1,Math.ceil(world.player.travel.arriveAt-world.minute));suggestions=[{label:'继续赶路',command:`等待${remaining}分钟`},{label:'观察路途',command:'观察路途'}];}
   } else suggestions=state.campaign?.status==='active'?[...campaignGuidance(state).options,...suggestions]:[];
   for (const suggestion of suggestions.slice(0, 7)) {
     const button = node('button', '', suggestion.label || suggestion.command || '行动');
@@ -525,7 +526,9 @@ async function submitTurn(input) {
       audioEngine.sfx(state.story.flags?.playerDead ? 'death' : Number(state.director?.dangerClocks?.zhaoPursuit || 0) >= 3 ? 'danger' : 'turn');
       renderAll({ suggestions: state.story.flags?.playerDead ? [] : getAvailableActions(state) });
       const sticky = aiClient.loadSticky(state.journeyId);
-      dom.systemLine.textContent = result.turn?.cloudAssist
+      dom.systemLine.textContent = result.turn?.diagnostics?.degraded
+        ? '本回合使用命簿有限回应 · AI 未生成有效叙事，详见系统提示'
+        : result.turn?.cloudAssist
         ? `命簿已续 · 本回合使用 ${V31_PROVIDER_DEFAULTS[result.turn.provider]?.label || result.turn.provider} 云端辅助`
         : sticky?.provider
         ? `命簿已续 · ${V31_PROVIDER_DEFAULTS[sticky.provider]?.label || sticky.provider}`

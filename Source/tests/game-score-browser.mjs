@@ -22,7 +22,10 @@ const server=http.createServer(async(req,res)=>{
   if(!target.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
   let data=await fs.readFile(target);
   if(target===path.join(root,'game/v4/index.html'))data=Buffer.from(data.toString().replace('src="./v4.js"','src="/visual-harness.js"'));
-  res.setHeader('Content-Type',types[path.extname(target)]||'application/octet-stream');res.end(data);
+  res.setHeader('Content-Type',types[path.extname(target)]||'application/octet-stream');
+  const range=/^bytes=(\d+)-(\d*)$/.exec(req.headers.range||'');
+  if(range){const start=Number(range[1]),end=Math.min(data.length-1,range[2]?Number(range[2]):data.length-1);res.writeHead(206,{'Accept-Ranges':'bytes','Content-Range':'bytes '+start+'-'+end+'/'+data.length,'Content-Length':end-start+1});res.end(data.subarray(start,end+1));}
+  else{res.setHeader('Content-Length',data.length);res.end(data);}
  }catch{res.writeHead(404);res.end();}
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -68,9 +71,16 @@ try{
  await screenshot('logo-film');
  await wait(7000);
  assert.ok(await evaluate("document.getElementById('cinematic').hidden && document.getElementById('titleScreen').classList.contains('menu-ready')"));
- const cover=await evaluate('window.__experience.audio.getNowPlaying()');
- assert.equal(cover.id,'luoxian-wish');assert.equal(cover.scene,'title');assert.ok(cover.position>first.position);
- await screenshot('animated-cover');
+  const cover=await evaluate('window.__experience.audio.getNowPlaying()');
+  assert.equal(cover.id,'luoxian-wish');assert.equal(cover.scene,'title');assert.ok(cover.position>first.position);
+  await wait(850);
+  const video=await evaluate("(()=>{const v=document.getElementById('menuLoopVideo');return {readyState:v.readyState,error:v.error?.message||null,currentTime:v.currentTime,paused:v.paused,muted:v.muted};})()");
+  assert.ok(video.readyState>=2);assert.equal(video.error,null);assert.equal(video.paused,false);assert.equal(video.muted,true);
+  assert.ok(await evaluate("document.getElementById('titleScreen').classList.contains('video-ready')"));
+  const poster=await evaluate("(()=>{const v=document.getElementById('menuLoopVideo'),c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c.toDataURL('image/png').split(',')[1];})()");
+  await fs.writeFile(path.join(output,'original-cover-frame.png'),Buffer.from(poster,'base64'));
+  console.log(JSON.stringify({coverVideo:video}));
+  await screenshot('animated-cover');
  await evaluate('window.__experience.audio.nextTrack()');
  assert.equal((await evaluate('window.__experience.audio.getNowPlaying()')).id,'luoxian-battle');
  await evaluate('window.__experience.audio.nextTrack()');
@@ -81,8 +91,13 @@ try{
  assert.equal((await evaluate('window.__experience.audio.getPlaybackState()')).activeSources,1);
  const sequence=['luoxian-loop'];
  for(let i=0;i<3;i++){await evaluate('window.__experience.audio.nextTrack()');sequence.push((await evaluate('window.__experience.audio.getNowPlaying()')).id);}
- assert.deepEqual(sequence,['luoxian-loop','luoxian-music','luoxian-battle','luoxian-loop']);
- await wait(3400);assert.equal((await evaluate('window.__experience.audio.getPlaybackState()')).activeSources,1);
+  assert.deepEqual(sequence,['luoxian-loop','luoxian-music','luoxian-battle','luoxian-loop']);
+  await wait(3400);assert.equal((await evaluate('window.__experience.audio.getPlaybackState()')).activeSources,1);
+  await evaluate("(async()=>{const a=window.__experience.audio;a.setEnabled(false);a.setScene('title');a.setEnabled(true);await a.unlock();})()");
+  assert.equal((await evaluate('window.__experience.audio.getNowPlaying()')).id,'luoxian-wish');
+  await evaluate("(async()=>{const a=window.__experience.audio;a.setEnabled(false);a.setScene('game');a.setEnabled(true);await a.unlock();})()");
+  assert.equal((await evaluate('window.__experience.audio.getNowPlaying()')).id,'luoxian-loop');
+  await wait(3400);assert.equal((await evaluate('window.__experience.audio.getPlaybackState()')).activeSources,1);
  const recordings=await evaluate("(async()=>{const {GAME_SOUNDTRACK}=await import('/game/beta4/game-soundtrack.js');const ctx=new AudioContext();const result=[];for(const track of GAME_SOUNDTRACK){const bytes=await fetch('/game/assets/audio/'+track.file).then(r=>r.arrayBuffer());const buffer=await ctx.decodeAudioData(bytes);let energy=0;const data=buffer.getChannelData(0);for(let i=0;i<data.length;i+=1000)energy+=Math.abs(data[i]);result.push({id:track.id,duration:buffer.duration,channels:buffer.numberOfChannels,energy});}await ctx.close();return result;})()");
  assert.equal(recordings.length,4);for(const recording of recordings){assert.ok(recording.duration>20);assert.ok(recording.energy>1);}
  assert.deepEqual(errors,[]);

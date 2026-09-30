@@ -15,6 +15,6 @@ powershell -ExecutionPolicy Bypass -File .\Source\native\test.ps1
 
 根目录 `version.json` 是补丁安装匹配用的版本。Launcher 从 `game/version.json` 读取实际安装的精确版本；安装补丁后须校验版本与文件健康状态，再显示更新成功和当前版本。`game/version.json` 也保留世界服务内部版本及玩家可见的 `display_version`。更新游戏时同步修改 `Source/Rebuild-GameBaseline.ps1`、Launcher 游戏版本文案和公告；只更新 Launcher 时在“更新公告”列出改动。
 
-当前完整包与文件夹统一为 Game Beta v4；根版本为 `4.0.0`。以后制作补丁时，把 v4 完整包作为 `Source/Build-AstraPatch.ps1` 的 `BaselineZip`，目标版本设为更高的 `4.x.y`。补丁只适用于与基线版本相同的安装。
+当前完整包与文件夹统一为 Game Beta v4；根版本为 `4.1.2`。以后制作补丁时，把最新完整包 ZIP 作为 `Source/Build-AstraPatch.ps1` 的 `BaselineZip`，目标版本设为更高的 `4.x.y`。补丁只适用于与基线版本相同的安装。维护先读 docs/ACTUAL_PLAYTEST_V412.md 与 ENGINE_CONTRACT.md。
 
 `RuntimeHost.exe` 是用户提供的 v2 原生服务重命名而来，源码未包含在原始资料中。本次没有伪造或重建其源码。

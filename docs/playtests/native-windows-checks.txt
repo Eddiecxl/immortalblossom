@@ -1,0 +1,36 @@
+PASS: launcher navigation ready
+PASS: launcher window title has no version
+PASS: game version and update news are visible without launcher version
+PASS: injected bridge
+PASS: invalid update rejects without closing or freezing launcher
+PASS: launcher minimized after game ready
+PASS: launcher audio stops and controls lock while game runs
+PASS: native launcher mute enforces game ownership
+PASS: manual launcher restore cannot bypass game audio lock
+PASS: game status reports live game
+PASS: UI thread is PerMonitorV2 DPI aware, scale=1
+PASS: window-status returns applied display state
+PASS: applied settings match browser client dimensions
+INFO: applied="{\"applied\":{\"clamped\":false,\"height\":700,\"maximized\":false,\"mode\":\"windowed\",\"physicalHeight\":700,\"physicalWidth\":1000,\"requestedHeight\":700,\"requestedWidth\":1000,\"scaleFactor\":1,\"width\":1000},\"innerWidth\":1000,\"innerHeight\":700,\"devicePixelRatio\":1}" controllerScale=1 native={"mode":"windowed","width":1000,"height":700,"scaleFactor":1,"physicalWidth":1000,"physicalHeight":700,"requestedWidth":1000,"requestedHeight":700,"clamped":false,"maximized":false}
+PASS: native fullscreen
+PASS: native windowed exact bounds restore
+INFO: before={X=-1468,Y=146,Width=1016,Height=739} after={X=-1468,Y=146,Width=1016,Height=739}
+PASS: oversized request reports clamping
+PASS: window chrome remains inside work area
+PASS: native display changes reach frontend
+INFO: accelerator 122 KeyDown alt=0 repeat=0
+INFO: accelerator 122 KeyUp alt=0 repeat=1
+PASS: F11 accelerator enters fullscreen
+INFO: accelerator 13 SystemKeyDown alt=1 repeat=0
+INFO: accelerator 13 SystemKeyUp alt=1 repeat=1
+PASS: Alt+Enter accelerator restores window
+PASS: browser and native DPI agree on \\.\DISPLAY5
+PASS: window fits \\.\DISPLAY5 {"mode":"windowed","width":1000,"height":700,"scaleFactor":1,"physicalWidth":1000,"physicalHeight":700,"requestedWidth":1000,"requestedHeight":700,"clamped":false,"maximized":false}
+PASS: browser and native DPI agree on \\.\DISPLAY1
+PASS: window fits \\.\DISPLAY1 {"mode":"windowed","width":1000,"height":700,"scaleFactor":1.25,"physicalWidth":1250,"physicalHeight":875,"requestedWidth":1000,"requestedHeight":700,"clamped":false,"maximized":false}
+PASS: native close routes through save confirmation bridge
+PASS: game close restores launcher
+PASS: runtime remains for launcher
+PASS: game close resumes launcher music automatically
+PASS: game close removes native launcher mute
+STOP: owned runtime shut down

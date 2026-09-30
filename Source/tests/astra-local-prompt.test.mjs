@@ -16,7 +16,7 @@ test('local prompt preserves speaker identity and separates rumor from presence'
   assert.equal(messages.length, 2);
   assert.match(messages[0].content, /传闻.*不等于.*身份/u);
   assert.match(messages[0].content, /没有求助事实.*不得.*新造求助/u);
-  assert.match(messages[0].content, /只写一个 dlg 块，不写旁白/u);
+  assert.match(messages[0].content, /必须含被问人物的 dlg/u);
   assert.match(messages[1].content, /"occupation":"guard"/u);
   assert.match(messages[1].content, /医者寻人帮忙/u);
   assert.doesNotMatch(messages[1].content, /\/no_think/u);

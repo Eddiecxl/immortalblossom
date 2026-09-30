@@ -9,7 +9,7 @@ test('opening advances the world and records a seeded live situation', () => {
   const result = createAstraOpening(state);
   assert.ok(result.state.astraWorld.minute > state.astraWorld.minute);
   assert.ok(result.state.astraWorld.history.some(event => event.type === 'opening_cue' && event.playerWitnessed));
-  assert.ok(result.turn.blocks.some(block => /[？?]|留意|看看/u.test(block.text)));
+  assert.ok(result.turn.blocks.some(block => /[？?]|留意|看看|可以先/u.test(block.text)));
   assert.ok(result.turn.summary);
 });
 
