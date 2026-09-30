@@ -62,4 +62,4 @@ Modify `Source/native/WorldDatabase.cs`, `game/v4/v4.js`; extend native SQLite s
 - [x] Run isolated local-model plan playtest if the installed runtime is available; report model limitations honestly.
 - [x] Update actual Engine contract, progress ledger, Launcher news and version; rebuild manifest and repair bundle.
 - [x] Build and trial-install patches from original 4.0.0 and current 4.0.4; preserve save sentinel and validate hashes.
-- [ ] Publish tested source to GitHub main under the user's prior authorization and return patch links.
+- [x] Publish tested source to GitHub main under the user's prior authorization and return patch links.

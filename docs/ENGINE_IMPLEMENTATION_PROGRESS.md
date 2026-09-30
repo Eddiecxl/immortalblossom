@@ -14,7 +14,7 @@ Verification: node --test Source/tests/*.test.mjs → 135/135 PASS after final r
 Local probe: isolated Qwen3 14B Q4_K_M, two seeds/four dialogues passed (~8 seconds). Initial identity proposals failed/deferred; revised general prompt passed both seeds in one request; no cloud or real saves touched.
 Task 2: Ruling: unsupported mechanisms become explicit unresolved concepts instead of executable model code — maintains truth and an extensible vocabulary — cost if wrong: novel wishes need a later Engine operator.
 Task 5: Ruling: release as v4.1.0, adding simulation domains but retaining save schema 6 — Launcher shows an unambiguous version — cost if wrong: users need the matching versioned patch.
-Task 5: release validation complete; source publication is the final integration step.
+Task 5: complete; release installed and tested source published to GitHub main.
 
 Final: fixed all 9 Important findings — Source/tests/astra-review-regressions.test.mjs 0/9 RED → 9/9 GREEN, full suite 135/135.
 1. Hypothetical known/open invocations gated before execution.
@@ -37,3 +37,4 @@ Task 4: complete (SQLite projection/index/rollback checks RED→GREEN; native ho
 Task 5: Node 135/135 passed on the final source tree. Native database self-test passed, updater ALL PATCH SELF-TESTS PASSED, builder ALL ASTRA PATCH BUILDER TESTS PASSED.
 Task 5: Both 4.0.0→4.1.0 and 4.0.4→4.1.0 patches passed native Validate/Apply, installed file hashes, target version and save-sentinel preservation checks. The user's specified installed folder was upgraded from 4.0.4 to 4.1.0 and every patched file hash verified. User saves, keys and models were not read or modified.
 Task 5: No interactive Windows visual playthrough performed; local provider tests used isolated generated worlds only. Source worktree retained outside the skill-owned scratch directory for future review.
+Task 5: GitHub main fast-forwarded from 6d90904 to release commit 8596b48; merged checkout full suite 135/135 passed after supplying its ignored packaged media dependencies. Push to Eddiecxl/immortalblossom main succeeded. Final installed manifest independently verified all 101 game files and all 70 cumulative patch targets, version 4.1.0. Completion documentation is recorded in the following commit.
