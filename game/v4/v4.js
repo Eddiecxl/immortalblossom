@@ -577,7 +577,6 @@ setInterval(() => {
 async function enterGame(nextState, { resetLog = false } = {}) {
   if (!(await experience.requireKey()) || turnBusy) return;
   audioEngine.unlock();
-  experience.audio.setScene('game');
   state = ensureV31Canon(nextState, 'ai');
   if(state.transactionJournal){try{state=await stateStore.recoverPendingTurn('ai',state,transcriptStore);}catch(error){showToast('上次结算已保存，行记恢复待重试：'+error.message);}}
   if (resetLog) {transcript = [];systemTranscript=[];}
@@ -1013,7 +1012,7 @@ dom.audioButton?.addEventListener('click', async () => {
   const enabled = audioEngine.setEnabled(!audioEngine.isEnabled());
   dom.audioButton.classList.toggle('muted', !enabled);
   dom.audioButton.querySelector('span').textContent = enabled ? '音' : '静';
-  showToast(enabled ? '轻音乐与音效已开启' : '声音已关闭');
+  showToast(enabled ? '背景音乐与音效已开启' : '声音已关闭');
 });
 document.addEventListener('pointerdown', () => audioEngine.unlock(), { once: true, passive: true });
 if (dom.audioButton && !audioEngine.isEnabled()) {

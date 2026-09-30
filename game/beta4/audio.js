@@ -1,11 +1,11 @@
 import {SOUNDTRACK} from './soundtrack.js';
 
-// Original locally synthesized stereo recordings, with equal-power transitions.
+// Shared score player. Game playlists are opt-in; launcher keeps its own score.
 export function createScore(getSettings, options = {}) {
  const doc=options.document||globalThis.document;
  const tracks=options.tracks||SOUNDTRACK, listeners=new Set(), cache=new Map();
  const every=options.setInterval||globalThis.setInterval, cancel=options.clearInterval||globalThis.clearInterval;
- let ctx,master,music,effects,timer,scene='title',enabled=true,current=null,loading=null,disposed=false,unlocked=false,blocked=Boolean(options.blocked),generation=0;
+ let ctx,master,music,effects,timer,scene=options.initialScene||'title',enabled=true,current=null,loading=null,disposed=false,unlocked=false,blocked=Boolean(options.blocked),generation=0;
  const active=new Set(),crossfade=3;
  const clamp=value=>Math.max(0,Math.min(100,Number(value)||0))/100;
  function ensure(){
@@ -26,10 +26,11 @@ export function createScore(getSettings, options = {}) {
   if(blocked||!enabled||(doc?.hidden&&s.muteBackground)){if(ctx.state==='running')void ctx.suspend().catch(()=>{});}
   else if(unlocked&&ctx.state==='suspended')void ctx.resume().catch(()=>{});
  }
- function pool(){return tracks.filter(t=>t.scenes.includes(scene));}
+ function pool(){const ids=options.playlists?.[scene];return ids?ids.map(id=>tracks.find(t=>t.id===id)).filter(Boolean):tracks.filter(t=>t.scenes.includes(scene));}
  function nextCandidate(){
   const candidates=pool().length?pool():tracks;
   if(!current)return candidates[0];
+  if(options.playlists){const index=candidates.findIndex(t=>t.id===current.track.id);return candidates[(index+1)%candidates.length];}
   const start=tracks.findIndex(t=>t.id===current.track.id);
   for(let step=1;step<=tracks.length;step++){const t=tracks[(start+step)%tracks.length];if(candidates.includes(t)&&t.id!==current.track.id)return t;}
   return candidates[0];
@@ -47,13 +48,15 @@ export function createScore(getSettings, options = {}) {
  function metadata(){
   if(!current)return null;
   const {track,buffer,start}=current;
-  return {id:track.id,title:track.title,composer:track.composer||'落仙原创',index:tracks.indexOf(track)+1,total:tracks.length,duration:buffer.duration,position:Math.max(0,ctx.currentTime-start),scene};
+  const listing=options.playlists?pool():tracks;
+  return {id:track.id,title:track.title,composer:track.composer||'落仙原创',index:listing.indexOf(track)+1,total:listing.length,duration:buffer.duration,position:Math.max(0,ctx.currentTime-start),scene};
  }
  function announce(){const detail=metadata();for(const fn of listeners){try{fn(detail);}catch(error){console.warn('Soundtrack subscriber',error);}}if(doc&&typeof CustomEvent!=='undefined')doc.dispatchEvent(new CustomEvent('lx:track',{detail}));}
  function fade(gain,from,to,at,duration){
   const curve=new Float32Array(64);
-  for(let i=0;i<curve.length;i++){const phase=i/(curve.length-1)*Math.PI/2;curve[i]=to>from?Math.sin(phase):Math.cos(phase);}
-  gain.cancelScheduledValues(at);gain.setValueAtTime(from,at);gain.setValueCurveAtTime(curve,at,duration);
+  for(let i=0;i<curve.length;i++){const phase=i/(curve.length-1)*Math.PI/2;curve[i]=to>from?from+(to-from)*Math.sin(phase):to+(from-to)*Math.cos(phase);}
+  if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(at);else gain.cancelScheduledValues(at);
+  gain.setValueAtTime(from,at);gain.setValueCurveAtTime(curve,at,duration);
  }
  function prefetch(){const track=nextCandidate();if(track)void load(track).catch(()=>{});}
  function retire(){
@@ -69,14 +72,14 @@ export function createScore(getSettings, options = {}) {
   if(blocked){generation++;loading=null;if(ctx)retire();current=null;}
   apply();return blocked;
  }
- async function advance(manual=false){
-  if(manual&&ctx)retire();
+ async function advance(manual=false,first=false){
+  if(manual&&ctx&&!options.smoothManual)retire();
   if(loading)return loading;
   if(!ctx||disposed||blocked||!enabled)return null;
   const epoch=generation;
   const task=(async()=>{
-   const track=nextCandidate();if(!track)return null;
-   if(manual)current=null;
+   const track=first?pool()[0]:nextCandidate();if(!track)return null;
+   if(manual&&!options.smoothManual)current=null;
    let buffer;
    try{buffer=await load(track);}catch(error){console.warn('落仙音乐载入失败',error);return metadata();}
    if(disposed||blocked||!enabled||epoch!==generation)return null;
@@ -85,7 +88,7 @@ export function createScore(getSettings, options = {}) {
    const overlap=Math.min(crossfade,buffer.duration/3);
    if(current){fade(gain.gain,0,1,at,overlap);for(const previous of active){
      if(previous!==current){try{previous.source.stop(at+.05);}catch{}continue;}
-     fade(previous.gain.gain,1,0,at,overlap);try{previous.source.stop(at+overlap+.02);}catch{}
+     fade(previous.gain.gain,Math.max(0,Math.min(1,previous.gain.gain.value)),0,at,overlap);try{previous.source.stop(at+overlap+.02);}catch{}
    }}else{gain.gain.setValueAtTime(0,at);gain.gain.setTargetAtTime(1,at,.45);}
    const entry={track,buffer,source,gain,start:at,end:at+buffer.duration,overlap};
    active.add(entry);current=entry;
@@ -120,7 +123,9 @@ export function createScore(getSettings, options = {}) {
  }
  function setScene(value){
   if(scene===value||!['intro','title','game','danger'].includes(value))return;
+  const previousPool=pool().map(track=>track.id).join('|');
   scene=value;
+  if(options.playlists&&previousPool!==pool().map(track=>track.id).join('|')){generation++;loading=null;if(ctx)void advance(false,true);return;}
   if(current&&!current.track.scenes.includes(scene))void advance();else if(ctx)prefetch();
  }
  function onVisibility(){apply();}
