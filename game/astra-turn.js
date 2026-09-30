@@ -211,9 +211,10 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       const plan = planRealityMutation(state.astraWorld, action.statement);
       world = applyRealityMutation(state.astraWorld, plan);
       ({ world, events } = advanceAstraWorld(world, 1));
+      const outcome = world.history.find(entry => entry.id === plan.id);
       narration = { blocks: [
-        { type: 'narr', text: `言出法随落定：${world.history.find(entry => entry.id === plan.id)?.summary || plan.request}` },
-        { type: 'sys', text: `【因果】改写范围：${plan.type}；代价：${plan.cost}。世界状态已由命簿结算。` }
+        { type: 'narr', text: `言出法随落定：${outcome?.summary || plan.request}` },
+        { type: 'sys', text: `【因果】改写范围：${plan.type}；实际代价：${outcome?.cost ?? plan.cost}。世界状态已由命簿结算。` }
       ] };
     } else {
       const conversation = !turnInput.action && turnInput.speech

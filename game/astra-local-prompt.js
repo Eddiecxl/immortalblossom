@@ -4,6 +4,8 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     minute: packet.minute,
     location: packet.location,
     player: packet.player,
+    cultivationRule: packet.cultivationRule,
+    numericFacts: packet.numericFacts,
     playerTurn: packet.playerTurn,
     conversation: packet.conversation,
     presentNpcs: packet.presentNpcs,

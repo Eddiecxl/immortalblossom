@@ -1,4 +1,5 @@
 import { seedHash } from './astra-seed.js';
+import { clampNumeric } from './astra-variables.js';
 
 export function runFactionTick(world, factionId, minute = world.minute) {
   const faction = world.factions?.[factionId];
@@ -8,14 +9,14 @@ export function runFactionTick(world, factionId, minute = world.minute) {
     const successor = faction.memberIds.find(id => world.characters[id]?.alive);
     faction.leaderId = successor || null;
     faction.succession = successor ? 'new leader' : 'vacant';
-    faction.stability = Math.max(0, Number(faction.stability || 0) - (successor ? 5 : 15));
+    faction.stability = clampNumeric(world, 'faction', 'stability', Number(faction.stability || 0) - (successor ? 5 : 15), faction);
     changes.push(successor ? `新掌事${world.characters[successor].name}接任` : '领导位置空缺');
   }
   const swing = (seedHash(world.seed, `faction:${factionId}:${minute}`) % 7) - 3;
-  faction.power = Math.max(0, Math.min(100, Number(faction.power || 0) + swing));
-  faction.wealth = Math.max(0, Number(faction.wealth || 0) + Math.max(-2, swing)
-    + Math.floor((faction.territories?.length || 0) / 4));
-  faction.stability = Math.max(0, Math.min(100, Number(faction.stability || 0) - Math.sign(swing)));
+  faction.power = clampNumeric(world, 'faction', 'power', Number(faction.power || 0) + swing, faction);
+  faction.wealth = clampNumeric(world, 'faction', 'wealth', Number(faction.wealth || 0) + Math.max(-2, swing)
+    + Math.floor((faction.territories?.length || 0) / 4), faction);
+  faction.stability = clampNumeric(world, 'faction', 'stability', Number(faction.stability || 0) - Math.sign(swing), faction);
   const opponentId = (faction.enemies || []).find(id => world.factions[id]?.active);
   const opponent = world.factions[opponentId];
   if (opponent && seedHash(world.seed, `war:${factionId}:${minute}`) % 4 === 0) {

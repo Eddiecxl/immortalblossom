@@ -1,4 +1,5 @@
 // A bounded, read-only view of the authoritative world for one narration turn.
+import { realmRules, effectiveRealmCap, realmLabel } from './astra-rules.js';
 const list = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const text = (value, max = 160) => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
 const idOf = value => typeof value === 'string' ? value : value?.id ?? value?.locationId ?? '';
@@ -104,19 +105,31 @@ export function compileAstraContext(state, input, recentTurns = []) {
     query, 6, entry => entry?.summary ?? entry?.text)
     .map(entry => compact(entry, ['id', 'summary', 'text', 'timestamp', 'locationId'], { summary: 140, text: 140 }));
   const turns = Array.isArray(recentTurns) ? recentTurns.filter(turn => turn?.kind !== 'system').slice(-6) : [];
+  const numericFacts = [
+    ...list(world.characters).filter(entity => entity.name && query.includes(entity.name)),
+    ...list(world.factions).filter(entity => entity.name && query.includes(entity.name)),
+    ...list(world.locations).filter(entity => entity.name && query.includes(entity.name))
+  ].slice(0, 5).map(entity => compact(entity, ['id', 'name', 'alive', 'active', 'destroyed', 'wealth', 'power', 'stability', 'population', 'risk']));
   const packet = {
     systemRules: RULES, minute, input: query,
-    location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'description'], { description: 140 }),
+    cultivationRule: {
+      globalMaximum: realmRules(world).globalMaximum,
+      globalMaximumName: realmLabel(world, realmRules(world).globalMaximum),
+      playerMaximum: effectiveRealmCap(world, player),
+      playerMaximumName: realmLabel(world, effectiveRealmCap(world, player)),
+      playerRealmName: realmLabel(world, player.cultivation?.realm || 'none')
+    },
+    location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'population', 'risk', 'description'], { description: 140 }),
     nearbyLocations, nearbyEdges,
-    player: compact(player, ['name', 'locationId', 'cultivation', 'realm', 'health', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
-    presentNpcs, activeQuests, dueEvents, history, memories, rumors,
+    player: compact(player, ['name', 'locationId', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
+    numericFacts, presentNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),
     recentTurns: turns.map(turn => ({ id: text(turn.id, 60), userText: text(turn.userText ?? turn.input, 220),
       blocks: list(turn.blocks).slice(-4).map(block => compact(block, ['type', 'name', 'text'], { text: 240 })) }))
   };
   // Long saves may contain unusually verbose individual facts. Keep the
   // packet capped even when the stored world was produced by an older build.
-  const trimOrder = ['history', 'memories', 'rumors', 'recentTurns', 'activeQuests', 'dueEvents', 'nearbyLocations', 'nearbyEdges', 'presentNpcs'];
+  const trimOrder = ['history', 'memories', 'rumors', 'recentTurns', 'activeQuests', 'dueEvents', 'nearbyLocations', 'nearbyEdges', 'numericFacts', 'presentNpcs'];
   while (JSON.stringify(packet).length > 12_000) {
     const field = trimOrder.find(key => packet[key].length > (key === 'presentNpcs' ? 1 : 0));
     if (!field) break;

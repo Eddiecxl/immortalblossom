@@ -4,6 +4,7 @@ import { runNpcPlans } from './astra-npc.js';
 import { runFactionTick } from './astra-faction.js';
 import { resolveDueAnchors } from './astra-anchors.js';
 import { createQuestArc, reconcileQuestArcs } from './astra-quests.js';
+import { clampNumeric } from './astra-variables.js';
 
 const DAY = 1440;
 const queueCache = new WeakMap();
@@ -178,11 +179,14 @@ function resolve(world, event) {
         const delta = dangerous ? -5 : seedHash(world.seed, `event:${event.id}`) % 5 - 2;
         place.economy.prosperity = Math.max(0, Math.min(100, Number(place.economy.prosperity || 0) + delta));
         if (/(?:plague|siege|fire|bandits|storm)/u.test(template?.family || '') && dangerous)
-          place.population = Math.max(0, place.population - Math.max(1, Math.floor(place.population / 50)));
+          place.population = clampNumeric(world, 'location', 'population',
+            place.population - Math.max(1, Math.floor(place.population / 50)), place);
         const faction = world.factions[place.controllerFactionId];
         if (faction && /(?:siege|rebellion|betrayal|treasury|treaty)/u.test(template?.family || '')) {
-          faction.power = Math.max(0, faction.power + (template.family === 'treaty' ? 2 : -3));
-          faction.stability = Math.max(0, faction.stability + (template.family === 'treaty' ? 3 : -4));
+          faction.power = clampNumeric(world, 'faction', 'power',
+            faction.power + (template.family === 'treaty' ? 2 : -3), faction);
+          faction.stability = clampNumeric(world, 'faction', 'stability',
+            faction.stability + (template.family === 'treaty' ? 3 : -4), faction);
           if (!faction.power || !faction.stability) faction.active = false;
           reconcileQuestArcs(world, { type: 'faction_change', factionId: faction.id });
         }

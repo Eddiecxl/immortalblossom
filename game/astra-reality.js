@@ -3,6 +3,8 @@ import { reconcileQuestArcs } from './astra-quests.js';
 import { checkTerminalWorld } from './astra-terminal.js';
 import { ITEM_TEMPLATES } from './astra-content.js';
 import { parseGeneratedItem } from './astra-effects.js';
+import { setRealmToCap, rewriteRealmCap, realmLabel } from './astra-rules.js';
+import { applyNumericMutation, parseNumericWish } from './astra-variables.js';
 
 const text = value => String(value ?? '').trim();
 const aliveNpcByName = (world, request) => Object.values(world.characters || {})
@@ -15,7 +17,7 @@ const locationByName = (world, request) => Object.values(world.locations || {})
 export function planRealityMutation(world, statement) {
   const request = text(statement).replace(/^言出法随\s*[:：]?\s*/u, '');
   if (!request) throw new Error('言灵没有写下要实现的结果。');
-  let type, targetId = null, scale = 1, generatedItem = null;
+  let type, targetId = null, scale = 1, generatedItem = null, realmName = null, scope = 'personal', numericMutation = null;
   const npc = aliveNpcByName(world, request);
   const faction = factionByName(world, request);
   const location = locationByName(world, request);
@@ -35,6 +37,14 @@ export function planRealityMutation(world, statement) {
     type = 'kill_npc'; targetId = npc.id; scale = 30;
   } else if (/(?:所有人|每个人|天下人).*(?:忘记|遗忘).*我/u.test(request)) {
     type = 'forget_player'; scale = 50;
+  } else if (/(?:最高境界|修行上限).*(?:改为|改成|设为|提升至|变成)\s*([^，。；\s]{2,32}境)/u.test(request)) {
+    realmName = request.match(/(?:最高境界|修行上限).*(?:改为|改成|设为|提升至|变成)\s*([^，。；\s]{2,32}境)/u)[1];
+    scope = /(?:全世界|整个世界|世界|天下|所有|全体|全宇宙)/u.test(request) ? 'world' : 'personal';
+    type = 'cultivation_rewrite_cap'; scale = scope === 'world' ? 70 : 45;
+  } else if (/(?:达到|升到|升至|提升到|提升至|突破到|晋升到).*(?:最高境界|境界巅峰)/u.test(request)
+    && /(?:我|自己|主角|本人|顾长生)/u.test(request)
+    && !/(?:全世界|整个世界|天下|所有|全体|全宇宙)/u.test(request)) {
+    type = 'cultivation_set_to_cap'; scale = 45;
   } else if (/(?:创造|变出|制造|炼成)/u.test(request) && /[:：]/u.test(request)) {
     generatedItem = parseGeneratedItem(request);
     type = 'create_generated_item'; scale = 25;
@@ -46,6 +56,10 @@ export function planRealityMutation(world, statement) {
     type = 'teleport'; targetId = location.id; scale = 25;
   } else if (/(?:治愈|治好|恢复).*(?:伤|病|气血|身体)/u.test(request)) {
     type = 'heal'; scale = 12;
+  } else if (/(?:气血上限|气血|财富|安全|实力|稳定|人口|危险)\s*(?:增加|提升|提高|减少|降低|设为|改为|变成)\s*\d+/u.test(request)) {
+    numericMutation = parseNumericWish(world, request);
+    type = 'numeric_mutation'; targetId = numericMutation.id;
+    scale = 14 + Math.ceil(Math.log10(Math.max(1, Math.abs(numericMutation.value)))) * 5;
   } else if (/(?:改写|重写|改变).*(?:历史|过去)/u.test(request)) {
     if (faction) { type = 'rewrite_history'; targetId = faction.id; scale = 75; }
     else if (npc) { type = 'rewrite_history'; targetId = npc.id; scale = 70; }
@@ -56,7 +70,7 @@ export function planRealityMutation(world, statement) {
     type = 'create_item'; targetId = template.id; scale = 25;
   } else throw new Error('此言灵尚不能被 Engine 解析为明确的现实变更；世界没有被改写。');
   const jitter = seedHash(world.seed, `wish:${world.minute}:${request}`) % 7;
-  return { type, targetId, generatedItem, request, cost: scale + jitter,
+  return { type, targetId, generatedItem, realmName, scope, numericMutation, request, cost: scale + jitter,
     id: `reality:${world.minute}:${seedHash(world.seed, request).toString(16)}` };
 }
 
@@ -108,7 +122,34 @@ export function applyRealityMutation(source, plan) {
   if (world.terminal?.ended) throw new Error('此世已经终结，不能继续改写。');
   if (world.history.some(entry => entry.id === plan.id)) return world;
   let summary = plan.request;
+  let changed = true;
   switch (plan.type) {
+    case 'numeric_mutation': {
+      const outcome = applyNumericMutation(world, plan.numericMutation);
+      changed = outcome.applied;
+      summary = outcome.summary;
+      break;
+    }
+    case 'cultivation_set_to_cap': {
+      const outcome = setRealmToCap(world, world.player);
+      changed = outcome.applied;
+      if (outcome.applied && outcome.steps > 0) {
+        applyNumericMutation(world, { kind: 'player', id: world.player.id,
+          field: 'maxHealth', operation: 'delta', value: 20 * outcome.steps });
+        applyNumericMutation(world, { kind: 'player', id: world.player.id,
+          field: 'health', operation: 'delta', value: 20 * outcome.steps });
+      }
+      summary = outcome.applied ? `言灵使我达到当前允许的最高境界：${realmLabel(world, outcome.to)}。`
+        : '当前已在允许的最高境界，言灵未改变境界。';
+      break;
+    }
+    case 'cultivation_rewrite_cap': {
+      const outcome = rewriteRealmCap(world, plan.realmName, plan.scope, world.player);
+      changed = outcome.changed;
+      summary = changed ? `${plan.scope === 'world' ? '天下' : '我的'}修行上限已改为${outcome.name}；现有境界未被自动提升。`
+        : '修行上限已经如此，言灵未再次改变规则。';
+      break;
+    }
     case 'invincible': world.player.invincible = true; break;
     case 'kill_npc': {
       const npc = world.characters[plan.targetId];
@@ -131,13 +172,16 @@ export function applyRealityMutation(source, plan) {
     case 'erase_faction': {
       const faction = world.factions[plan.targetId];
       if (!faction) throw new Error('言灵宗门目标不在世界中。');
+      const formerMembers = Object.values(world.characters).filter(npc => npc.factionId === faction.id).map(npc => npc.id);
       faction.active = false;
       faction.power = 0;
       faction.wars = [];
+      faction.memberIds = [];
+      faction.leaderId = null;
       for (const npc of Object.values(world.characters)) if (npc.factionId === faction.id) npc.factionId = null;
       for (const loc of Object.values(world.locations)) if (loc.name === faction.name || loc.controllerFactionId === faction.id)
         destroyLocation(world, loc, plan.id);
-      reconcileQuestArcs(world, { type: 'faction_change', factionId: faction.id });
+      reconcileQuestArcs(world, { type: 'faction_change', factionId: faction.id, affectedActorIds: formerMembers });
       summary = `${faction.name}被抹除，其领地与道路已改变。`;
       break;
     }
@@ -243,11 +287,14 @@ export function applyRealityMutation(source, plan) {
   }
   // The effect happens first. Its cost is recorded, never used as an excuse to
   // silently deny a valid rewrite. Invincibility diverts lethal cost into debt.
-  world.flags.causalDebt = Number(world.flags.causalDebt || 0) + plan.cost;
+  const actualCost = changed ? plan.cost : 0;
+  world.flags.causalDebt = Number(world.flags.causalDebt || 0) + actualCost;
   if (!world.player.invincible && !world.terminal.ended && plan.type !== 'resurrect_player')
-    world.player.health = Math.max(0, Number(world.player.health || 0) - Math.min(40, Math.ceil(plan.cost / 3)));
+    world.player.health = Math.max(0, Number(world.player.health || 0) - Math.min(40, Math.ceil(actualCost / 3)));
   world.history.push({ id: plan.id, minute: world.minute, type: 'reality_mutation',
-    summary, scope: plan.type, targetId: plan.targetId, cost: plan.cost, playerWitnessed: true });
+    summary, scope: plan.type, targetId: plan.targetId, locationId: world.player.locationId,
+    actors: plan.targetId ? [world.player.id, plan.targetId] : [world.player.id],
+    cost: actualCost, applied: changed, playerWitnessed: true });
   checkTerminalWorld(world);
   reconcileQuestArcs(world, { type: 'reality_mutation', targetId: plan.targetId });
   return world;

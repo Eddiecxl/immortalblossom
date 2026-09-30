@@ -79,7 +79,8 @@ export function reconcileQuestArcs(world, cause = { type: 'time' }) {
     else if (cause.type === 'abandon' && cause.questId === quest.id) next = 'abandoned';
     else if (world.minute > quest.deadline) next = 'expired';
     else if (giver && !giver.alive || target && !target.alive) next = 'mutated';
-    else if (cause.type === 'faction_change' && quest.participants.includes(cause.factionId)) next = 'mutated';
+    else if (cause.type === 'faction_change' && (quest.participants.includes(cause.factionId)
+      || quest.participants.some(id => cause.affectedActorIds?.includes(id)))) next = 'mutated';
     if (next && transition(world, quest, next, cause.type)) {
       if (next === 'mutated') {
         quest.primaryGoals = quest.primaryGoals.map(goal => `${goal}（原委托或目标已有变故，需重新判断）`);

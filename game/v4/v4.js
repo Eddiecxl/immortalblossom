@@ -1,5 +1,6 @@
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
+import {realmLabel} from '../astra-rules.js';
 import {recentEchoSummary} from '../turn-summary.js';
 import {createTurnFlow} from '../turn-flow.js';
 import {campaignGuidance} from '../campaign.js';
@@ -209,7 +210,8 @@ function renderHud() {
   const snap = v31Snapshot(state);
   dom.gameShell.dataset.scene = state.astraWorld ? 'world' : state.story.location.includes('柴房') ? 'woodshed' : 'world';
   dom.playerName.textContent = snap.player.name;
-  dom.realmValue.textContent = snap.player.realm;
+  dom.realmValue.textContent = state.astraWorld?.player?.cultivation?.realm
+    ? realmLabel(state.astraWorld, state.astraWorld.player.cultivation.realm) : snap.player.realm;
   dom.hpValue.textContent = `${state.player.hp} / ${state.player.maxHp}`;
   dom.spiritValue.textContent = `${state.player.spirit} / ${state.player.maxSpirit}`;
   dom.qiValue.textContent = String(state.player.qi);

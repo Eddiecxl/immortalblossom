@@ -1,4 +1,5 @@
 import { seededRng } from './astra-seed.js';
+import { initialAstraRules, realmRules } from './astra-rules.js';
 import {
   LOCATION_TEMPLATES, FACTION_TEMPLATES, NPC_ARCHETYPES,
   EVENT_TEMPLATES, QUEST_TEMPLATES, ANCHOR_FAMILIES, ITEM_TEMPLATES
@@ -318,6 +319,7 @@ export function createAstraWorld(seed = 'default', playerName = '无名之人') 
   eventQueue.sort((a, b) => a.dueAt - b.dueAt || a.priority - b.priority || a.id.localeCompare(b.id));
   return {
     schema: 1, seed: actualSeed, minute: 360, player, locations, edges, characters,
+    rules: initialAstraRules(),
     factions, items, quests: {}, anchors, eventQueue, history: [], historyArchive: { counts: {}, lastMinute: 0 },
     resolvedEventIds: [], rumors: [], secrets: [],
     terminal: { ended: false, ending: null, minute: null },
@@ -340,6 +342,8 @@ export function normalizeAstraWorld(raw, seed = 'default', playerName = '无名�
   const result = { ...base, ...saved, schema: 1, seed: saved.seed ?? base.seed };
   result.minute = Number.isFinite(saved.minute) && saved.minute >= 0 ? Math.floor(saved.minute) : 360;
   result.player = { ...base.player, ...saved.player };
+  result.rules = isRecord(saved.rules) ? { ...base.rules, ...saved.rules } : base.rules;
+  result.rules.cultivation = structuredClone(realmRules(result));
   for (const key of fields) {
     if (Array.isArray(base[key])) result[key] = Array.isArray(saved[key]) ? saved[key] : base[key];
     else result[key] = isRecord(saved[key]) ? saved[key] : base[key];

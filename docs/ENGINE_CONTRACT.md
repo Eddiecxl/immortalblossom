@@ -21,6 +21,8 @@
 | 势力与世界 | `factions`、territories、relations、memberIds、pressure、rumors、secrets、history 共存。NPC 的知识边界由 ID 管理；叙述不得泄露其未知秘密。 |
 | 死亡和言出法随 | `astra-reality.js` 先计划、后结算，按明确类型改写现实并记录代价。自杀/死亡和终局看 `astra-terminal.js`，终局是吸收态；不要让 AI 口述复活。仅已有规则支持的保命物品或效果才可救命。 |
 
+`game/astra-rules.js` 与 `game/astra-variables.js` 维护存档内境界上限和注册数值的边界；`astra-effects.js` 的普通效果与 `astra-reality.js` 的言灵结算应读取同一套当前规则。明确“天下／世界”的上限言灵改世界范围，普通“我的”只改主角；境界提升在当前上限必须无效果，不能附带气血收益。数值变更应记录实际增量，并在势力归零时解除领地和人物关联。当前仍只支持 Engine 可解析的结构化字段及效果，不能宣称任意自然语言或任意新规则都已执行；设计边界见 `docs/ENGINE_MUTATION_DESIGN.md`。
+
 `game/astra-content.js` 是模板目录，世界实例才是当局事实。不要把未接受的机会说成已完成任务，也不要把道路风险内部评分读成人物对白。开场 `astra-opening.js` 的机会是**传闻**，不保证医者或商队就在玩家面前；其记录进入 `rumors`，要交谈仍须确认 `characters` 中有人真实在场。林小满有带 seed 的角色、目标和预定的 `lin_first_encounter` 事件；当前代码没有保证她一定是玩家第一个看见或交谈的人，也没有可验证的 100 小时终局内容。未来若补这两项目标，必须设计真实状态迁移和长程测试。
 
 ## AI 与记忆

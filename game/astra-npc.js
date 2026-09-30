@@ -1,4 +1,5 @@
 import { seedHash } from './astra-seed.js';
+import { clampNumeric } from './astra-variables.js';
 
 const DAY = 1440;
 
@@ -17,7 +18,7 @@ export function runNpcPlans(world, minute = world.minute) {
     if (year > npc.lastAgeYear) { npc.age = Number(npc.age || 20) + year - npc.lastAgeYear; npc.lastAgeYear = year; }
     const choice = seedHash(world.seed, `npc:${npc.id}:${bucket}`) % 16;
     if (choice === 0) {
-      npc.wealth = Math.max(0, Number(npc.wealth || 0) + 1);
+      npc.wealth = clampNumeric(world, 'character', 'wealth', Number(npc.wealth || 0) + 1, npc);
       outcomes.push({ actorId: npc.id, type: 'work', text: `${npc.name}完成了自己的生计安排。` });
     } else if (choice === 1) {
       const possible = world.edges.filter(edge => edge.from === npc.locationId && !edge.closed && !world.locations[edge.to]?.destroyed);
@@ -48,7 +49,7 @@ export function runNpcPlans(world, minute = world.minute) {
       npc.physicalCondition = 'recovering';
       outcomes.push({ actorId: npc.id, type: 'healing', text: `${npc.name}的病势开始好转。` });
     } else if (choice === 7 && Number(npc.wealth || 0) > 0) {
-      npc.wealth = Math.max(0, npc.wealth - 3);
+      npc.wealth = clampNumeric(world, 'character', 'wealth', npc.wealth - 3, npc);
       outcomes.push({ actorId: npc.id, type: 'loss', text: `${npc.name}在交易或劫掠中损失了财物。` });
     } else if (choice === 8 && !npc.factionId) {
       const faction = Object.values(world.factions || {}).find(entry => entry.active && entry.homeId === npc.locationId);
