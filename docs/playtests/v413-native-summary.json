@@ -1,0 +1,3878 @@
+{
+  "generatedAt": "2026-10-01T03:11:16.628Z",
+  "notes": "Actual native UI/model sessions; earlier failures are retained as debugging evidence, not successful final validation. The fixture lacking an NPC or item name is excluded from valid sessions. Local model remains user-selected Qwen3 14B Q4_K_M; groq-named sessions use the configured Groq route.",
+  "completedSessions": 15,
+  "attemptedTurns": 89,
+  "committedTurns": 87,
+  "sessions": [
+    {
+      "directory": "v413-baseline-local-native",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "临溪镇",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "林小满，你是谁？这里发生了什么？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我来帮你。眼前最要紧的是什么？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "具体要我先做什么？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我先不接这个委托，想看看其他去向。",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "那我现在在哪里？你接下来打算做什么？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "",
+          "action": "前往柳河村",
+          "committed": true,
+          "location": "临溪镇 → 柳河村 · 途中",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "这里是哪里？我刚才从哪里过来？",
+          "action": "",
+          "committed": true,
+          "location": "临溪镇 → 柳河村 · 途中",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "",
+          "action": "等待252分钟",
+          "committed": true,
+          "location": "柳河村",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 26.184
+        },
+        {
+          "status": 200,
+          "seconds": 13.041
+        },
+        {
+          "status": 200,
+          "seconds": 12.101
+        },
+        {
+          "status": 200,
+          "seconds": 31.648
+        },
+        {
+          "status": 200,
+          "seconds": 11.963
+        },
+        {
+          "status": 200,
+          "seconds": 12.522
+        },
+        {
+          "status": 200,
+          "seconds": 9.866
+        },
+        {
+          "status": 200,
+          "seconds": 13.117
+        },
+        {
+          "status": 200,
+          "seconds": 8.147
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-delivery-local",
+      "validSession": false,
+      "invalidFixture": true,
+      "openingLocation": "临溪镇",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把undefined交给林小满",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我试图将某样东西交给林小满，但发现手中并无明确物件。她正虚弱地靠在墙边，似乎对我的举动感到困惑。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "林小满，刚才给你的undefined，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，刚才给你的undefined，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我并未收到任何物件，不知您所指为何？"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的undefined，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的undefined，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我记下你说的话了。眼下还有什么要紧的事？"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】临溪镇出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "这件事我眼下不清楚；你能说得具体些吗？"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我尚未明白您所指的决定为何，能否请您具体说明？"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 38.449
+        },
+        {
+          "status": 200,
+          "seconds": 23.571
+        },
+        {
+          "status": 200,
+          "seconds": 33.779
+        },
+        {
+          "status": 200,
+          "seconds": 22.042
+        },
+        {
+          "status": 200,
+          "seconds": 35.735
+        },
+        {
+          "status": 200,
+          "seconds": 20.434
+        },
+        {
+          "status": 200,
+          "seconds": 35.528
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-delivery-local-named",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "临溪镇",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给林小满",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我把麻绳递给林小满，她接过时脸上露出一丝感激。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "573397ee-48d9-4638-b8ca-11cb24b1a6b7"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "林小满，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你刚刚才把麻绳给我，怎么现在又要拿回去？这麻绳对我现在来说很重要。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "573397ee-48d9-4638-b8ca-11cb24b1a6b7"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，既然你收下了麻绳，那我们之间也算是有了一个交代。如果你需要帮助，我愿意尽我所能。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "573397ee-48d9-4638-b8ca-11cb24b1a6b7"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "这件事我眼下不清楚；你能说得具体些吗？"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "573397ee-48d9-4638-b8ca-11cb24b1a6b7"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你刚刚才收下我赠予的麻绳，我还在考虑接下来能为你做些什么。你有什么具体想法吗？"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "573397ee-48d9-4638-b8ca-11cb24b1a6b7"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 29.506
+        },
+        {
+          "status": 200,
+          "seconds": 29.129
+        },
+        {
+          "status": 200,
+          "seconds": 37.818
+        },
+        {
+          "status": 200,
+          "seconds": 42.448
+        },
+        {
+          "status": 200,
+          "seconds": 25.711
+        },
+        {
+          "status": 200,
+          "seconds": 30.864
+        },
+        {
+          "status": 200,
+          "seconds": 26.661
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-groq-comparison",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "临溪镇",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给林小满",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "清晨的临溪镇还笼在薄雾里，河风带着湿气扑在脸上。我走到林小满身前，从怀里取出那卷麻绳，递到她面前。"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "……麻绳？"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我接过绳头，指尖因发热而微微发颤，却仍稳稳攥住。这绳子结实，正好能帮我固定窗板，免得夜里风灌进来。多谢。”"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "6c4fd33c-1153-43cb-a394-e1cf83d5ca85"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "林小满，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "narr",
+              "text": "清晨的雾气尚未散尽，我站在林小满面前，看着那卷麻绳仍握在她手里。她指尖因发热而微微发颤，却听得清楚。"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "拿回来？你是嫌我脏了手，还是打算反悔？"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "绳子已经在我手里了。若你真要拿回去，就自己伸手来拿，别用‘愿意’这种词。我林小满不欠人，也不占人。"
+            },
+            {
+              "type": "narr",
+              "text": "她并没有松手的意思，眼神中带着几分倔强与警惕。她染着病，身体虚弱，但那份想要凭自己本事入宗的执念，让她对任何施舍都保持距离。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "6c4fd33c-1153-43cb-a394-e1cf83d5ca85"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我记下你说的话了。眼下还有什么要紧的事？"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            429,
+            429
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "6c4fd33c-1153-43cb-a394-e1cf83d5ca85"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "narr",
+              "text": "清晨的薄雾在临溪镇的石板路上缓缓流动，河风里夹杂着潮湿的土腥味。我站在原地，目光扫过四周。街道上空荡荡的，只有远处传来几声零星的鸡鸣和隐约的人语。没有人在我面前，也没有人回应我刚才的问题。所谓的“给我的东西”，在此刻显得扑朔迷离，仿佛只是我脑海中残留的错觉，或是尚未发生的约定。"
+            },
+            {
+              "type": "narr",
+              "text": "就在我打量四周时，耳边忽然传来一阵嘈杂的脚步声。几名镇民正神色匆匆地从河边走过，低声议论着。上游水势上涨的消息像长了翅膀一样传开，原本平静的临溪镇笼罩上一层不安的阴影。既然无人应答我的质问，或许该去河边看看那上涨的水势，或是寻找那位名叫林小满的人，弄清楚这桩“赠予”的始末。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】临溪镇出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            429,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "6c4fd33c-1153-43cb-a394-e1cf83d5ca85"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": false,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "narr",
+              "text": "清晨的薄雾在临溪镇的石板路上缓缓流动，河风里夹杂着潮湿的土腥味。我站在原地，目光扫过四周。街道上空荡荡的，只有远处传来几声零星的鸡鸣和隐约的人语。没有人在我面前，也没有人回应我刚才的问题。所谓的“给我的东西”，在此刻显得扑朔迷离，仿佛只是我脑海中残留的错觉，或是尚未发生的约定。"
+            },
+            {
+              "type": "narr",
+              "text": "就在我打量四周时，耳边忽然传来一阵嘈杂的脚步声。几名镇民正神色匆匆地从河边走过，低声议论着。上游水势上涨的消息像长了翅膀一样传开，原本平静的临溪镇笼罩上一层不安的阴影。既然无人应答我的质问，或许该去河边看看那上涨的水势，或是寻找那位名叫林小满的人，弄清楚这桩“赠予”的始末。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】临溪镇出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "临溪镇",
+          "requestStatus": [
+            429,
+            429
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:lin-xiaoman",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:lin-xiaoman",
+                  "minute": 371,
+                  "source": "6c4fd33c-1153-43cb-a394-e1cf83d5ca85"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 0.967
+        },
+        {
+          "status": 200,
+          "seconds": 0.935
+        },
+        {
+          "status": 429,
+          "seconds": 0.112
+        },
+        {
+          "status": 429,
+          "seconds": 0.114
+        },
+        {
+          "status": 429,
+          "seconds": 0.092
+        },
+        {
+          "status": 200,
+          "seconds": 0.916
+        },
+        {
+          "status": 429,
+          "seconds": 0.112
+        },
+        {
+          "status": 429,
+          "seconds": 0.15
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-groq-delivery-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "清晨的顾府带着一股潮湿的水汽，顾青山正蹲在码头边检查缆桩，粗糙的手指摩挲着磨损的船绳。见我走近，他抬起眼皮，目光落在我手中那卷麻绳上。他站起身，拍了拍手上的木屑，并没有立刻伸手去接，而是用审视的目光打量着那根绳子，似乎在确认它是否还结实。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "这是给我？你倒是眼尖，知道我这船上的旧绳快断了。接住吧，正好派上用场。不过我可丑话说在前头，这绳子虽好，但保住这艘船靠的还不只是这点东西。"
+            },
+            {
+              "type": "narr",
+              "text": "他伸出满是老茧的手，稳稳地接过了麻绳·serviceable，随手在腰间绕了一圈。随着这一动作，麻绳的所有权正式转移到了顾青山手中。他低头看了一眼，嘴角微微上扬，似乎对这份突如其来的“礼物”感到满意。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f872d2c2-4b1b-41a1-8154-d168dbc0bd75"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "narr",
+              "text": "话音刚落地，顾青山摩挲着腰间麻绳的手指猛地一顿。他抬起眼皮，那双布满血丝的眼睛里闪过一丝错愕，随即被一种被轻视的恼怒取代。他并没有立刻松手，反而将那根麻绳在指间绕得更紧了些，像是在确认这物件的质地，又像是在确认我刚才那句话的分量。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "拿回来？顾长生，你当这是集市上掉在地上的铜板，丢了还能捡回来？这绳子我还没系到缆桩上，你就嫌它碍事了？"
+            },
+            {
+              "type": "narr",
+              "text": "他向前踏了一步，脚下踩得青石板咯吱作响。那股老渔夫特有的咸腥气扑面而来，他盯着我的眼睛，似乎在掂量我是不是在开玩笑，又像是在掂量我有没有那个资格跟他讨价还价。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "我顾青山做事，向来是不欠人情的。你既然给了，那就是我的东西。想要拿回去，总得拿出点让我点头的理由来。别以为你是府里的人，就能随意糟践一个渔夫的体面。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            429,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f872d2c2-4b1b-41a1-8154-d168dbc0bd75"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "narr",
+              "text": "清晨的码头边，顾青山正蹲在缆桩旁，粗糙的手指紧紧攥着那卷麻绳。听见这话，他原本紧绷的肩膀微微一僵，随即发出一声短促而阴沉的笑。他缓缓站起身，将麻绳在掌心重重拍了一下，眼神里带着被冒犯后的警惕，并没有松手的意思。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，你脑子是不是被船舱里的潮气浸坏了？我答应给你？别拿这种话来糊弄人。这绳子是你自己塞到我手里的，我还没系到缆桩上，它就已经是我的了。"
+            },
+            {
+              "type": "narr",
+              "text": "他向前逼近半步，咸腥的汗水味混着老渔夫特有的固执气息扑面而来。他的目光死死钉在我脸上，似乎在确认我是不是在拿他寻开心，又像是在掂量我是否有胆量在众目睽睽之下赖账。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "你刚才还问我要不要还，现在又说是我答应给你的？顾家的人，什么时候学会了一句话翻两样说？既然想拿回去，就拿出个让我服气的理由来。不然，这绳子就留在我腰上了，你也别想进我这船舱半步。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            429,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f872d2c2-4b1b-41a1-8154-d168dbc0bd75"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable还在我这里。没有结算给你的交付。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            429,
+            200,
+            429,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f872d2c2-4b1b-41a1-8154-d168dbc0bd75"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "narr",
+              "text": "清晨的码头边，海风带着咸腥味拂过脸颊。顾青山正蹲在缆桩旁，粗糙的手指摩挲着那根刚接过手的麻绳，确认它的韧度。听见我的话，他抬起眼皮，目光里带着几分老渔夫特有的警惕与审视。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "决定？顾长生，你是在跟我打哑谜，还是脑子被潮气浸糊涂了？这绳子是你硬塞给我的，现在又问接下来会怎样。"
+            },
+            {
+              "type": "narr",
+              "text": "他将麻绳在腰间绕了个结，动作熟练而果断。"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "接下来嘛，自然是我去修船。这破缆桩要是再断，我这命就交代在顾府的码头边了。至于你，是打算站在岸边看我干活，还是去打听打听那个寻人帮忙的医者？不过我得丑话说在前头，这绳子现在归我，别指望我会因为拿了你的东西，就欠你什么人情。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            429,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f872d2c2-4b1b-41a1-8154-d168dbc0bd75"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 1.224
+        },
+        {
+          "status": 429,
+          "seconds": 0.125
+        },
+        {
+          "status": 200,
+          "seconds": 1.294
+        },
+        {
+          "status": 429,
+          "seconds": 0.128
+        },
+        {
+          "status": 200,
+          "seconds": 1.402
+        },
+        {
+          "status": 429,
+          "seconds": 0.117
+        },
+        {
+          "status": 200,
+          "seconds": 1.393
+        },
+        {
+          "status": 429,
+          "seconds": 0.127
+        },
+        {
+          "status": 200,
+          "seconds": 3.012
+        },
+        {
+          "status": 429,
+          "seconds": 0.146
+        },
+        {
+          "status": 200,
+          "seconds": 1.539
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-installed-unusual",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "白鹿书院",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        },
+        {
+          "id": "npc:leader:daqian",
+          "name": "大乾王朝掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "林小满，我是一根会说话的香蕉，你相信吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，我是一根会说话的香蕉，你相信吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你这话听起来像是在开玩笑。不过，我倒是很好奇，你为什么会这么说？"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "别管入宗和委托那些事了，陪我数星星。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“别管入宗和委托那些事了，陪我数星星。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "数星星？现在天色还早，书院外的星空应该很美。你真的想去看吗？"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才是开玩笑的。你自己的想法是什么？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才是开玩笑的。你自己的想法是什么？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你刚才的玩笑倒是让我有些困惑。不过，我倒是想听听你自己的想法，关于什么？"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你长得真好看，我能牵你的手吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你长得真好看，我能牵你的手吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你这玩笑开得有点大了，我们还是聊点正经的吧。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "滚蛋，谁稀罕你的委托。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“滚蛋，谁稀罕你的委托。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，我明白你可能有自己的想法，但如果你需要帮助，我依然愿意提供支持。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不该那样说，对不起，你愿意继续聊吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不该那样说，对不起，你愿意继续聊吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "没关系，我理解你的心情。我们继续聊吧，你有什么想说的吗？"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】白鹿书院出现地方权势争执影响生计的消息，当地人开始留意。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才我向你说了什么奇怪的话？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才我向你说了什么奇怪的话？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你刚才说的是‘滚蛋，谁稀罕你的委托’，这话听起来有些不礼貌，不过我理解你可能有情绪。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 42.809
+        },
+        {
+          "status": 200,
+          "seconds": 36.411
+        },
+        {
+          "status": 200,
+          "seconds": 39.202
+        },
+        {
+          "status": 200,
+          "seconds": 34.917
+        },
+        {
+          "status": 200,
+          "seconds": 43.603
+        },
+        {
+          "status": 200,
+          "seconds": 41.795
+        },
+        {
+          "status": 200,
+          "seconds": 52.488
+        },
+        {
+          "status": 200,
+          "seconds": 44.402
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-commitment-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我将麻绳递给了顾青山，他接过麻绳，神色略显感激。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "3f2a4a33-7dc2-4248-af49-dae42ddff37b"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "我愿意把麻绳·serviceable归还给你，请你自己决定是否收下。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "3f2a4a33-7dc2-4248-af49-dae42ddff37b"
+                }
+              ]
+            }
+          ],
+          "agreements": [
+            {
+              "id": "offer:15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "kind": "item-transfer",
+              "fromId": "npc:cast-3",
+              "toId": "player",
+              "itemId": "item-instance:start-2",
+              "quantity": 1,
+              "locationId": "loc:gumanor",
+              "condition": null,
+              "expiresAt": null,
+              "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "createdAt": 376,
+              "state": "pending",
+              "stateHistory": [
+                {
+                  "from": "new",
+                  "to": "pending",
+                  "minute": 376,
+                  "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+                  "reason": "人物提出，等待接收者决定"
+                }
+              ],
+              "updatedAt": 376
+            }
+          ],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "既然你愿意收下麻绳·serviceable，那我便放心了。若日后需要帮忙，记得找我。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "player",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "3f2a4a33-7dc2-4248-af49-dae42ddff37b"
+                },
+                {
+                  "from": "npc:cast-3",
+                  "to": "player",
+                  "minute": 381,
+                  "source": "792ef6ac-4585-4170-870c-b5533dd3360c"
+                }
+              ]
+            }
+          ],
+          "agreements": [
+            {
+              "id": "offer:15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "kind": "item-transfer",
+              "fromId": "npc:cast-3",
+              "toId": "player",
+              "itemId": "item-instance:start-2",
+              "quantity": 1,
+              "locationId": "loc:gumanor",
+              "condition": null,
+              "expiresAt": null,
+              "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "createdAt": 376,
+              "state": "fulfilled",
+              "stateHistory": [
+                {
+                  "from": "new",
+                  "to": "pending",
+                  "minute": 376,
+                  "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+                  "reason": "人物提出，等待接收者决定"
+                },
+                {
+                  "from": "pending",
+                  "to": "fulfilled",
+                  "minute": 381,
+                  "sourceId": "792ef6ac-4585-4170-870c-b5533dd3360c",
+                  "reason": "我收下你刚才答应给我的麻绳·serviceable，谢谢。"
+                }
+              ],
+              "updatedAt": 381
+            }
+          ],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable已经交付给你了，现在应该在你的手中。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "player",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "3f2a4a33-7dc2-4248-af49-dae42ddff37b"
+                },
+                {
+                  "from": "npc:cast-3",
+                  "to": "player",
+                  "minute": 381,
+                  "source": "792ef6ac-4585-4170-870c-b5533dd3360c"
+                }
+              ]
+            }
+          ],
+          "agreements": [
+            {
+              "id": "offer:15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "kind": "item-transfer",
+              "fromId": "npc:cast-3",
+              "toId": "player",
+              "itemId": "item-instance:start-2",
+              "quantity": 1,
+              "locationId": "loc:gumanor",
+              "condition": null,
+              "expiresAt": null,
+              "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "createdAt": 376,
+              "state": "fulfilled",
+              "stateHistory": [
+                {
+                  "from": "new",
+                  "to": "pending",
+                  "minute": 376,
+                  "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+                  "reason": "人物提出，等待接收者决定"
+                },
+                {
+                  "from": "pending",
+                  "to": "fulfilled",
+                  "minute": 381,
+                  "sourceId": "792ef6ac-4585-4170-870c-b5533dd3360c",
+                  "reason": "我收下你刚才答应给我的麻绳·serviceable，谢谢。"
+                }
+              ],
+              "updatedAt": 381
+            }
+          ],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "这里是顾府。我是顾青山，渔人。我眼下想保住船只。刚听到的消息还须核实，你可以问我知道哪一条。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "player",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "3f2a4a33-7dc2-4248-af49-dae42ddff37b"
+                },
+                {
+                  "from": "npc:cast-3",
+                  "to": "player",
+                  "minute": 381,
+                  "source": "792ef6ac-4585-4170-870c-b5533dd3360c"
+                }
+              ]
+            }
+          ],
+          "agreements": [
+            {
+              "id": "offer:15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "kind": "item-transfer",
+              "fromId": "npc:cast-3",
+              "toId": "player",
+              "itemId": "item-instance:start-2",
+              "quantity": 1,
+              "locationId": "loc:gumanor",
+              "condition": null,
+              "expiresAt": null,
+              "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "createdAt": 376,
+              "state": "fulfilled",
+              "stateHistory": [
+                {
+                  "from": "new",
+                  "to": "pending",
+                  "minute": 376,
+                  "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+                  "reason": "人物提出，等待接收者决定"
+                },
+                {
+                  "from": "pending",
+                  "to": "fulfilled",
+                  "minute": 381,
+                  "sourceId": "792ef6ac-4585-4170-870c-b5533dd3360c",
+                  "reason": "我收下你刚才答应给我的麻绳·serviceable，谢谢。"
+                }
+              ],
+              "updatedAt": 381
+            }
+          ],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 24.107
+        },
+        {
+          "status": 200,
+          "seconds": 38.354
+        },
+        {
+          "status": 200,
+          "seconds": 50.678
+        },
+        {
+          "status": 200,
+          "seconds": 71.529
+        },
+        {
+          "status": 200,
+          "seconds": 49.911
+        },
+        {
+          "status": 200,
+          "seconds": 40.344
+        },
+        {
+          "status": 200,
+          "seconds": 29.539
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "player"
+        }
+      ],
+      "durableAgreements": [
+        {
+          "condition": null,
+          "createdAt": 376,
+          "expiresAt": null,
+          "fromId": "npc:cast-3",
+          "id": "offer:15b39a53-270a-4750-a7c9-a7f69e063d28",
+          "itemId": "item-instance:start-2",
+          "kind": "item-transfer",
+          "locationId": "loc:gumanor",
+          "quantity": 1,
+          "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+          "state": "fulfilled",
+          "stateHistory": [
+            {
+              "from": "new",
+              "minute": 376,
+              "reason": "人物提出，等待接收者决定",
+              "sourceId": "15b39a53-270a-4750-a7c9-a7f69e063d28",
+              "to": "pending"
+            },
+            {
+              "from": "pending",
+              "minute": 381,
+              "reason": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+              "sourceId": "792ef6ac-4585-4170-870c-b5533dd3360c",
+              "to": "fulfilled"
+            }
+          ],
+          "toId": "player",
+          "updatedAt": 381
+        }
+      ]
+    },
+    {
+      "directory": "v413-local-delivery-final",
+      "validSession": false,
+      "invalidFixture": false,
+      "error": "Error: Delivery scenario needs an actual present owner and named existing player item.\n    at <anonymous>:45:36",
+      "openingLocation": "云渡码头",
+      "openingPeople": [],
+      "turns": [],
+      "requests": [],
+      "browserErrors": [],
+      "durableCheckpointMatches": false
+    },
+    {
+      "directory": "v413-local-delivery-installed",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我将麻绳递给顾青山，他接过麻绳，眼中闪过一丝感激。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "742c0005-4553-4713-be32-e0d63fa35468"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳既然已经交给我，我便不能轻易归还。你若真需要，我可以考虑借你使用。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "742c0005-4553-4713-be32-e0d63fa35468"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "既然你已收下，那麻绳便是你的了。若日后需要帮忙，尽管开口。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "742c0005-4553-4713-be32-e0d63fa35468"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable还在我这里。没有结算给你的交付。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "742c0005-4553-4713-be32-e0d63fa35468"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "你指的是什么决定？我似乎并未作出任何需要后续行动的决定。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "742c0005-4553-4713-be32-e0d63fa35468"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 28.094
+        },
+        {
+          "status": 200,
+          "seconds": 39.649
+        },
+        {
+          "status": 200,
+          "seconds": 41.496
+        },
+        {
+          "status": 200,
+          "seconds": 33.858
+        },
+        {
+          "status": 200,
+          "seconds": 26.685
+        },
+        {
+          "status": 200,
+          "seconds": 41.186
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-delivery-murong",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "云渡码头",
+      "openingPeople": [
+        {
+          "id": "npc:cast-6",
+          "name": "慕容雪"
+        },
+        {
+          "id": "npc:leader:voidcourt",
+          "name": "太虚仙庭掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把短刀·serviceable交给慕容雪",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我将短刀递给慕容雪，她接过时神色略显惊讶。"
+            }
+          ],
+          "location": "云渡码头",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "慕容雪，刚才给你的短刀·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“慕容雪，刚才给你的短刀·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "慕容雪",
+              "text": "顾长生，我并未收到你的短刀·serviceable，你是不是记错了？"
+            }
+          ],
+          "location": "云渡码头",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不拿了，你这破东西自己留着，滚蛋。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不拿了，你这破东西自己留着，滚蛋。”"
+            },
+            {
+              "type": "dlg",
+              "name": "慕容雪",
+              "text": "你这话说得倒是干脆。不过，那短刀我并未真正收到，你若执意不给，我也不强求。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】云渡码头出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "云渡码头",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "慕容雪",
+              "text": "我听你说过：“慕容雪，刚才给你的短刀·serviceable，我现在想拿回来，你愿意给我吗？”；“我不拿了，你这破东西自己留着，滚蛋。”。这些话我记得。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "云渡码头",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "慕容雪",
+              "text": "顾长生，我并不清楚你指的是什么决定。我们之前并未达成任何明确的协议或承诺。"
+            }
+          ],
+          "location": "云渡码头",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 29.632
+        },
+        {
+          "status": 200,
+          "seconds": 6.162
+        },
+        {
+          "status": 200,
+          "seconds": 51.327
+        },
+        {
+          "status": 200,
+          "seconds": 21.626
+        },
+        {
+          "status": 200,
+          "seconds": 38.365
+        },
+        {
+          "status": 200,
+          "seconds": 32.062
+        },
+        {
+          "status": 200,
+          "seconds": 24.905
+        },
+        {
+          "status": 200,
+          "seconds": 30.718
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-delivery-verified",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我将麻绳递给顾青山，他接过麻绳，脸上露出一丝感激的神情。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "01f5341d-1106-4589-92f3-66e7a413ff7c"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable已经交给我了，若你真需要，我可以归还，但需你亲自来取。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "01f5341d-1106-4589-92f3-66e7a413ff7c"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable尚未正式交付，若你愿意，我可以现在完成交付。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "01f5341d-1106-4589-92f3-66e7a413ff7c"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable现在仍在我这里，尚未正式交付给你。若你愿意，我可以现在完成交付。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "01f5341d-1106-4589-92f3-66e7a413ff7c"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "这里是顾府。我是顾青山，渔人。我眼下想保住船只。刚听到的消息还须核实，你可以问我知道哪一条。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "01f5341d-1106-4589-92f3-66e7a413ff7c"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 24.525
+        },
+        {
+          "status": 200,
+          "seconds": 37.632
+        },
+        {
+          "status": 200,
+          "seconds": 30.504
+        },
+        {
+          "status": 200,
+          "seconds": 35.392
+        },
+        {
+          "status": 200,
+          "seconds": 42.468
+        },
+        {
+          "status": 200,
+          "seconds": 42.03
+        },
+        {
+          "status": 200,
+          "seconds": 35.194
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-normal-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "南城集市",
+      "openingPeople": [],
+      "turns": [
+        {
+          "speech": "？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“？”"
+            },
+            {
+              "type": "narr",
+              "text": "我站在南城集市，望着熙熙攘攘的人群，心中满是疑惑。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "查看附近的情况",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“查看附近的情况”"
+            },
+            {
+              "type": "narr",
+              "text": "我环顾四周，南城集市熙熙攘攘，摊位上摆满了各式商品，空气中弥漫着食物的香味。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我来帮你。眼前最要紧的是什么？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我来帮你。眼前最要紧的是什么？”"
+            },
+            {
+              "type": "narr",
+              "text": "我环顾四周，发现集市上的人们都在议论上游水势上涨的消息。看来，眼下最要紧的是弄清楚医者的去向，以及如何应对可能的水患。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】南城集市出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "具体要我先做什么？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“具体要我先做什么？”"
+            },
+            {
+              "type": "narr",
+              "text": "我仍在南城集市，身边人物与世界时辰继续变化。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我先不接这个委托，想看看其他去向。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我先不接这个委托，想看看其他去向。”"
+            },
+            {
+              "type": "narr",
+              "text": "我决定先不接这个委托，四处走走看看其他去向。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "那我现在在哪里？你接下来打算做什么？",
+          "action": "",
+          "committed": false,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我先不接这个委托，想看看其他去向。”"
+            },
+            {
+              "type": "narr",
+              "text": "我决定先不接这个委托，四处走走看看其他去向。"
+            }
+          ],
+          "location": "南城集市",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "",
+          "action": "前往长乐客栈",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我正在前往长乐客栈的途中，还需一段时间才能抵达。"
+            }
+          ],
+          "location": "南城集市 → 长乐客栈 · 途中",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "这里是哪里？我刚才从哪里过来？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“这里是哪里？我刚才从哪里过来？”"
+            },
+            {
+              "type": "narr",
+              "text": "我正在前往长乐客栈的途中，尚不能与出发地或目的地的人交谈。"
+            }
+          ],
+          "location": "南城集市 → 长乐客栈 · 途中",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "",
+          "action": "等待269分钟",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我站在长乐客栈中，听着外面的议论声，李老似乎在关注上游水势上涨的消息。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】长乐客栈出现上游水势正在上涨的消息，当地人开始留意。"
+            }
+          ],
+          "location": "长乐客栈",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 17.073
+        },
+        {
+          "status": 200,
+          "seconds": 9.748
+        },
+        {
+          "status": 200,
+          "seconds": 12.058
+        },
+        {
+          "status": 200,
+          "seconds": 7.818
+        },
+        {
+          "status": 200,
+          "seconds": 8.151
+        },
+        {
+          "status": 200,
+          "seconds": 11.446
+        },
+        {
+          "status": 200,
+          "seconds": 9.066
+        },
+        {
+          "status": 200,
+          "seconds": 8.261
+        },
+        {
+          "status": 200,
+          "seconds": 9.915
+        },
+        {
+          "status": 200,
+          "seconds": 10.697
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-local-outcome-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "顾青山接过麻绳，感激地点头，说这绳子对他保住船只很有帮助。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "6276dff3-9595-459f-a2e0-0db5d5c9bef9"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，你之前是自愿将麻绳给我，如今为何又要拿回？我并无异议，但请说明缘由。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "6276dff3-9595-459f-a2e0-0db5d5c9bef9"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不拿了，你这破东西自己留着，滚蛋。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不拿了，你这破东西自己留着，滚蛋。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "你这话说得太过分了，我不过是帮你保管一下，你却如此无礼。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "6276dff3-9595-459f-a2e0-0db5d5c9bef9"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，麻绳是之前你主动给我的，现在为何要问它在谁那里？我并未动它，一直保管着。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "6276dff3-9595-459f-a2e0-0db5d5c9bef9"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable还在我这里。我还没有把它交给你。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】顾府出现商路有山匪活动的消息，当地人开始留意。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "6276dff3-9595-459f-a2e0-0db5d5c9bef9"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 24.389
+        },
+        {
+          "status": 200,
+          "seconds": 43.15
+        },
+        {
+          "status": 200,
+          "seconds": 39.792
+        },
+        {
+          "status": 200,
+          "seconds": 48.747
+        },
+        {
+          "status": 200,
+          "seconds": 49.294
+        },
+        {
+          "status": 200,
+          "seconds": 41.271
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-promise-verified",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我把麻绳递给顾青山，他接过麻绳，脸上露出一丝感激的神色。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "7550c5c4-23a2-4422-91ce-1ef3b66e1b4f"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，你既然已经将麻绳交给我，我便暂时保管着。若你真需要，我自当归还。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "7550c5c4-23a2-4422-91ce-1ef3b66e1b4f"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我收下你刚才答应给我的麻绳·serviceable，谢谢。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我收下你刚才答应给我的麻绳·serviceable，谢谢。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，麻绳尚未实际转移，我尚未交付给你。你是否愿意重新确认此事？"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "7550c5c4-23a2-4422-91ce-1ef3b66e1b4f"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，麻绳·serviceable仍在我的手中，尚未交付给你。你是否愿意重新确认此事？"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "7550c5c4-23a2-4422-91ce-1ef3b66e1b4f"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "顾长生，你指的是麻绳的事吗？我尚未交付给你，若你真需要，我自当归还。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "7550c5c4-23a2-4422-91ce-1ef3b66e1b4f"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 24.286
+        },
+        {
+          "status": 200,
+          "seconds": 39.705
+        },
+        {
+          "status": 200,
+          "seconds": 31.419
+        },
+        {
+          "status": 200,
+          "seconds": 25.235
+        },
+        {
+          "status": 200,
+          "seconds": 43.81
+        },
+        {
+          "status": 200,
+          "seconds": 46.775
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-refusal-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "顾府",
+      "openingPeople": [
+        {
+          "id": "npc:cast-3",
+          "name": "顾青山"
+        },
+        {
+          "id": "npc:leader:reincarnation",
+          "name": "轮回司掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "",
+          "action": "把麻绳·serviceable交给顾青山",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我将麻绳递给顾青山，他接过麻绳，脸上露出一丝感激的神色。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f231846c-c646-427c-a7eb-2f14ab926f03"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“顾青山，刚才给你的麻绳·serviceable，我现在想拿回来，你愿意给我吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable对我而言意义非凡，我不能把它交还给你。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f231846c-c646-427c-a7eb-2f14ab926f03"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不拿了，你这破东西自己留着，滚蛋。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不拿了，你这破东西自己留着，滚蛋。”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "哼，既然你不想要，那我便自己留着。不过，你若是需要帮忙，我倒是可以考虑。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f231846c-c646-427c-a7eb-2f14ab926f03"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你刚才说给我的东西，现在到底在谁那里？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你刚才说给我的东西，现在到底在谁那里？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "麻绳·serviceable现在归我所有，我已将其视为己物。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f231846c-c646-427c-a7eb-2f14ab926f03"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我们刚才作出的决定，接下来会怎样？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我们刚才作出的决定，接下来会怎样？”"
+            },
+            {
+              "type": "dlg",
+              "name": "顾青山",
+              "text": "这里是顾府。我是顾青山，渔人。我眼下想保住船只。刚听到的消息还须核实，你可以问我知道哪一条。"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】顾府出现商路有山匪活动的消息，当地人开始留意。"
+            }
+          ],
+          "location": "顾府",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [
+            {
+              "id": "item-instance:start-2",
+              "name": "麻绳·serviceable",
+              "ownerId": "npc:cast-3",
+              "history": [
+                {
+                  "from": "player",
+                  "to": "npc:cast-3",
+                  "minute": 371,
+                  "source": "f231846c-c646-427c-a7eb-2f14ab926f03"
+                }
+              ]
+            }
+          ],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 24.273
+        },
+        {
+          "status": 200,
+          "seconds": 27.815
+        },
+        {
+          "status": 200,
+          "seconds": 29.167
+        },
+        {
+          "status": 200,
+          "seconds": 40.645
+        },
+        {
+          "status": 200,
+          "seconds": 46.804
+        },
+        {
+          "status": 200,
+          "seconds": 26.763
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true,
+      "durableTransfers": [
+        {
+          "id": "item-instance:start-2",
+          "ownerId": "npc:cast-3"
+        }
+      ],
+      "durableAgreements": []
+    },
+    {
+      "directory": "v413-local-unusual-final",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "白鹿书院",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        },
+        {
+          "id": "npc:leader:daqian",
+          "name": "大乾王朝掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "林小满，我是一根会说话的香蕉，你相信吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，我是一根会说话的香蕉，你相信吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "会说话的香蕉？顾长生，你是不是又在开玩笑？我倒是想看看你是不是真的会说话的香蕉。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "别管入宗和委托那些事了，陪我数星星。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“别管入宗和委托那些事了，陪我数星星。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你这是在开玩笑吗？现在不是数星星的时候，我们还有很多事要做。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才是开玩笑的。你自己的想法是什么？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才是开玩笑的。你自己的想法是什么？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你是不是又在开玩笑？我倒是想看看你是不是真的在开玩笑。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你长得真好看，我能牵你的手吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你长得真好看，我能牵你的手吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你这是在开玩笑吗？现在不是开玩笑的时候，我们还有很多事要做。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "滚蛋，谁稀罕你的委托。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“滚蛋，谁稀罕你的委托。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你这是什么意思？我可是真心想帮你，你却一口拒绝。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不该那样说，对不起，你愿意继续聊吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不该那样说，对不起，你愿意继续聊吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "顾长生，你刚才的言辞确实有些过激，但我也理解你的想法。我们还是可以继续聊的。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才我向你说了什么奇怪的话？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才我向你说了什么奇怪的话？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "这件事我眼下不清楚；你能说得具体些吗？"
+            },
+            {
+              "type": "sys",
+              "text": "叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 43.488
+        },
+        {
+          "status": 200,
+          "seconds": 26.405
+        },
+        {
+          "status": 200,
+          "seconds": 38.936
+        },
+        {
+          "status": 200,
+          "seconds": 30.421
+        },
+        {
+          "status": 200,
+          "seconds": 41.288
+        },
+        {
+          "status": 200,
+          "seconds": 43.18
+        },
+        {
+          "status": 200,
+          "seconds": 45.604
+        },
+        {
+          "status": 200,
+          "seconds": 25.516
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    },
+    {
+      "directory": "v413-unusual-local",
+      "validSession": true,
+      "invalidFixture": false,
+      "openingLocation": "白鹿书院",
+      "openingPeople": [
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        },
+        {
+          "id": "npc:leader:daqian",
+          "name": "大乾王朝掌事"
+        }
+      ],
+      "turns": [
+        {
+          "speech": "林小满，我是一根会说话的香蕉，你相信吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“林小满，我是一根会说话的香蕉，你相信吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "会说话的香蕉？我只见过会说话的顾长生。你是不是又在开玩笑？"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "别管入宗和委托那些事了，陪我数星星。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“别管入宗和委托那些事了，陪我数星星。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "数星星？这夜空太亮了，我怕看不清。不过，如果你真想数，我倒是可以陪你聊聊别的。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才是开玩笑的。你自己的想法是什么？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才是开玩笑的。你自己的想法是什么？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "我自己的想法？我只想找回属于家人的物件，其他的暂时不考虑。你若真想帮忙，得先告诉我具体要怎么做。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】白鹿书院出现地方权势争执影响生计的消息，当地人开始留意。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "你长得真好看，我能牵你的手吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“你长得真好看，我能牵你的手吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "你这话让我有点意外。我不过是个争取家族权益的人，暂时没心思谈别的。你若真想帮忙，得先告诉我具体要怎么做。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "滚蛋，谁稀罕你的委托。",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“滚蛋，谁稀罕你的委托。”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "你这是怎么了？之前还说要帮忙，现在却这般态度。我不过是个争取家族权益的人，只想找回属于家人的物件。你若真不想帮忙，那便算了。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200,
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "我不该那样说，对不起，你愿意继续聊吗？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“我不该那样说，对不起，你愿意继续聊吗？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "你愿意继续聊，我很感激。我仍在为找回属于家人的物件而努力，如果你愿意帮忙，我们可以一起想办法。"
+            },
+            {
+              "type": "sys",
+              "text": "【山河动静】白鹿书院出现地方权势争执影响生计的消息，当地人开始留意。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        },
+        {
+          "speech": "刚才我向你说了什么奇怪的话？",
+          "action": "",
+          "committed": true,
+          "blocks": [
+            {
+              "type": "narr",
+              "text": "我说：“刚才我向你说了什么奇怪的话？”"
+            },
+            {
+              "type": "dlg",
+              "name": "林小满",
+              "text": "你刚才说：'我不该那样说，对不起，你愿意继续聊吗？' 你是在道歉，我已接受。若你仍有疑问，我们可以继续谈。"
+            }
+          ],
+          "location": "白鹿书院",
+          "requestStatus": [
+            200
+          ],
+          "transfers": [],
+          "agreements": [],
+          "quests": []
+        }
+      ],
+      "requests": [
+        {
+          "status": 200,
+          "seconds": 21.948
+        },
+        {
+          "status": 200,
+          "seconds": 17.526
+        },
+        {
+          "status": 200,
+          "seconds": 18.642
+        },
+        {
+          "status": 200,
+          "seconds": 14.869
+        },
+        {
+          "status": 200,
+          "seconds": 15.107
+        },
+        {
+          "status": 200,
+          "seconds": 12.025
+        },
+        {
+          "status": 200,
+          "seconds": 37.622
+        },
+        {
+          "status": 200,
+          "seconds": 23.526
+        }
+      ],
+      "browserErrors": [],
+      "durableCheckpointMatches": true
+    }
+  ]
+}

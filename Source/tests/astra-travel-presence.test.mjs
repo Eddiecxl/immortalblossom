@@ -54,3 +54,18 @@ test('a journey in progress cannot converse with people left at the origin',()=>
   assert.equal(arrived.player.locationId,road.to);assert.equal(arrived.player.travel,null);
  }
 });
+test('a participant departing during this turn retains identity and heard memory for a farewell only',()=>{
+ const state=createGameState('旅人','ai',()=> 'farewell-memory'),w=state.astraWorld;
+ const n=w.characters['npc:lin-xiaoman'],road=w.edges.find(e=>e.from===w.player.locationId&&!e.closed);
+ n.alive=true;n.locationId=road.from;n.travel={from:road.from,to:road.to,departAt:w.minute,arriveAt:w.minute+road.minutes};
+ n.memories=[{source:'player-speech',summary:'玩家说过：“我是一只会唱歌的猫”'}];
+ const conversation={targetId:n.id,targetName:n.name,presentAtStart:true};
+ const packet=compileAstraContext(state,'刚才我说过什么？',[],{conversation});
+ assert.ok(!packet.presentNpcs.some(row=>row.id===n.id));
+ assert.ok(packet.departingNpcs.some(row=>row.id===n.id&&row.memories[0].summary.includes('会唱歌的猫')));
+ assert.equal(compileAstraContext(state,'刚才我说过什么？',[]).departingNpcs.length,0);
+ packet.conversation=conversation;
+ assert.equal(validateAstraNarration(w,[{type:'dlg',name:n.name,text:'我记得你说过会唱歌的猫；我要先出门了。'}],packet).ok,true);
+ w.player.travel={from:road.from,to:road.to};
+ assert.equal(compileAstraContext(state,'刚才我说过什么？',[],{conversation}).departingNpcs.length,0);
+});

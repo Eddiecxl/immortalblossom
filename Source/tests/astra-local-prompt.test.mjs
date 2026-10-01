@@ -23,7 +23,7 @@ test('local prompt preserves speaker identity and separates rumor from presence'
 });
 
 test('non-conversation local prompt stays in first-person narration', () => {
-  const messages = buildAstraLocalMessages({ ...packet, conversation: null }, [], 'other.gguf');
+  const messages = buildAstraLocalMessages({ ...packet, conversation: null, playerTurn:{speech:'',action:'查看道路'} }, [], 'other.gguf');
   assert.match(messages[0].content, /只写 1–2 个 narr 块/u);
   assert.doesNotMatch(messages[0].content, /只写一个 dlg 块/u);
 });

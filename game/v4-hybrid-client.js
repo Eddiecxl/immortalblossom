@@ -211,8 +211,11 @@ export function createV31HybridClient({
           if (error?.name === 'AbortError') throw error;
           const retryable = provider === 'local' || isRetryableStatus(Number(error?.status || 0));
           if (!retryable) throw error;
+          // A daily/long token cooldown is not an invitation to retry early.
+          // Preserve the provider gate and let the UI keep the user's input.
+          if (Number(error?.retryAfterMs) > 60000) throw error;
           if (attempt < sameProviderAttempts - 1) {
-            const delay = Math.min(30000, Math.max(1200, Number(error?.retryAfterMs) || 1500));
+            const delay = Math.max(1200, Number(error?.retryAfterMs) || 1500);
             await waitForRequestSlot(delay, context.signal);
             continue;
           }

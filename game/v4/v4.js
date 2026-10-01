@@ -13,7 +13,7 @@ import { createTranscriptStore } from '../transcript-store.js';
 import { createAiTurnRunner } from '../ai-turn.js';
 import { createV31HybridClient, V31_PROVIDER_DEFAULTS } from '../v4-hybrid-client.js';
 import { normalizePlayerTurnInput, playerTurnIsEmpty, serializePlayerTurn, playerTurnDisplay } from '../player-turn.js';
-import { inventoryRows, questRows, characterRows } from '../beta4/rpg-view.js';
+import { inventoryRows, questRows, characterRows, commitmentRows } from '../beta4/rpg-view.js';
 import { commitInventoryAction } from '../beta4/inventory-command.js';
 import { createExperience } from '../beta4/experience.js';
 const $ = (id) => document.getElementById(id);
@@ -320,7 +320,10 @@ function renderDrawer(tab = activeDrawer) {
     dom.drawerTitle.textContent='因果命簿';
     const entries=[...(state.rpg?.ledger||[])].reverse();
     dom.drawerContent.append(node('p','local-ledger-note','这里记录实际结算的获得、消耗与生死因果。过去获得的护命能力不会因为聊天记录变长而失效。'));
-    if(!entries.length)dom.drawerContent.append(ledgerSection('尚无结算',[['此世','重要物品与生死事件将在这里留痕']]));
+    const deliveries=commitmentRows(state);
+    for(const delivery of deliveries.slice(0,32))dom.drawerContent.append(ledgerSection(delivery.status+' · '+delivery.itemName,
+      [['提出者',delivery.fromName],['当前归属',delivery.ownerName],['约定',delivery.description]]));
+    if(!entries.length&&!deliveries.length)dom.drawerContent.append(ledgerSection('尚无结算',[['此世','重要物品与生死事件将在这里留痕']]));
     for(const event of entries.slice(0,100))dom.drawerContent.append(ledgerSection(event.name||({death:'此世归寂',revival:'绝境逢生',acquired:'因缘所得',consumed:'物品消耗'}[event.kind]||'因果落定'),[['经过',event.text||event.cause||event.kind],['回合',event.turn??'已记录'],...(event.chargesRemaining!==undefined?[['剩余次数',event.chargesRemaining]]:[])]));
   } else if (tab === 'character') {
     dom.drawerTitle.textContent = '人物与修行';const mine=characterRows(state);dom.drawerContent.append(ledgerSection(state.player.name,[['境界',mine.realm],['气血',state.player.hp+' / '+state.player.maxHp],['灵力',state.player.spirit+' / '+state.player.maxSpirit],['灵石',state.player.gold],['装备',mine.equipment.map(([,v])=>Array.isArray(v)?v.join('、'):v).join('、')||'无']]));for(const tech of mine.techniques)dom.drawerContent.append(ledgerSection(tech.name,[['功法',tech.description],['状态',tech.equipped?'已装配':'已习得']]));

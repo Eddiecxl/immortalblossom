@@ -1,0 +1,12 @@
+落仙 Game Beta v4.1.3 · 万象世界
+
+完整解压后运行 LuoXian.exe。启动器当前版本应显示 Beta v4.1.3。
+本安装已经更新，无需再次安装 Patches 内的 4.1.2 → 4.1.3 补丁。
+仍使用 4.1.2 的安装可将该补丁放入其 Patches，再从启动器检查更新。
+
+原动漫封面、Logo/开场衔接、四首游戏配乐和启动器原配乐保留。
+玩家保存区、凭据和本地模型保留；不要为了更新删除 LocalAppData 的 LuoXian 目录。
+
+开放交互、真实物品约定和关联任务说明：docs/OPEN_INTERACTION_V413.md。
+真实试玩与模型限制：docs/ACTUAL_PLAYTEST_V413.md。
+验证记录：VALIDATION.md。后续维护先读 AGENTS.md 和 docs/ENGINE_CONTRACT.md。

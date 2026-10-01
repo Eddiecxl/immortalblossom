@@ -4,7 +4,8 @@ import { applyNumericMutation } from './astra-variables.js';
 import { resolveStructuredEffect, consumeGeneratedItem } from './astra-effects.js';
 import { killNpc } from './astra-reality.js';
 import { checkTerminalWorld } from './astra-terminal.js';
-import { reconcileQuestArcs } from './astra-quests.js';
+import { reconcileQuestArcs, respondQuestArc } from './astra-quests.js';
+import { transferOwnedItem, offerCommitment, respondCommitment } from './astra-commitments.js';
 export { evaluateCondition } from './astra-expression.js';
 
 const domains = { character: 'characters', faction: 'factions', location: 'locations', item: 'items' };
@@ -22,6 +23,18 @@ function present(world, id) {
 function inputAction(context) {
   const action = context.input?.action || '';
   return /假如|如果|假设|不要|不想|开玩笑|「|“|"/u.test(action) ? '' : action;
+}
+function actionNamesItem(context,item,action){
+  if(!item?.name)return false;
+  const alias=item.name.split('·')[0];
+  // Authorization cannot expand after earlier operations change ownership.
+  // Keep destroyed instances too: a consumed A's full name cannot authorize B.
+  const references=context.actionItems;
+  const namedAction=references.filter(row=>row.id!==item.id&&row.name&&row.name.length>alias.length)
+    .reduce((text,row)=>text.split(row.name).join(''),action);
+  if(namedAction.includes(item.name))return true;
+  return alias.length>=2&&namedAction.includes(alias)&&references.filter(row=>!row.destroyed
+    &&row.ownerId==='player'&&String(row.name||'').split('·')[0]===alias).length===1;
 }
 const worldScope = value => /天下|全世界|整个世界|世界规则|世界法则|所有(?:人|生命|人物|势力|地点)|全部(?:人|生命|人物|势力|地点)/u.test(value);
 function authorizeScope(world, op, context) {
@@ -134,17 +147,10 @@ function transfer(world, op, context) {
     || !Array.isArray(to.inventory) || !to.alive || from.id === to.id) fail('物品转移的所有权或人物无效。');
   if (context.mode !== 'reality') {
     const action = inputAction(context);
-    if (from.id !== 'player' || !present(world, to.id) || !action.includes(item.name)
+    if (from.id !== 'player' || !present(world, to.id) || !actionNamesItem(context,item,action)
       || !action.includes(to.name) || !/给|交|送|赠/u.test(action)) fail('普通物品转移未获本轮真实动作授权。');
   }
-  from.inventory = from.inventory.filter(id => id !== item.id);
-  to.inventory.push(item.id);
-  item.ownerId = to.id; item.locationId = to.locationId;
-  item.transferHistory ||= [];
-  item.transferHistory.push({ from: from.id, to: to.id, minute: world.minute, source: context.turnId });
-  recordCausalEvent(world, { id: context.turnId + ':transfer:' + item.id, actorId: from.id, targetIds: [to.id],
-    action: 'give', locationId: world.player.locationId, summary: from.name + '将' + item.name + '交给' + to.name + '。',
-    impacts: [{ entityId: to.id, dimension: 'resources', delta: 0.2 }] });
+  transferOwnedItem(world, op, context.turnId);
 }
 function relation(world, op, context) {
   if (context.mode !== 'reality') fail('普通关系变化应来自社会认知提案。');
@@ -176,6 +182,10 @@ function createQuest(world, op, context) {
   if (!giver?.alive || !world.locations[q.targetLocationId] || world.locations[q.targetLocationId].destroyed) fail('任务来源或地点无效。');
   if (context.mode !== 'reality' && !present(world, giver.id)) fail('普通委托须由真实在场人物提出。');
   validateConditionReferences(world, q.condition);
+  const dependencies = q.requiredCommitmentIds || [];
+  if (!Array.isArray(dependencies) || dependencies.length > 8 || dependencies.some(id =>
+    world.simulation?.commitments?.[id]?.kind !== 'item-transfer' || world.simulation.commitments[id].toId !== 'player'
+    || !['pending', 'fulfilled'].includes(world.simulation.commitments[id].state))) fail('委托引用的必需交付不存在或已失效。');
   if (context.mode !== 'reality' && evaluateCondition(world, q.condition)) fail('新委托不能用当前已满足的无关事实直接领取奖励。');
   effectsValid(q.reward, world);
   if (context.mode !== 'reality') {
@@ -190,6 +200,7 @@ function createQuest(world, op, context) {
   world.quests[q.id] = { id: q.id, title: clean(q.title, 80), summary: clean(q.summary), generated: true,
     originEventId: context.turnId, giverId: giver.id, offerLocationId: giver.locationId, targetId: null, targetLocationId: q.targetLocationId,
     condition: structuredClone(q.condition), rewardEffects: structuredClone(q.reward), state: 'available',
+    requiredCommitmentIds: [...new Set(dependencies)],
     participants: [giver.id], primaryGoals: [clean(q.summary || q.title)], optionalGoals: [], hiddenGoals: [],
     deadline: world.minute + Math.max(60, Math.min(365 * 1440, Number(q.durationMinutes) || 1440)),
     rewards: ['委托人的实付奖励'], lostRewards: [], earnedRewards: [], followUpArcs: [], worldConsequences: [], stateHistory: [],
@@ -202,7 +213,7 @@ function social(world, op, context) {
   if (!npc || !present(world, npc.id) || op.subjectId !== 'player') fail('社会认知必须有真实听者和主体。');
   const input = String(context.input?.speech || '') + String(context.input?.action || '');
   if (!op.evidence || !input.includes(op.evidence)) fail('社会认知缺少本轮输入证据。');
-  if (!['threat', 'promise', 'help', 'insult', 'affection', 'question'].includes(op.meaning)
+  if (typeof op.meaning !== 'string' || !/^[a-z][a-z_-]{1,39}$/u.test(op.meaning)
     || !Number.isFinite(op.valence) || Math.abs(op.valence) > 1) fail('社会认知类型无效。');
   const sim = ensureSimulation(world);
   const id = context.turnId + ':social:' + npc.id;
@@ -215,7 +226,7 @@ function social(world, op, context) {
     meaning: op.meaning, summary: clean(op.reason || op.evidence) };
   recordCausalEvent(world, { id, actorId: 'player', action: op.meaning, targetIds: [npc.id],
     sourceId: context.turnId, locationId: world.player.locationId, witnessIds: [npc.id],
-    summary: npc.name + '对本轮言行作出了自己的判断。', impacts: [] });
+    summary: npc.name + '对“' + clean(op.evidence, 80) + '”的判断：' + clean(op.reason || op.meaning, 120), impacts: [] });
   if (delta) npc.currentPlan = { id: 'plan:' + id, type: delta < 0 ? 'avoid' : 'support',
     state: 'pending', targetId: 'player', causeEventId: id, confidence: 0.8, createdAt: world.minute };
 }
@@ -225,6 +236,8 @@ export function applyWorldPlan(source, plan, context) {
   if (JSON.stringify(plan).length > 18000 || !Array.isArray(plan?.operations) || plan.operations.length > 24)
     fail('提案超出本轮有界预算。');
   const world = structuredClone(source);
+  context={...context,actionItems:Object.values(source.items).map(item=>({id:item.id,name:item.name,
+    ownerId:item.ownerId,destroyed:item.destroyed}))};
   let sim = ensureSimulation(world);
   if (sim.transactions[context.turnId]) return { world, events: [] };
   const eventStart = new Set(Object.keys(sim.events));
@@ -240,15 +253,18 @@ export function applyWorldPlan(source, plan, context) {
       case 'entity.create': createEntity(world, op, context); break;
       case 'entity.update': updateEntity(world, op, context); break;
       case 'resource.transfer': transfer(world, op, context); break;
+      case 'commitment.offer': offerCommitment(world, op, context); break;
+      case 'commitment.respond': respondCommitment(world, op, context); break;
       case 'relation.upsert': case 'relation.remove': relation(world, op, context); break;
       case 'quest.create': createQuest(world, op, context); break;
+      case 'quest.respond': respondQuestArc(world, op, context); break;
       case 'social.observe': social(world, op, context); break;
       case 'effect.apply': {
         if (consumed.has(op.itemId) || context.settledAction === 'use_generated_item'
           && (!context.settledItemId || context.settledItemId === op.itemId)) fail('这件物品的本轮使用已经结算，不能重复消费。');
         consumed.add(op.itemId);
         const item = world.items[op.itemId];
-        if (context.mode !== 'reality' && (!item || !inputAction(context).includes(item.name)
+        if (context.mode !== 'reality' && (!item || !actionNamesItem(context,item,inputAction(context))
           || !/用|服|吞|吃/u.test(inputAction(context)))) fail('物品使用未获动作授权。');
         const used = consumeGeneratedItem(world, op.itemId);
         Object.assign(world, used.world); break;
@@ -298,16 +314,19 @@ export function applyWorldPlan(source, plan, context) {
 
 export function settleWorldRules(world, events) {
   if (world.terminal?.ended) return world;
+  reconcileQuestArcs(world);
   const sim = ensureSimulation(world);
   sim.pendingRuleEffects ||= [];
   let budget = 64;
   const jobs = [...sim.pendingRuleEffects];
   const queued = new Set(jobs.map(job => job.key));
-  for (const rule of Object.values(sim.rules)) for (const event of events) {
+  const dispatch = [...new Map([...events,...Object.values(sim.events).filter(event=>event.rulePending)].map(event=>[event.id,event])).values()];
+  for (const rule of Object.values(sim.rules)) for (const event of dispatch) {
     const key = 'rule:' + rule.id + ':' + rule.version + ':' + event.id;
     if (queued.has(key) || world.simulation.transactions[key] || event.action !== rule.trigger) continue;
     queued.add(key); jobs.push({ key, ruleId: rule.id, ruleVersion: rule.version, event: structuredClone(event) });
   }
+  for(const event of dispatch)if(sim.events[event.id])sim.events[event.id].rulePending=false;
   world.simulation.pendingRuleEffects = [];
   for (const job of jobs) {
     const rule = world.simulation.rules[job.ruleId], event = job.event, key = job.key;
@@ -323,13 +342,20 @@ export function settleWorldRules(world, events) {
     } catch (error) { companionNotification(world, 'rule-error:' + key, '一条世界规则暂无法结算：' + clean(error.message), event.id); }
   }
   for (const quest of Object.values(world.quests).filter(q => q.generated && q.condition && q.state === 'active')) {
+    if ((quest.requiredCommitmentIds || []).some(id => world.simulation?.commitments?.[id]?.state !== 'fulfilled')) continue;
     if (budget-- <= 0 || !evaluateCondition(world, quest.condition)) continue;
     const giver = world.characters[quest.giverId];
     const reserved = Number(quest.reservedReward || 0);
     if (reserved && (!giver?.alive || giver.wealth < reserved)) continue;
+    if (reserved && quest.rewardEffects.some(effect=>effect.condition&&!evaluateCondition(world,effect.condition))) {
+      quest.rewardPending=true;continue;
+    }
     const draft = structuredClone(world), next = draft.quests[quest.id];
+    const beforeWealth=draft.player.wealth;
     for (const effect of quest.rewardEffects) resolveStructuredEffect(draft, effect);
+    if (reserved && draft.player.wealth-beforeWealth!==reserved) {quest.rewardPending=true;continue;}
     if (reserved) draft.characters[quest.giverId].wealth -= reserved;
+    next.rewardPending=false;
     next.state = 'completed'; next.updatedAt = world.minute;
     next.earnedRewards = [...next.rewards];
     draft.history.push({ id: quest.id + ':completed', minute: world.minute, type: 'quest_state',

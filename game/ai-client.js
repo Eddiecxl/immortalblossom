@@ -82,6 +82,12 @@ function parseBlocks(data, requestType) {
     const requestedType = ['narr', 'dlg', 'sys'].includes(block?.type) ? block.type : 'narr';
     if (requestType === 'system' && requestedType !== 'sys') return null;
     const output = { type: requestedType, text: cleanText(block?.text, 12_000) };
+    if (block?.claims !== undefined) {
+      if (!Array.isArray(block.claims) || block.claims.length > 12
+        || block.claims.some(claim=>!claim||typeof claim!=='object'||Array.isArray(claim)))
+        throw new Error('AI 的事实声明格式无效。');
+      output.claims = block.claims.map(claim=>structuredClone(claim));
+    }
     if (requestedType === 'dlg') {
       output.name = cleanText(block?.name || '身份未知', 40);
       if (Array.isArray(block?.factIds)) output.factIds = block.factIds.map((id) => cleanText(id, 80)).filter(Boolean).slice(0, 20);

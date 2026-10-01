@@ -1,4 +1,5 @@
 // A conservative guard for model prose. Rejected blocks never become Engine mutations.
+import { validateConditionReferences, evaluateCondition } from './astra-expression.js';
 const list = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const idOf = value => typeof value === 'string' ? value : value?.id ?? '';
 const placeOf = value => value?.locationId ?? value?.location ?? value?.at ?? '';
@@ -115,17 +116,80 @@ export function validateAstraNarration(world, blocks, packet = {}) {
         || (item.ownerId && !['player', source.player?.id].includes(item.ownerId)))
         reject('unsupported-item', 'Item claim lacks an Engine instance and provenance.');
     }
+    for (const claim of hasClaim(block, 'state')) {
+      try {
+        const condition={op:'eq',left:{entityId:claim.entityId,field:claim.field},right:claim.value};
+        validateConditionReferences(source,condition);
+        if (!evaluateCondition(source,condition)) throw new Error('state mismatch');
+      } catch {
+        reject('unsupported-state', `事实声明与命簿不符：${claim.entityId}.${claim.field}，不能把玩家的说法当作已发生的改变。`);
+      }
+    }
+    if (speaker&&!/考虑|可能|或许|尚未答应|不能|不愿|不会|不可以|[?？]/u.test(prose)
+      &&/我(?:现在|愿意|可以|会|将|答应|准备|愿|自当|定会){1,3}[^。！？]{0,12}(?:归还|还给|给你(?!解释|说明|讲述|讲讲|讲清|回答|解答)|送你|赠你|交付|交给|借你)/u.test(prose)) {
+      const reference=prose+' '+String(packet.playerTurn?.speech||'');
+      const held=items.filter(item=>!item.destroyed&&item.ownerId===speaker.id
+        &&String(item.name||'').split('·')[0].length>=2&&reference.includes(item.name.split('·')[0]));
+      if (held.length===1&&!list(source.simulation?.commitments).some(offer=>offer.kind==='item-transfer'
+        &&offer.state==='pending'&&offer.fromId===speaker.id&&offer.itemId===held[0].id))
+        reject('unrecorded-promise',`人物已明确提出交付${held[0].name}，必须用commitment.offer落账（fromId:${speaker.id},toId:player,itemId:${held[0].id}）；不能只在对白许诺或自动接受。尚未决定则明确说明。`);
+    }
+    // A small prose safety net complements explicit state claims. It applies to
+    // every real item, including seed and player-created instances, never to a
+    // named opening scene. Questions/offers are not completed acquisition.
+    if (block.type === 'dlg' || block.type === 'narr') {
+      for (const clause of prose.match(/[^。！？!?；]+[。！？!?；]?/gu)||[]) {
+        if (/[?？]|吗|未|没有|还没|并未|如果|假如|是否|愿意|曾经|从前|过去/u.test(clause)) continue;
+        const received=clause.match(/(?:你|我|玩家|主角)(?:(?:(?:刚刚|刚才|已经|早已|才|刚|已|又|终于|确实|先前)){1,5}(?:收下|拿到|得到|获得|接过|领到)|(?:收下|拿到|得到|获得|接过|领到)(?:了|我赠予的|我给的|我的|这|那))/u);
+        if (!received) continue;
+        const suffix=clause.slice(received.index+received[0].length);
+        const itemAliases=[...new Set(items.map(item=>String(item.name||'').split('·')[0]))];
+        let aliases=itemAliases.filter(alias=>alias.length>=2&&suffix.includes(alias));
+        if (!aliases.length) {
+          const referenced=String(packet.playerTurn?.speech||'')+' '+String(packet.playerTurn?.action||'');
+          const candidates=itemAliases.filter(alias=>alias.length>=2&&(prose.includes(alias)||referenced.includes(alias)));
+          // Resolve a single discourse referent; multiple items need explicit
+          // state claims rather than guessing who received every mentioned item.
+          if (candidates.length===1) aliases=candidates;
+        }
+        for (const alias of aliases) {
+          const receiver=block.type==='dlg'&&received[0].startsWith('我')?speaker?.id:(source.player?.id||'player');
+          const matches=items.filter(item=>String(item.name||'').split('·')[0]===alias);
+          if (!matches.some(item=>!item.destroyed&&item.ownerId===receiver))
+            reject('unsupported-item', `${alias}没有归${receiver==='player'?'玩家':speaker?.name}；没有结算交付，不能声称已经收下。`);
+        }
+      }
+    }
     for (const claim of hasClaim(block, 'skill')) {
       const skills = list(source.player?.skills).map(x => idOf(x) || String(x));
       if (!skills.includes(claim.id)) reject('unsupported-skill', 'Skill claim is absent from Engine player state.');
     }
     if (/凭空|突然变出/u.test(prose) && /物|剑|丹|玉|宝|灵石/u.test(prose))
       reject('unsupported-item', 'Prose creates an item without an Engine event.');
-    const acquired = prose.match(/(?:我|玩家|主角)?(?:得到|获得|拾得|捡到|领到|拿到)(?:了|一件|一把|一枚|一颗|一块)?([^，。！？；\s]{2,20})/u)?.[1];
-    if (acquired && /剑|丹|玉|石|宝|符|药|珠|甲|刀|戒|玺/u.test(acquired)) {
+    if (block.type==='narr'&&!/未|没有|还没|并未|如果|假如|试图/u.test(prose)) {
+      const addressed=characters.filter(n=>n.name&&String(packet.playerTurn?.action||'').includes(n.name));
+      const mentioned=characters.filter(n=>n.name&&prose.includes(n.name));
+      const recipient=addressed.length===1?addressed[0]:mentioned.length===1?mentioned[0]:null;
+      if (recipient&&(/(?:她|他)(?:接过|收下|拿到)/u.test(prose)
+        ||['接过','收下','拿到'].some(verb=>prose.includes(recipient.name+verb)))) {
+        const parts=prose.split(/[，。；]/u),receiptParts=[];
+        for (let at=0;at<parts.length;at++) if (/(?:她|他)(?:接过|收下|拿到)/u.test(parts[at])
+          ||['接过','收下','拿到'].some(verb=>parts[at].includes(recipient.name+verb))) {
+          receiptParts.push(parts[at]);
+          if (at>0&&/交给|递给|送给|赠给/u.test(parts[at-1])) receiptParts.push(parts[at-1]);
+        }
+        const receiptText=receiptParts.join('，');
+        const aliases=[...new Set(items.map(item=>String(item.name||'').split('·')[0]))].filter(alias=>alias.length>=2&&receiptText.includes(alias));
+        for (const alias of aliases) if (!items.some(item=>String(item.name||'').split('·')[0]===alias&&!item.destroyed&&item.ownerId===recipient.id))
+          reject('unsupported-item',`${recipient.name}尚未真实持有${alias}；若确实收下，必须通过resource.transfer结算，不能只修改旁白。`);
+      }
+    }
+    const acquired = block.type === 'narr' && prose.match(/(?:我|玩家|主角)(?:得到|获得|拾得|捡到|领到|拿到|接过|收下)(?:了|一件|一把|一枚|一颗|一块)?([^，。！？；\s]{2,20})/u)?.[1];
+    if (acquired) {
       const item = items.find(x => (x?.name && acquired.includes(x.name)) || idOf(x) === acquired);
-      if (!item || !provenance(item))
-        reject('unsupported-item', 'Prose awards an item without an Engine instance and provenance.');
+      if (item && (item.destroyed || !provenance(item) || item.ownerId !== (source.player?.id || 'player'))
+        || !item && /剑|丹|玉|石|宝|符|药|珠|甲|刀|戒|玺/u.test(acquired))
+        reject('unsupported-item', 'Prose awards an item without valid Engine ownership and provenance.');
     }
     const learned = prose.match(/(?:我|玩家|主角)?(?:学会|掌握|领悟)(?:了)?([^，。！？；\s]{2,20})/u)?.[1];
     if (learned && /术|功|诀|法|剑意|技能/u.test(learned)) {

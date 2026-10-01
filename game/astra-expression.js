@@ -13,6 +13,7 @@ export function worldEntity(world, id) {
   if (id === 'player') return world.player;
   for (const field of ['characters', 'factions', 'locations', 'items', 'quests'])
     if (Object.hasOwn(world[field] || {}, id)) return world[field][id];
+  if (Object.hasOwn(world.simulation?.commitments || {}, id)) return world.simulation.commitments[id];
   return null;
 }
 const OPS = new Set(['all', 'any', 'not', 'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'exists']);
@@ -80,4 +81,25 @@ export function evaluateCondition(world, condition, bindings = {}) {
   if (typeof left !== 'number' || typeof right !== 'number') return false;
   return condition.op === 'lt' ? left < right : condition.op === 'lte' ? left <= right
     : condition.op === 'gt' ? left > right : left >= right;
+}
+
+// Mutable values may change later. Only sealed state records can prove a
+// prerequisite impossible; a currently false wealth/health test cannot.
+export function conditionCanStillBecomeTrue(world, condition) {
+  validateCondition(condition);
+  const sealedStates=new Set(['completed','failed','expired','abandoned','resolved-by-other','invalidated','declined','withdrawn','fulfilled']);
+  const fixed=spec=>!spec||typeof spec!=='object'||spec.field==='state'
+    && (Object.hasOwn(world.quests||{},spec.entityId)||Object.hasOwn(world.simulation?.commitments||{},spec.entityId))
+    && sealedStates.has(worldEntity(world,spec.entityId)?.state);
+  const possibilities=node=>{
+    if(node.op==='all'||node.op==='any'){
+      const children=node.conditions.map(possibilities);
+      return node.op==='all'?{yes:children.every(c=>c.yes),no:children.some(c=>c.no)}
+        :{yes:children.some(c=>c.yes),no:children.every(c=>c.no)};
+    }
+    if(node.op==='not'){const inner=possibilities(node.condition);return {yes:inner.no,no:inner.yes};}
+    if(!fixed(node.left)||node.op!=='exists'&&!fixed(node.right))return {yes:true,no:true};
+    const result=evaluateCondition(world,node);return {yes:result,no:!result};
+  };
+  return possibilities(condition).yes;
 }

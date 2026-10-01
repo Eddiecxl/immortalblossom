@@ -23,7 +23,7 @@ export function recordCausalEvent(world, source) {
     minute: world.minute, summary: text(source.summary), sourceId: source.sourceId || null,
     impacts: (source.impacts || []).map(impact => ({ entityId: impact.entityId,
       dimension: text(impact.dimension), delta: clamp(Number(impact.delta) || 0, -1, 1) })),
-    witnessIds: [...new Set(source.witnessIds || witnesses)], affiliations: source.affiliations || {}, processed: false
+    witnessIds: [...new Set(source.witnessIds || witnesses)], affiliations: source.affiliations || {}, processed: false, rulePending: true
   };
   sim.events[event.id] = event;
   return event;

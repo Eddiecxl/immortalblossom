@@ -29,3 +29,13 @@ export function characterRows(state){
  return {realm:REALMS[state.player?.realm]?.name||'未知',equipment:Object.entries(state.equipment?.slots||{}).filter(([,v])=>v),techniques:(state.techniques?.known||[]).map(name=>({name,description:TECHNIQUES[name]?.description||state.journeyWorld?.skills?.[name]?.description||'已掌握',equipped:state.techniques?.equipped?.includes(name)}))};
 }
 export function newLedgerEvents(before,after){const old=new Set((before.rpg?.ledger||[]).map(x=>x.id));return (after.rpg?.ledger||[]).filter(x=>!old.has(x.id));}
+export function commitmentRows(state){
+ const world=state.astraWorld;if(!world)return [];
+ const name=id=>id==='player'?world.player.name:world.characters[id]?.name||'去向已变化';
+ const labels={pending:'待接受',fulfilled:'已交付',declined:'已拒绝',withdrawn:'已撤回',expired:'已过期',invalidated:'已失效'};
+ return Object.values(world.simulation?.commitments||{}).filter(row=>row.kind==='item-transfer'&&row.toId==='player')
+  .sort((a,b)=>Number(b.state==='pending')-Number(a.state==='pending')||Number(b.createdAt||0)-Number(a.createdAt||0))
+  .map(row=>({id:row.id,state:row.state,status:labels[row.state]||'待核实',fromName:name(row.fromId),
+   itemName:world.items[row.itemId]?.name||'原物品',ownerName:world.items[row.itemId]?.destroyed?'已损毁':name(world.items[row.itemId]?.ownerId),
+   description:row.state==='pending'?'提出赠予仍需收下；物品尚未进入行囊。':'决定和实际交付已经记入命簿。'}));
+}

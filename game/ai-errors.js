@@ -7,7 +7,7 @@ export function retryAfterMs(response, data, fallback = 10000, now = Date.now())
     const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(header) - now;
     if (Number.isFinite(ms) && ms > 0) return Math.ceil(ms);
   }
-  const message = String(data?.error?.message || '');
+  const message = String(data?.error?.message || (typeof data?.error === 'string' ? data.error : ''));
   const retryInfo = data?.error?.details?.find?.(detail => detail['@type']?.endsWith('RetryInfo'));
   const retrySeconds = Number(String(retryInfo?.retryDelay || '').replace(/s$/, ''));
   if (Number.isFinite(retrySeconds) && retrySeconds > 0) return Math.ceil(retrySeconds * 1000);
@@ -44,8 +44,8 @@ export function aiHttpError(response, data = {}, trustedProxy = false) {
   } else if (status === 429) {
     code = upstreamCode === 'AI_SITE_LIMITED' ? upstreamCode : 'AI_RATE_LIMITED';
     wait = retryAfterMs(response, data);
-    const dailyTokenLimit = /tokens per day|\bTPD\b/i.test(message);
-    const minuteTokenLimit = /tokens per minute|\bTPM\b/i.test(message);
+    const dailyTokenLimit = /tokens per day|\b[IO]?TPD\b/i.test(message);
+    const minuteTokenLimit = /tokens per minute|\b[IO]?TPM\b/i.test(message);
     const numbers = message.match(/Limit:?\s*([\d,]+),?\s*Used:?\s*([\d,]+),?\s*Requested:?\s*([\d,]+)/i);
     if (numbers && (dailyTokenLimit || minuteTokenLimit)) quota = { scope: dailyTokenLimit ? 'TPD' : 'TPM',
       limit: Number(numbers[1].replaceAll(',', '')), used: Number(numbers[2].replaceAll(',', '')), requested: Number(numbers[3].replaceAll(',', '')) };

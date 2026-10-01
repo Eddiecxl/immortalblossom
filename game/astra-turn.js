@@ -151,8 +151,8 @@ function recordHeardSpeech(world, speech, targetId = null) {
     npc.knowledge.push(id);
     npc.knowledge = [...new Set(npc.knowledge)].slice(-80);
     npc.relationships ||= {};
-    const delta = /谢谢|请|帮忙|帮你|愿意|救/u.test(spoken) ? 1 : /威胁|滚|去死/u.test(spoken) ? -2 : 0;
-    if (delta) npc.relationships[world.player.id] = Math.max(-100, Math.min(100, Number(npc.relationships[world.player.id] || 0) + delta));
+    // Hearing words is not an appraisal: negation, sarcasm and context belong
+    // to the AI's grounded social.observe, which settles relationship once.
   }
   world.history.push({ id: `speech:${world.minute}:${world.history.length}`, type: 'player_speech',
     minute: world.minute, locationId: world.player.locationId, actors: witnesses.map(npc => npc.id),
@@ -262,7 +262,8 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       const directed = directAstraScene(world, events);
       if (directed.event) events.push(directed.event);
       const projected = projectAstraWorld(state, world);
-      const packet = compileAstraContext(projected, turnInput.action || turnInput.speech, recent);
+      const participant={...conversation,presentAtStart:Boolean(conversation?.targetId)};
+      const packet = compileAstraContext(projected, turnInput.action || turnInput.speech, recent,{conversation:participant});
       packet.turnStart = {minute:state.astraWorld.minute,locationId:state.astraWorld.player.locationId,
         locationName:state.astraWorld.locations[state.astraWorld.player.locationId]?.name||'',
         travel:structuredClone(state.astraWorld.player.travel||null)};
@@ -292,7 +293,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       const visibleEvents = events.filter(event => event.playerWitnessed).slice(-6);
       const messages = [
         { role: 'system', content: '你是《落仙》的叙事作者。Game Engine 世界状态是唯一事实来源。只写主角第一人称所见所闻，不替玩家说话，不生成物品、修行、移动、死亡或任务效果。NPC 只能在场且存活才可发言，只能知道其已知事实。世界事件已经结算，不可倒退。conversation.targetId 是本轮真实在场的说话对象：若非空，必须让该人物针对玩家本轮话语作出有内容的新回应；不知情就明确说不知情，不要复读上一轮或空泛应声。若 absentName 非空，此人缺席，不得让其发言。传闻不等于人在眼前。不要重述上一轮景物或留下“我说，”一类空句。数值只供引擎计算，不作为人物口中的刻度。仅返回严格 JSON：{"blocks":[{"type":"narr","text":"..."},{"type":"dlg","name":"...","text":"..."}]}。不可填 effects。' },
-        { role: 'user', content: `世界事实：${JSON.stringify(packet)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。叙事末段自然承接 directorHook，让玩家看见下一步可做的事；勿强迫选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
+        { role: 'user', content: `世界事实：${JSON.stringify(packet)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。先理解并回应本轮真实含义：离题、粗俗、玩笑或暧昧也要接住，不能每句话都拉回任务。人物依据自己的性格、关系和认知反应；有真实变化就用worldPlan落账。只有自然相关时承接directorHook，玩家可以另外选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
       ];
       messages[0].content += '\n' + WORLD_PLAN_PROMPT;
       messages[0].content += '\n玩家表达困惑（如“？”）时，要帮助他理解所在地点、眼前人物与可行的下一步，不要把困惑当成未知具体事件。affordances 来自当局状态，供自然承接；围绕真实目标商量行动，提出新委托须经 quest.create 落账。';
@@ -314,6 +315,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
               messages: requestMessages,
               signal, protectBudget: true });
         } catch (error) {
+          if (error?.status || /^AI_(?:RATE|TOKEN|INPUT|AUTH|QUOTA|NOT_CONFIGURED|MODEL|NETWORK|TIMEOUT|CANCELLED|BUSY)/u.test(error?.code||'')) throw error;
           if (!conversation?.targetId || signal?.aborted) throw error;
           errors = [clean(error?.message || '叙事服务暂不可用', 100)];
           break;
@@ -332,13 +334,16 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           if (parsed.worldPlan) {
             const applied = applyWorldPlan(baseDraft, parsed.worldPlan, { turnId: txId,
               mode: action.type === 'reality' ? 'reality' : 'ordinary', input: turnInput,
+              conversationTargetId: conversation?.targetId,
               settledAction: action.type, settledItemId: action.itemId, enforceScope: true });
             candidateWorld = applied.world;
             settleWorldRules(candidateWorld, applied.events);
             propagateCausality(candidateWorld);
           }
         } catch (error) { errors = [clean(error.message, 240)]; continue; }
-        const candidatePacket = compileAstraContext(projectAstraWorld(state, candidateWorld), turnInput.action || turnInput.speech, recent);
+        const candidatePacket = compileAstraContext(projectAstraWorld(state, candidateWorld), turnInput.action || turnInput.speech, recent,{conversation:packet.conversation});
+        candidatePacket.playerTurn = packet.playerTurn;
+        candidatePacket.conversation = packet.conversation;
         const checked = validateAstraNarration(candidateWorld, parsed.blocks, candidatePacket);
         const answered = validateAstraConversation(checked.blocks, conversation, recent);
         if (checked.ok && answered.ok) { world = candidateWorld; narration = { blocks: checked.blocks }; break; }
@@ -360,6 +365,10 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       }
       if (directed.event && !narration.blocks.some(block => String(block.text || '').includes(directed.event.summary))) {
         narration.blocks.push({ type: 'sys', text: `【山河动静】${directed.event.summary}` });
+      }
+      if (packet.departingNpcs.length) {
+        const departing=packet.departingNpcs[0];
+        companionNotification(world,'departure:'+txId,`宿主，${departing.name}已动身前往${world.locations[departing.travel.to]?.name||'别处'}。此后要找这个人，需要按实际去向行动。`,txId);
       }
     }
     propagateCausality(world);

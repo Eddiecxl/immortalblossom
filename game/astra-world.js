@@ -228,7 +228,7 @@ function createStartingItems(seed, player, locations) {
     const template = templates[id];
     const itemId = `item-instance:start-${index}`;
     items[itemId] = {
-      id: itemId, templateId: id, ownerId: player.id, locationId: player.locationId,
+      id: itemId, templateId: id, name: template.name, ownerId: player.id, locationId: player.locationId,
       quantity: id.startsWith('item:copper:') ? rng.int(2, 20) : 1,
       durability: 100, quality: template.grade, effects: [template.use],
       creationHistory: [{ minute: 0, source: 'mortal household' }], transferHistory: [],
@@ -349,5 +349,9 @@ export function normalizeAstraWorld(raw, seed = 'default', playerName = '无名�
     else result[key] = isRecord(saved[key]) ? saved[key] : base[key];
   }
   if (saved.simulation !== undefined && !isRecord(saved.simulation)) result.simulation = {};
+  for (const item of Object.values(result.items)) if (isRecord(item) && !item.name) {
+    const template=ITEM_TEMPLATES.find(entry=>entry.id===item.templateId);
+    if(template)item.name=template.name;
+  }
   return result;
 }

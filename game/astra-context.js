@@ -59,11 +59,14 @@ function relevant(entry, locationId, input, npcIds) {
 }
 
 /** Compile at most a few local facts from a schema-6 state. This never mutates state. */
-export function compileAstraContext(state, input, recentTurns = []) {
+export function compileAstraContext(state, input, recentTurns = [], options = {}) {
   const world = state?.astraWorld ?? state?.world ?? state ?? {};
   const minute = Number.isFinite(Number(world.minute)) ? Number(world.minute) : 0;
   const player = world.player ?? {};
   const query = text(input, 500);
+  const refScore=(entry,extra=[])=>[entry?.id,entry?.name,entry?.title,...extra]
+    .filter(label=>typeof label==='string'&&label.length>=2&&query.includes(label)).reduce((sum,label)=>sum+label.length,0);
+  const recalling = /之前|刚才|记得|说过|答应|承诺|约定|上次|当时|过去/u.test(query);
   const locations = list(world.locations);
   const currentId = idOf(locationOf(player) || world.currentLocationId || state?.story?.location);
   const current = locations.find(loc => idOf(loc) === currentId || loc?.name === currentId) ?? { id: currentId, name: currentId };
@@ -82,11 +85,14 @@ export function compileAstraContext(state, input, recentTurns = []) {
     .map(loc => compact(loc, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'description'], { description: 100 }));
   const secrets = list(world.secrets);
   const npcs = list(world.characters ?? world.npcs).filter(npc => !player.travel && active(npc) && !npc.travel
-    && (locationOf(npc) === locationId || locationOf(npc) === current?.name)).slice(0, 8);
-  const npcIds = npcs.map(idOf);
-  const presentNpcs = npcs.map(npc => ({
-    ...compact(npc, ['id', 'name', 'gender', 'role', 'occupation', 'cultivation', 'wealth', 'physicalCondition', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'currentPlan', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
-    memories: recall(npc.memories, query, 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
+    && (locationOf(npc) === locationId || locationOf(npc) === current?.name))
+    .sort((a,b)=>refScore(b)-refScore(a)||Number(b.id===world.flags?.conversation?.npcId)-Number(a.id===world.flags?.conversation?.npcId)).slice(0, 8);
+  const departing=options.conversation?.presentAtStart&&!player.travel?list(world.characters).filter(npc=>active(npc)
+    &&npc.id===options.conversation.targetId&&npc.travel?.from===locationId):[];
+  const npcIds = [...npcs,...departing].map(idOf);
+  const describeNpc = npc => ({
+    ...compact(npc, ['id', 'name', 'gender', 'personality', 'fears', 'role', 'occupation', 'cultivation', 'wealth', 'inventory', 'physicalCondition', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'currentPlan', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
+    memories: recall(npc.memories, query, recalling ? 12 : 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
       .map(x => {
         if (typeof x === 'string') return text(x, 140);
         const belief = Object.values(world.simulation?.beliefs || {}).find(row => row.holderId === npc.id && row.eventId === x.eventId);
@@ -95,11 +101,14 @@ export function compileAstraContext(state, input, recentTurns = []) {
       }),
     allowedSecrets: secrets.filter(secret => knownBy(secret).some(id => id === npc.id || id === npc.name))
       .slice(0, 4).map(secret => compact(secret, ['id', 'text', 'summary'], { text: 140, summary: 140 }))
-  }));
+  });
+  const presentNpcs=npcs.map(describeNpc),departingNpcs=departing.map(npc=>({...describeNpc(npc),travel:structuredClone(npc.travel)}));
   const activeQuests = list(world.quests).filter(quest => ['active', 'available', 'mutated', 'in-progress', 'accepted'].includes(String(quest?.state ?? quest?.status)))
     .filter(quest => ['active', 'mutated'].includes(quest.state) || npcIds.includes(quest.giverId)
       || !locationOf(quest) || locationOf(quest) === locationId || query.includes(text(quest?.title ?? quest?.name, 60)))
-    .slice(0, 8).map(quest => compact(quest, ['id', 'title', 'name', 'giverId', 'targetLocationId', 'primaryGoals', 'condition', 'state', 'status', 'stage', 'deadline', 'locationId', 'summary'], { summary: 120 }));
+    .sort((a,b)=>refScore(b)-refScore(a)||Number(b.giverId===world.flags?.conversation?.npcId)-Number(a.giverId===world.flags?.conversation?.npcId))
+    .slice(0, 8).map(quest => ({ ...compact(quest, ['id', 'title', 'name', 'giverId', 'targetLocationId', 'primaryGoals', 'requiredCommitmentIds', 'rewardPending', 'state', 'status', 'stage', 'deadline', 'locationId', 'summary'], { summary: 120 }),
+      ...(quest.condition ? {condition: structuredClone(quest.condition)} : {}) }));
   const dueEvents = list(world.eventQueue).filter(event => Number(event?.dueAt ?? event?.minute) <= minute)
     .sort((a, b) => Number(a.dueAt ?? a.minute) - Number(b.dueAt ?? b.minute)).slice(0, 8)
     .map(event => compact(event, ['id', 'type', 'dueAt', 'locationId', 'summary', 'payload'], { summary: 120 }));
@@ -119,6 +128,8 @@ export function compileAstraContext(state, input, recentTurns = []) {
   ].slice(0, 5).map(entity => compact(entity, ['id', 'name', 'alive', 'active', 'destroyed', 'wealth', 'power', 'stability', 'population', 'risk']));
   const packet = {
     systemRules: RULES, minute, input: query,
+    clock: {day:Math.floor(minute/1440)+1,hour:Math.floor((minute%1440)/60),minute:minute%60,
+      period:minute%1440<360?'夜晚':minute%1440<600?'清晨':minute%1440<1020?'白昼':minute%1440<1200?'黄昏':'夜晚'},
     cultivationRule: {
       globalMaximum: realmRules(world).globalMaximum,
       globalMaximumName: realmLabel(world, realmRules(world).globalMaximum),
@@ -129,17 +140,25 @@ export function compileAstraContext(state, input, recentTurns = []) {
     location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'population', 'risk', 'description'], { description: 140 }),
     nearbyLocations, nearbyEdges,
     player: compact(player, ['id', 'name', 'gender', 'locationId', 'travel', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
-    items: list(world.items).filter(item => !item.destroyed && item.ownerId === 'player').slice(0, 8)
-      .map(item => compact(item, ['id', 'name', 'quantity', 'ownerId', 'effects', 'description'])),
+    items: list(world.items).filter(item => !item.destroyed && (item.ownerId === 'player' || npcIds.includes(item.ownerId)))
+      .sort((a,b)=>refScore(b,[String(b.name||'').split('·')[0]])-refScore(a,[String(a.name||'').split('·')[0]])).slice(0, 16)
+      .map(item => ({...compact(item, ['id', 'name', 'quantity', 'ownerId', 'effects', 'description']),
+        ownershipFact:`${item.name}现在归${item.ownerId==='player'?player.name:world.characters?.[item.ownerId]?.name||item.ownerId}。`,
+        lastTransfer:item.transferHistory?.length?compact(item.transferHistory.at(-1),['from','to','minute']):null})),
     simulationFacts: {
       relations: list(world.simulation?.relations).filter(row => row.active !== false && [row.fromId, row.toId].some(id => npcIds.includes(id) || id === 'player')).slice(-8),
       beliefs: list(world.simulation?.beliefs).filter(row => npcIds.includes(row.holderId)).slice(-8)
-        .map(row => compact(row, ['holderId', 'eventId', 'mode', 'confidence', 'appraisal', 'summary'])),
-      commitments: list(world.simulation?.commitments).filter(row => row.state === 'unresolved').slice(-3),
+        .map(row => compact(row, ['holderId', 'eventId', 'mode', 'confidence', 'appraisal', 'meaning', 'summary'])),
+      commitments: list(world.simulation?.commitments).filter(row => row.state === 'unresolved'
+        || row.kind === 'item-transfer' && (npcIds.includes(row.fromId) || row.toId === 'player'))
+        .sort((a,b)=>refScore(b,[world.items?.[b.itemId]?.name])-refScore(a,[world.items?.[a.itemId]?.name])
+          ||Number(b.state==='pending')-Number(a.state==='pending')||Number(b.createdAt||0)-Number(a.createdAt||0)).slice(0,8)
+        .map(row=>({...compact(row,['id','kind','state','fromId','toId','itemId','quantity','sourceId','createdAt','expiresAt','description','reason']),
+          ...(row.condition?{condition:structuredClone(row.condition)}:{})})),
       rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
     },
     affordances: sceneAffordances(world),
-    numericFacts, presentNpcs, activeQuests, dueEvents, history, memories, rumors,
+    numericFacts, presentNpcs, departingNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),
     recentTurns: turns.map(turn => ({ id: text(turn.id, 60), userText: text(turn.userText ?? turn.input, 220),
       blocks: list(turn.blocks).slice(-4).map(block => compact(block, ['type', 'name', 'text'], { text: 240 })) }))
@@ -150,7 +169,8 @@ export function compileAstraContext(state, input, recentTurns = []) {
   while (JSON.stringify(packet).length > 12_000) {
     const field = trimOrder.find(key => packet[key].length > (key === 'presentNpcs' ? 1 : 0));
     if (!field) break;
-    packet[field].shift();
+    if (['activeQuests','items','presentNpcs'].includes(field)) packet[field].pop();
+    else packet[field].shift();
   }
   return packet;
 }

@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$ReleaseRoot,[Parameter(Mandatory=$true)][string]$OutputRoot,[string]$Seed='native-playtest-0',[switch]$TravelOnly)
+param([Parameter(Mandatory=$true)][string]$ReleaseRoot,[Parameter(Mandatory=$true)][string]$OutputRoot,[string]$Seed='native-playtest-0',[switch]$TravelOnly,[ValidateSet('normal','unusual','delivery-accept','delivery-decline')][string]$Scenario='normal',[ValidateSet('local','groq')][string]$Provider='local')
 $ErrorActionPreference='Stop'
 if (Get-Process -Name LuoXian,RuntimeHost -ErrorAction SilentlyContinue) { throw 'Close existing game normally before playtesting.' }
 $release=(Resolve-Path -LiteralPath $ReleaseRoot).Path
@@ -10,17 +10,18 @@ $hostText=[IO.File]::ReadAllText((Join-Path $native 'Host.cs'))
 $literalRoot=$release.Replace('\','\\').Replace('"','\"')
 $hostText=$hostText.Replace('AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar)',('"'+$literalRoot+'"'))
 $preload=@'
-localStorage.setItem('luoxian_v31_ai_settings_v2',JSON.stringify({mode:'local'}));
+localStorage.setItem('luoxian_v31_ai_settings_v2',JSON.stringify({mode:'__PROVIDER__'}));
 localStorage.setItem('luoxian_beta3_settings',JSON.stringify({master:0,music:0,sfx:0,textSpeed:0,requestInterval:3}));
 window.__aiTrace=[];window.__playtestErrors=[];
 window.addEventListener('error',e=>window.__playtestErrors.push(e.message));
 window.addEventListener('unhandledrejection',e=>window.__playtestErrors.push(String(e.reason)));
 const originalFetch=window.fetch.bind(window);
-window.fetch=async (...args)=>{const target=String(args[0]);if(!target.includes('/api/ai/generate'))return originalFetch(...args);const row={request:JSON.parse(args[1].body),started:Date.now()};window.__aiTrace.push(row);try{const r=await originalFetch(...args);row.status=r.status;row.response=await r.clone().json();row.seconds=(Date.now()-row.started)/1000;return r;}catch(e){row.error=String(e);throw e;}};
+window.fetch=async (...args)=>{const target=String(args[0]);if(!target.includes('/api/ai/generate')&&!target.includes('/api/ai/cloud/generate'))return originalFetch(...args);const row={request:JSON.parse(args[1].body),started:Date.now()};window.__aiTrace.push(row);try{const r=await originalFetch(...args);row.status=r.status;row.response=await r.clone().json();row.seconds=(Date.now()-row.started)/1000;return r;}catch(e){row.error=String(e);throw e;}};
+window.__interactionScenario='__SCENARIO__';
 const originalUUID=crypto.randomUUID.bind(crypto);let firstUUID=true;
 crypto.randomUUID=()=>{if(firstUUID){firstUUID=false;return '__SEED__';}return originalUUID();};
 '@
-$preload=$preload.Replace('__SEED__',$Seed)
+$preload=$preload.Replace('__SEED__',$Seed).Replace('__SCENARIO__',$Scenario).Replace('__PROVIDER__',$Provider)
 if($TravelOnly){$preload+="`nwindow.__travelOnly=true;"}
 $preloadLiteral=$preload.Replace('\','\\').Replace('"','\"').Replace("`r",'').Replace("`n",'\n')
 $driver=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'native-narrative-driver.js'))
