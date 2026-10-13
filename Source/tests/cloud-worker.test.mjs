@@ -86,6 +86,15 @@ const completion = text => Response.json({choices: [{message: {role: 'assistant'
 const payload = transactionId => ({provider: 'groq', model: 'qwen/qwen3.8-27b', messages: [{role: 'user', content: '继续这段真实剧情'}], maxTokens: 256, temperature: 0.72, transactionId});
 const jobPath = job => `/api/ai/cloud/jobs/${job.jobId}`;
 
+test('structured game turns request JSON object mode while plain connection probes keep text mode', async () => {
+ const sent=[];const app=harness({upstream:async(_url,options)=>{sent.push(JSON.parse(options.body));return completion('{"blocks":[{"type":"sys","text":"我在。"}]}');}});
+ const player=app.visitor();
+ await player.request('/api/ai/cloud/generate',{...payload('json-turn'),messages:[{role:'system',content:'只返回严格 JSON：{"blocks":[{"type":"narr","text":"..."}]}。'},{role:'user',content:'你好'}]});
+ await app.fire();assert.deepEqual(sent[0].response_format,{type:'json_object'});
+ await player.request('/api/ai/cloud/test',{provider:'groq'});await app.fire();
+ assert.equal(sent[1].response_format,undefined);
+});
+
 test('cloud status uses the shared server secret without exposing it and disables local AI', async () => {
   const app = harness();
   const player = app.visitor();

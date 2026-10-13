@@ -396,7 +396,9 @@ export class GroqQueue {
           method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
           headers: {'Content-Type': 'application/json', Authorization: `Bearer ${key}`},
           body: JSON.stringify({model: job.payload.model, messages: job.payload.messages,
-            max_tokens: job.payload.maxTokens, temperature: job.payload.temperature, stream: false})
+            max_tokens: job.payload.maxTokens, temperature: job.payload.temperature, stream: false,
+            ...(job.payload.messages.some(m=>m.role==='system'&&/\bJSON\b/i.test(m.content)&&/\bblocks\b/.test(m.content))
+              ?{response_format:{type:'json_object'}}:{})})
         });
       } catch (error) {
         // Bounded platform diagnostics: never log upstream bodies, prompts or keys.

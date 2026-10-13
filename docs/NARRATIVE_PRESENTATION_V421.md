@@ -11,3 +11,5 @@
 游戏默认 music=0，保留用户已明确保存的音量；静音不加载曲目，音效可继续，开启/下一首明确启用背景音乐。Launcher 原播放逻辑与歌曲保留。
 
 验证进度：新增9项回归已观察RED→GREEN，涵盖三seed在场、生死/旅行、弹窗策略、任务终态、不复读、内部数值与自然价格、言灵真实落账、系统修复及静音曲目。真实 Groq 多轮试玩及发布状态继续记录在 Maintenance/Verification/v421-*；测试通过不等于所有叙事质量已完美。
+
+真实试玩新增发现：一次候选返回普通小说文本，缺少JSON，导致耗费额外修复请求。Worker现在对system指令明确要求JSON blocks的回合使用response_format:json_object；普通连接探测保持文本模式，不锁定worldPlan的动态结构，仍由Engine验证。边界回归已观察失败后修复。官方依据：https://console.groq.com/docs/structured-outputs 。
