@@ -18,8 +18,8 @@ test('continue travelling honours a minute count longer than 365',async()=>{
  const result=await runner.runWorld({state,input:{action:'等待500分钟'},settings:{mode:'local'}});
  assert.equal(result.ok,true,result.error);assert.equal(result.state.astraWorld.minute,w.minute+500);
   assert.equal(result.state.astraWorld.player.travel,null);assert.equal(result.state.astraWorld.player.locationId,road.to);
- assert.ok(prompt.includes('"turnStart":'));
- assert.ok(prompt.includes('"arriveAt":860'),'narrator must see the journey at the start of the turn');
+ assert.equal(prompt,undefined,'deterministic arrival does not require narrative quota');
+ assert.equal(result.turn.provider,'engine');
 });
 test('travel cannot attack or accept an origin commission through mechanical shortcuts',async()=>{
  for(const action of ['杀死林小满','接受任务']){

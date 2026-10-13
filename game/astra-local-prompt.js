@@ -1,7 +1,10 @@
 // A compact view for small local models. The full Engine packet remains authoritative.
 import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
+import { compactNarrativePacket } from './astra-narrative-budget.js';
 export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = '', repairErrors = []) {
-  const recalling=/之前|刚才|记得|说过|答应|承诺|约定|上次|当时|过去/u.test(packet.playerTurn?.text||'');
+  const compactPacket=compactNarrativePacket(packet);
+  const speakingNpc=[...(packet.presentNpcs||[]),...(packet.departingNpcs||[])].find(npc=>npc.id===packet.conversation?.targetId);
+  const focus=speakingNpc?`\n这一次主角在对${speakingNpc.name}说话。对话里的“你”指${speakingNpc.name}，“我”指主角；人物dlg里的“我”才指人物本人。${speakingNpc.name}的身份是${packet.affordances?.role||speakingNpc.occupation||''}，真实目标是${packet.affordances?.goal||speakingNpc.goals?.join('、')||'尚未明确'}，性格是${speakingNpc.personality||'依事实中的表现'}。先站在这个人物的立场作判断，再写出回应，不反过来替玩家回答。此刻是第${packet.clock?.day||1}日${packet.clock?.period||''}，${String(packet.clock?.hour??'').padStart(2,'0')}:${String(packet.clock?.minute??'').padStart(2,'0')}；未来计划不能写成眼下已经发生。`:'';
   const heldReferences=(packet.items||[]).filter(item=>item.ownerId===packet.conversation?.targetId
     &&String(item.name||'').split('·')[0].length>=2
     &&String(packet.playerTurn?.text||packet.playerTurn?.speech||'').includes(item.name.split('·')[0]));
@@ -33,8 +36,7 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     recentHistory: packet.history?.slice(-4),
     // Keep the conversational boundary without feeding a previous answer back
     // as the most recent prose exemplar for small models to copy.
-    recentTurns: packet.recentTurns?.slice(recalling ? -6 : -2).map(turn=>({id:turn.id,userText:turn.userText,
-      ...(recalling?{dialogue:(turn.blocks||[]).filter(b=>b.type==='dlg').map(b=>({name:b.name,text:b.text.slice(0,120)}))}:{})})),
+    recentTurns: compactPacket.recentTurns,
     recalledSummaries:packet.recalledSummaries,
     rumors: packet.rumors,
     directorHook: packet.directorHook,
@@ -57,8 +59,13 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
   const noThink = /^qwen3(?:[.\-]|\d)/iu.test(String(modelName).split(/[\\/]/u).at(-1)) ? '\n/no_think' : '';
   const planPrompt = packet.planMode === 'reality' ? WORLD_PLAN_PROMPT
     : WORLD_PLAN_PROMPT.split('\n').filter(line=>!line.startsWith('reality 模式：')&&!line.startsWith('relation.upsert/remove:')).join('\n');
+  const writer='\n写一段正在发生的修仙小说互动，让人物有自己的判断，而非客服问答。根据这次输入、性格、目标和先前态度作选择：可以揶揄、拒绝、动摇、讨价还价或主动提出有真实依据的下一步。用新的所见反应与对白连续展开；感官、停顿、神态可以丰富，但不改变已登记的事实。只问自己的想法时回答人物自己的顾虑和打算，不反问玩家的想法。澄清玩笑后承接澄清，道歉不立即抹掉已有不满。不要每次结尾都问玩家想做什么。篇幅随场面变化，可以写2–5块、几段连贯文字，不套固定长度和固定句式；简短输入也能有内容。真正的交付、承诺或任务变化仍必须落账，不替主角作决定。';
+  const authorShape=packet.planMode!=='reality'&&speakingNpc&&!speakingNpc.travel
+    ? '本轮是小说场面，不是单句问答。通常写180–400字，用2–5个narr/dlg块按发生顺序展开；场面可以自然缩短。至少有一个主角第一人称所见的narr和一个受问人物dlg，name等于conversation.targetName。narr写人物这次新的反应，dlg体现这个人物自己的判断和态度。输出严格JSON，顶层为worldPlan和blocks；blocks每项仅用type、text（正文）、name（仅dlg）与可选claims。narr从主角的我所见所闻来写，不写玩家、他心想或替主角作选择；dlg.text只含人物直接说出的话，神态和动作另放narr，不在对白里写某某开口道。少量可观察动作即可，不要每轮重复布景；worldPlan.operations理解本轮语义，有社会认知变化用social.observe（中性valence可为0），重要交付/任务变化用相应操作。避免用泛泛的反问代替回应；人物拒绝、协商或主动提出真实可行的行动都可以。'
+    : shape.replace('每块不超过 120 字。','').replace('每块不超过 100 字。','');
+  const boundedFacts=compactNarrativePacket({...facts,conversation:packet.conversation});
   return [
-    { role: 'system', content: system.replace('不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。', '不能在文字中自行新增职业、人物、身份、委托、物品、地点、行动结果或知识；新变化需要有效的 worldPlan。') + '\n' + planPrompt + '\n' + shape + (packet.departingNpcs?.length?'':deliveryGuide) },
-    { role: 'user', content: `引擎事实：${JSON.stringify(facts)}${repair}\nrecentTurns是先前交谈的记录，不是重新播放的范文；recalledSummaries是本地SQLite召回，不需另一次AI请求。奇怪、离题、粗俗或暧昧也有本轮含义，人物可以拒绝；不要把每句话都解读为问任务。只问自己想法时根据本人的goals/性格回答，不再质疑已经澄清的玩笑。问过去说过什么时检索真实听闻记忆，不用“不清楚”回避已经听见的话。turnStart为行动前，当前事实为结算后；途中等待不是在目的地等候。未登记物件不补材质/出处，猜想不是事实。\n现在只回应以下本轮新输入，旧回应不作范文：${JSON.stringify(packet.playerTurn)}${noThink}` }
+    { role: 'system', content: system.replace('不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。', '不能在文字中自行新增职业、人物、身份、委托、物品、地点、行动结果或知识；新变化需要有效的 worldPlan。') + '\n' + planPrompt + '\n' + authorShape + writer + (packet.departingNpcs?.length?'':deliveryGuide) },
+    { role: 'user', content: `引擎事实：${JSON.stringify(boundedFacts)}${repair}\nrecentTurns是先前交谈的记录，不是重新播放的范文；recalledSummaries是本地SQLite召回，不需另一次AI请求。奇怪、离题、粗俗或暧昧也有本轮含义，人物可以拒绝；不要把每句话都解读为问任务。只问自己想法时根据本人的goals/性格回答，不再质疑已经澄清的玩笑。问过去说过什么时检索真实听闻记忆，不用“不清楚”回避已经听见的话。turnStart为行动前，当前事实为结算后；途中等待不是在目的地等候。未登记物件不补材质/出处，猜想不是事实。${focus}\n现在只回应以下本轮新输入，旧回应不作范文：${JSON.stringify(packet.playerTurn)}${noThink}` }
   ];
 }

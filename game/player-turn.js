@@ -60,7 +60,8 @@ export function stripExactPlayerSpeechEcho(blocks, speech) {
       value = value.split('：' + quoted).join('，').split(':' + quoted).join('，').split(quoted).join('');
     }
     return { ...block, text: value.replace(/([，。！？])\1+/gu, '$1').trim() };
-  }).filter(block => block?.type !== 'narr' || block.text);
+  }).filter(block => block?.type !== 'narr' || block.engineOwnedPlayerSpeech || block.text
+    && !/^我(?:低声|轻声|沉声|冷声|高声|大声|开口|直接)?(?:说|道|问|答|喊|喝道|笑道|开口问道)[\s，,。！？：:]*$/u.test(block.text));
 }
 
 export function playerTurnDisplay(input) {

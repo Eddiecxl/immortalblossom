@@ -1,5 +1,6 @@
 import {createRequestGate,cancellationError,waitForRequestSlot} from './beta4/request-gate.js';
 import {aiHttpError} from './ai-errors.js';
+import {waitForCloudJob} from './cloud-jobs.js';
 const ROUTE_KEY_PREFIX = 'luoxian_v31_ai_route:';
 const SETTINGS_KEY = 'luoxian_v31_ai_settings_v2';
 const STICKY_MS = 30 * 60 * 1000;
@@ -21,7 +22,7 @@ const now = () => Date.now();
 
 function defaultSettings() {
   return {
-    mode: 'local',
+    mode: 'groq',
     preferred: 'groq',
     models: Object.fromEntries(Object.entries(V31_PROVIDER_DEFAULTS).map(([id, p]) => [id, p.model])),
     customBaseUrl: ''
@@ -66,7 +67,7 @@ function isRetryableStatus(status) {
 }
 
 async function jsonFetch(fetchImpl, path, options = {}) {
-  const timeout=AbortSignal.timeout(path.endsWith('/generate')?90000:15000);
+  const timeout=AbortSignal.timeout(path==='/api/ai/generate'?180000:path.endsWith('/generate')?90000:15000);
   const signal=options.signal?AbortSignal.any([options.signal,timeout]):timeout;
   if(signal.aborted)throw cancellationError(signal);
   let response;
@@ -81,7 +82,12 @@ async function jsonFetch(fetchImpl, path, options = {}) {
   const data = await response.json().catch(() => ({}));
   if(signal.aborted)throw cancellationError(signal);
   if (!response.ok) {
-    throw aiHttpError(response,data,true);
+    const error=aiHttpError(response,data,true);
+    if(path.includes('/jobs/')&&(data.terminalJob===true||data.code==='AI_JOB_NOT_FOUND'))Object.assign(error,{terminalJob:true});
+    throw error;
+  }
+  if(response.status===202&&data.jobId&&!path.includes('/jobs/')){options.onQueued?.(data);return waitForCloudJob({job:data,signal:options.signal,
+    fetchStatus:id=>jsonFetch(fetchImpl,'/api/ai/cloud/jobs/'+encodeURIComponent(id),{signal:options.signal})});
   }
   return data;
 }
@@ -165,7 +171,7 @@ export function createV31HybridClient({
     for (let index = 0; index < candidates.length; index++) {
       const provider = candidates[index];
       const providerDefaultTokens = provider === 'local'
-        ? (context.requestType === 'system' ? 192 : context.requestType === 'repair' ? 420 : context.importance === 'important' ? 640 : 512)
+        ? (context.requestType === 'system' ? 192 : context.importance === 'important' ? 1024 : 768)
         : context.requestType === 'system' ? 440
           : context.requestType === 'repair' ? 1200
             : context.importance === 'important' ? 1300 : 1050;
@@ -176,7 +182,7 @@ export function createV31HybridClient({
       if(provider!=='local'&&availability.cloud?.configured?.[provider]===false)throw Object.assign(new Error('请先为当前服务商保存 API Key。'),{code:'AI_NOT_CONFIGURED'});
       // Fixed modes retry the SAME provider once. This prevents voice/style jumping
       // between Groq/Local/other clouds during an ordinary play session.
-      const sameProviderAttempts = 2;
+      const sameProviderAttempts = provider==='local'?2:6;
       for (let attempt = 0; attempt < sameProviderAttempts; attempt += 1) {
         try {
           let data;
@@ -191,12 +197,20 @@ export function createV31HybridClient({
               body: JSON.stringify({ task: localTask, messages, maxTokens, temperature })
             });
           } else {
+            const outboxKey=context.transactionId?'luoxian_cloud_request:'+context.transactionId:null;
+            let saved;try{saved=outboxKey&&JSON.parse(storage?.getItem(outboxKey)||'null');}catch{}
+            const payload=saved?.payload||{
+              provider, model, ...(provider === 'custom' ? { baseUrl: settings.customBaseUrl } : {}),
+              messages, maxTokens, temperature,transactionId:context.transactionId
+            };
+            if(outboxKey&&!saved){saved={payload,createdAt:Date.now()};storage?.setItem(outboxKey,JSON.stringify(saved));}
+            const rememberJob=job=>{if(outboxKey)storage?.setItem(outboxKey,JSON.stringify({...saved,job}));};
+            if(saved?.job)data=await waitForCloudJob({job:saved.job,signal:context.signal,
+              fetchStatus:id=>jsonFetch(fetchImpl,'/api/ai/cloud/jobs/'+encodeURIComponent(id),{signal:context.signal})});
+            else
             data = await jsonFetch(fetchImpl, '/api/ai/cloud/generate', {
               method: 'POST', signal: context.signal,
-              body: JSON.stringify({
-                provider, model, ...(provider === 'custom' ? { baseUrl: settings.customBaseUrl } : {}),
-                messages, maxTokens, temperature
-              })
+              body:JSON.stringify(payload),onQueued:rememberJob
             });
           }
           if (!data?.text?.trim()) {
@@ -209,11 +223,12 @@ export function createV31HybridClient({
         } catch (error) {
           lastError = error;
           if (error?.name === 'AbortError') throw error;
+          if(error?.terminalJob)throw error;
           const retryable = provider === 'local' || isRetryableStatus(Number(error?.status || 0));
           if (!retryable) throw error;
           // A daily/long token cooldown is not an invitation to retry early.
           // Preserve the provider gate and let the UI keep the user's input.
-          if (Number(error?.retryAfterMs) > 60000) throw error;
+          if (Number(error?.retryAfterMs) > 20*60*1000) throw error;
           if (attempt < sameProviderAttempts - 1) {
             const delay = Math.max(1200, Number(error?.retryAfterMs) || 1500);
             await waitForRequestSlot(delay, context.signal);
@@ -247,13 +262,13 @@ export function createV31HybridClient({
   async function testProvider(provider, model, baseUrl = '') {
     return jsonFetch(fetchImpl, '/api/ai/cloud/test', {
       method: 'POST',
-      body: JSON.stringify({ provider, model, ...(provider === 'custom' ? { baseUrl } : {}) })
+      body: JSON.stringify({ provider, model, transactionId:globalThis.crypto.randomUUID(), ...(provider === 'custom' ? { baseUrl } : {}) })
     });
   }
 
   return {
     narrate: (settings, context = {}) => gate.run(() => narrateOnce(settings, {...context,
-      signal: context.signal ? AbortSignal.any([context.signal,AbortSignal.timeout(90000)]) : AbortSignal.timeout(90000)
+      signal: context.signal ? AbortSignal.any([context.signal,AbortSignal.timeout(settings?.mode==='local'?180000:20*60*1000)]) : AbortSignal.timeout(settings?.mode==='local'?180000:20*60*1000)
     }), context.signal,settings?.forceCloudAssist ? settings.preferred || 'groq'
       : settings?.mode==='auto-stable'?settings.preferred||'groq'
       : settings?.mode==='hybrid-assist'?'local':settings?.mode||loadV31AiSettings(storage).mode),

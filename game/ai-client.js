@@ -81,7 +81,11 @@ function parseBlocks(data, requestType) {
   const blocks = data.blocks.slice(0, 8).map((block) => {
     const requestedType = ['narr', 'dlg', 'sys'].includes(block?.type) ? block.type : 'narr';
     if (requestType === 'system' && requestedType !== 'sys') return null;
-    const output = { type: requestedType, text: cleanText(block?.text, 12_000) };
+    // Some local chat templates use content for a block's string body. This
+    // normalizes only the field name; facts and worldPlan still face validation.
+    const body = typeof block?.text === 'string' ? block.text
+      : block?.text === undefined && typeof block?.content === 'string' ? block.content : '';
+    const output = { type: requestedType, text: cleanText(body, 12_000) };
     if (block?.claims !== undefined) {
       if (!Array.isArray(block.claims) || block.claims.length > 12
         || block.claims.some(claim=>!claim||typeof claim!=='object'||Array.isArray(claim)))

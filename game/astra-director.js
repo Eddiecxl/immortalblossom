@@ -38,6 +38,10 @@ export function directAstraScene(world, events = []) {
   const summary = road
     ? `${current?.name || '此地'}传出警示：通往${world.locations[road.to]?.name || '邻地'}的路近来不太平，出发前最好先打听。`
     : `${current?.name || '此地'}出现${dangerText[world.flags.earlyDanger] || '局势变化的消息'}，当地人开始留意。`;
+  if((world.rumors||[]).some(r=>r.locationId===world.player.locationId&&r.summary===summary)) {
+    return {hook:quest?`${quest.title}的当前状态是${quest.state}；按真实条件继续推进，不能重放任务开端。`
+      : '当前没有新的公开变故；人物仍会回应这次输入，时辰和各自计划继续推进。不要重播旧传闻或重新介绍已经见过的人。',event:null};
+  }
   const present = Object.values(world.characters || {}).filter(npc => npc.alive && npc.locationId === world.player.locationId);
   const rumorId = `rumor:${id}`;
   world.rumors ||= [];

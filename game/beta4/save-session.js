@@ -12,7 +12,10 @@ export function createSaveSession({stateStore,transcriptStore,storage=localStora
   const record={state:clean,endId:latest?.id||null,activeSlot,savedAt:new Date().toISOString(),
    provider:latest?.provider||'engine',model:latest?.model||'',worldMinute:clean.astraWorld?.minute??null,
    locationId:clean.astraWorld?.player?.locationId||null};
-  if(typeof nativeAction==='function')await nativeAction('world-save',{record,turn:latest||null});
+  if(typeof nativeAction==='function'){
+   try{await nativeAction('world-save',{record,turn:latest||null});}
+   catch(error){storage.setItem(key,JSON.stringify(record));turns=0;throw error;}
+  }
   storage.setItem(key,JSON.stringify(record));turns=0;return clean;
  }
  async function fork(state,endId){
@@ -25,17 +28,25 @@ export function createSaveSession({stateStore,transcriptStore,storage=localStora
  return {
   async initialize(){
    let browser=null;try{browser=read();}catch{}
+   let automatic=stateStore.loadAuto?.('ai');
+   if(automatic?.transactionJournal)automatic=await stateStore.recoverPendingTurn('ai',automatic,transcriptStore);
+   if(automatic&&(!browser||(automatic.journeyId===browser.state.journeyId&&(automatic.revision>browser.state.revision
+     ||automatic.revision===browser.state.revision&&Date.parse(automatic.updatedAt)>Date.parse(browser.state.updatedAt))))){
+    try{await checkpoint(automatic);}catch{}browser=read();
+   }
    if(typeof nativeAction==='function'){
-    const durable=await nativeAction('world-load',{});
+    let durable;try{durable=await nativeAction('world-load',{});}catch{}
    if(durable?.state){durable.state=validateImportedState(durable.state,'ai');
-     if(!browser||durable.state.journeyId!==browser.state.journeyId||durable.state.revision>=browser.state.revision){
+     if(!browser||(durable.state.journeyId===browser.state.journeyId?durable.state.revision>browser.state.revision:
+       Date.parse(durable.savedAt)>Date.parse(browser.savedAt))){
       storage.setItem(key,JSON.stringify(durable));browser=durable;
-     }else await nativeAction('world-save',{record:browser,turn:null});
-    }else if(browser)await nativeAction('world-save',{record:browser,turn:null});
+     }else try{await nativeAction('world-save',{record:browser,turn:null});}catch{}
+    }else if(browser)try{await nativeAction('world-save',{record:browser,turn:null});}catch{}
    }
    if(!browser){let old=stateStore.loadAuto('ai');if(old){if(old.transactionJournal)old=await stateStore.recoverPendingTurn('ai',old,transcriptStore);await checkpoint(old);}}
   },
   peek:()=>read()?.state||null,
+  checkpoint,
   info:()=>({activeSlot,turns,checkpoint:read()}),
   async begin(state){activeSlot=null;await checkpoint(state);},
   async committed(state){turns++;await checkpoint(state);return true;},
@@ -47,9 +58,11 @@ export function createSaveSession({stateStore,transcriptStore,storage=localStora
   async load(slot){
    const record=slot?null:read();const snapshot=slot?stateStore.loadSlot('ai',slot):record?.state;
    if(!snapshot)throw new Error('这个存档为空。');
-   const next=await fork(snapshot,slot?undefined:record.endId);
+   const next=slot?await fork(snapshot,undefined):validateImportedState(snapshot,'ai');
    const previous=stateStore.loadAuto('ai'),previousSlot=activeSlot;
-   try{stateStore.saveAuto('ai',next);activeSlot=slot||record.activeSlot||null;await checkpoint(next);}
+   try{stateStore.saveAuto('ai',next);activeSlot=slot||record.activeSlot||null;
+    if(slot)await checkpoint(next);else {try{await checkpoint(next);}catch{}}
+   }
    catch(error){activeSlot=previousSlot;if(previous)stateStore.saveAuto('ai',previous);throw error;}
    return next;
   }

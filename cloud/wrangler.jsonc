@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "immortalblossombeta",
+  "main": "worker.mjs",
+  "account_id": "39c7e6404e1da1fc0d0ae4d2e7a79914",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true,
+  "assets": {
+    "directory": "../cloud-public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/", "/launcher/index.html", "/game/v4/index.html"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {"name": "GROQ_QUEUE", "class_name": "GroqQueue"},
+      {"name": "SESSION_STORE", "class_name": "SessionStore"}
+    ]
+  },
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["GroqQueue", "SessionStore"]}],
+  "vars": {"CLOUD_VERSION": "4.2.0"},
+  "observability": {"enabled": false}
+}

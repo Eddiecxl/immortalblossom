@@ -1,3 +1,5 @@
+import '../cloud-bridge.js';
+import {createPendingTurns} from '../pending-turn.js';
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
 import {realmLabel} from '../astra-rules.js';
@@ -31,7 +33,12 @@ const dom = Object.fromEntries([
 const stateStore = createStorage();
 const transcriptStore = createTranscriptStore();
 const aiClient = createV31HybridClient();
+if(!localStorage.getItem('luoxian_cloud_beta_preset_v1')){
+  aiClient.saveSettings({mode:'groq',preferred:'groq'});
+  localStorage.setItem('luoxian_cloud_beta_preset_v1','1');
+}
 const aiRunner = createAiTurnRunner({ aiClient, transcriptStore, stateStore });
+const pendingTurns=createPendingTurns();
 
 let state = null;
 let transcript = [];
@@ -43,6 +50,12 @@ const deviceRam = Number(navigator.deviceMemory || 0);
 const lowSpecUI = cpuCores <= 8 || (deviceRam > 0 && deviceRam <= 8);
 if (lowSpecUI) document.documentElement.classList.add('low-spec-ui');
 let turnBusy = false;
+let activeTurnController=null;
+window.addEventListener('lx:cancel-ai-wait',()=>activeTurnController?.abort());
+window.addEventListener('lx:request-state',e=>{
+  if(turnBusy&&['queued','quota-wait','cooldown'].includes(e.detail?.phase))
+    dom.systemLine.textContent=`云端正在排队 · ${Math.ceil((e.detail.ms||0)/1000)} 秒后继续；原话和命簿保留，可停止等待。`;
+});
 const turnFlow = createTurnFlow({ cooldownMs: 1500 });
 let menuBusy = false;
 let experience;let saveUI;
@@ -489,10 +502,13 @@ async function submitTurn(input) {
   dom.storyScroll.scrollTop = dom.storyScroll.scrollHeight;
 
   try {
+    activeTurnController=new AbortController();
+    const settings=runnerSettings(),pending=pendingTurns.prepare(state,playerTurn,settings);
     const result = await aiRunner.runWorld({
       state,
       input: playerTurn,
-      settings: runnerSettings(),
+      settings,transactionId:pending.id,
+      signal:activeTurnController.signal,
       onProgress: (phase) => {
         if (phase === 'generating' || phase === 'repair') turnFlow.phase('ai_running');
         if (phase === 'saving') turnFlow.phase('engine_commit');
@@ -507,6 +523,7 @@ async function submitTurn(input) {
     if (result.ok) {
       state = ensureV31Canon(result.state, 'ai');
       committedTurn = true;
+      pendingTurns.clear();
       turnFlow.commit();
       // Persist the committed engine transaction before its visual reveal.
       persist();
@@ -542,6 +559,7 @@ async function submitTurn(input) {
     // A fixed cloud route never substitutes another writing engine. If Groq
     // cannot produce a causally valid turn after same-provider retries/repair,
     // leave reality untouched and let the player retry without style-jumping.
+    if(result.terminalJob||['AI_NARRATIVE_INVALID','AI_AUTH_FAILED','AI_NOT_CONFIGURED','AI_MODEL_UNAVAILABLE'].includes(result.code))pendingTurns.clear();
     throw Object.assign(new Error(result.error || '本回合尚未完成。'),{code:result.code,retryAfterMs:result.retryAfterMs});
   } catch (error) {
     if (!committedTurn) turnFlow.fail();
@@ -551,6 +569,7 @@ async function submitTurn(input) {
     audioEngine.sfx('danger');
   } finally {
     turnBusy = false;
+    activeTurnController=null;
     experience.pendingSpeech('');
     const dead = Boolean(state?.story?.flags?.playerDead||state?.astraWorld?.terminal?.ended||(!state?.astraWorld && state?.campaign?.status==='complete'));
     dom.sendButton.disabled = dead || turnFlow.state() !== 'idle';
@@ -590,6 +609,9 @@ async function enterGame(nextState, { resetLog = false } = {}) {
   persist();
   await experience.enter(()=>{dom.titleScreen.hidden=true;dom.gameShell.hidden=false;rebuildStory();renderAll({suggestions:getAvailableActions(state)});});
   refreshAiBadge();
+  const pending=pendingTurns.read(state);
+  if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;
+   dom.systemLine.textContent='上次等待的原话已恢复；落笔会继续同一云端请求。';}
   if (!state.story.flags?.playerDead) dom.speechInput.focus();
 }
 
@@ -674,6 +696,10 @@ async function submitSystemChat() {
     }
     persist();
     const answerText = (result.blocks || []).map(block => block.text).join('\n') || '系统没有更多补充。';
+    // A companion exchange has no world revision/time change, but is still a
+    // durable checkpoint. Do not overwrite the currently selected manual slot.
+    try{await saveSession.checkpoint(state);}catch(error){showToast('系统对话已保存在浏览器，云端同步待恢复：'+error.message);}
+    try{localStorage.removeItem('luoxian_cloud_request:'+result.turn.id);}catch{}
     try{systemTranscript=systemArchive(await transcriptStore.allTurns(state.journeyId));}catch{systemTranscript.push({role:'player',text:input},{role:'system',text:answerText});}
     renderSystemArchive();
     if (dom.systemInput) dom.systemInput.value = '';
@@ -807,8 +833,8 @@ function installAiSettingsPanel() {
   layer.hidden = true;
   layer.innerHTML = `
     <section class="ai-config-card">
-      <header><div><small>BETA V1 · HYBRID ENGINE</small><h2>叙事 AI 路由</h2></div><button type="button" class="ai-close">×</button></header>
-      <p class="ai-explain">本地模型优先；云端只在你选择辅助或云端模式后使用。模型与世界规则分离，云端调用会在回合记录中标明。</p>
+      <header><div><small>BETA V4.2 · WORLD ENGINE</small><h2>叙事 AI 设置</h2></div><button type="button" class="ai-close">×</button></header>
+      <p class="ai-explain">默认使用 Groq 云端叙事；世界时间、数值、任务与记忆由引擎保存。额度繁忙时排队继续，可保留原话停止等待。</p>
       <label class="ai-field"><span>运行模式</span><select id="v31AiMode">
         <option value="local">本地均衡 · 不用云端</option>
         <option value="hybrid-assist">混合辅助 · 本地优先</option>
@@ -830,9 +856,10 @@ function installAiSettingsPanel() {
       </div>
       <label class="ai-field custom-url" hidden><span>Custom Base URL</span><input id="v31AiBase" placeholder="https://example.com/v1"></label>
       <section class="ai-credential">
-        <div><b>本机加密 API Key</b><small id="v31AiCredentialState">读取状态中…</small></div>
+        <div><b>${window.lxCloud?'云端 AI 与个人 Groq Key':'本机加密 API Key'}</b><small id="v31AiCredentialState">读取状态中…</small></div>
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">登录 Groq · 获取自己的 API Key</a>
         <input id="v31AiKey" type="password" autocomplete="off" placeholder="只在这里输入一次；不会写入游戏存档或 ZIP">
-        <div class="ai-actions"><button type="button" id="v31AiSaveKey">加密保存 Key</button><button type="button" id="v31AiTest">测试连接</button><button type="button" id="v31AiClear">清除 Key</button></div>
+        <div class="ai-actions"><button type="button" id="v31AiSaveKey">${window.lxCloud?'保存自己的 Key':'加密保存 Key'}</button><button type="button" id="v31AiTest">测试连接</button><button type="button" id="v31AiClear">${window.lxCloud?'恢复默认 Key':'清除 Key'}</button></div>
       </section>
       <section class="ai-local-status" id="v31AiLocal">本地 AI 状态读取中…</section>
       <footer><button type="button" id="v31AiApply">保存路由设置</button></footer>
@@ -848,6 +875,10 @@ function installAiSettingsPanel() {
   const credentialState = q('v31AiCredentialState');
   const localState = q('v31AiLocal');
   const customUrl = layer.querySelector('.custom-url');
+  if(window.lxCloud){
+    for(const select of [mode,preferred])for(const option of [...select.options])if(option.value!=='groq')option.remove();
+    localState.hidden=true;preferred.closest('label').hidden=true;
+  }
 
   const selectedProvider = () => mode.value === 'hybrid-assist' ? 'local' : mode.value === 'auto-stable' ? preferred.value : mode.value;
   const credentialProvider = () => mode.value === 'hybrid-assist' ? preferred.value : selectedProvider();
@@ -868,7 +899,7 @@ function installAiSettingsPanel() {
     credentialState.textContent = mode.value === 'hybrid-assist'
       ? `本地无需 Key；辅助 ${V31_PROVIDER_DEFAULTS[credential]?.label || credential} ${info?.cloud?.configured?.[credential] ? '已配置' : '尚未配置'}`
       : provider === 'local' ? '本地模型无需 API Key'
-      : configured ? '已安全保存于 Windows 当前用户 DPAPI' : '尚未配置';
+      : configured ? (window.lxCloud?'云端 AI 已配置；可以使用默认 Key 或自己的 Groq Key':'已安全保存于 Windows 当前用户 DPAPI') : '尚未配置';
     localState.textContent = info?.local?.modelInstalled && info?.local?.runtimeInstalled
       ? `本地 AI：已安装 · ${info.local.profileLabel || 'Qwen'} · ${info.local.contextSize || '?'} ctx · ${info.local.threads || '?'} threads`
       : '本地 AI：组件尚未就绪；云端模式不受影响';
@@ -876,7 +907,7 @@ function installAiSettingsPanel() {
 
   async function open() {
     const settings = aiClient.loadSettings();
-    mode.value = settings.mode || 'local';
+    mode.value = settings.mode || 'groq';
     preferred.value = settings.preferred || 'groq';
     syncModel();
     key.value = '';
@@ -928,7 +959,7 @@ function installAiSettingsPanel() {
       await aiClient.clearCredential(provider);
       key.value = '';
       await refreshPanelStatus();
-      showToast('已清除这个供应商的 Key');
+      showToast(window.lxCloud?'已恢复默认测试 Key':'已清除这个供应商的 Key');
     } catch (error) { showToast('清除失败：' + error.message); }
   });
 

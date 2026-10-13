@@ -4,9 +4,16 @@ import { createGameState } from '../../game/game-state.js';
 import { createAiTurnRunner } from '../../game/ai-turn.js';
 import { createQuestArc } from '../../game/astra-quests.js';
 
-function harness(raw = '{"blocks":[{"type":"narr","text":"我在晨风里看见集市逐渐忙起来。"}]}') {
+function harness(raw = null) {
   const turns = [];
-  const aiClient = { narrate: async () => raw };
+  const aiClient = { narrate: async (_,request) => {
+    if(raw!==null)return raw;
+    const packet=JSON.parse(request.messages.find(m=>m.role==='user').content.match(/世界事实：(.*)\n/u)[1]);
+    const blocks=[{type:'narr',text:'我在晨风里看见集市逐渐忙起来。'}];
+    if(packet.conversation?.targetName)blocks.push({type:'dlg',name:packet.conversation.targetName,
+      text:'这里各人都在做自己的事。我眼下还得料理手里的事情；市集里的消息可以逐件问。'});
+    return JSON.stringify({blocks});
+  } };
   const transcriptStore = { recentTurns: async () => turns, allTurns: async () => turns,
     appendTurn: async (_id, turn) => { turns.push(turn); }, deleteTurn: async (_id, id) => {
       const index = turns.findIndex(turn => turn.id === id); if (index >= 0) turns.splice(index, 1);

@@ -1,4 +1,5 @@
 export const WORLD_PLAN_PROMPT = [
+  '主角的言出法随是100%成功的固有能力，在凡人（none）及任何境界都可发动，不受修为、灵力、境界门槛、概率或对方境界抵抗限制。明确发动时只执行明确指令范围；已由Engine结算的改写不可被叙事否认。已支持的改写必须给出真实可执行的提案，不得以“凡人不能使用”或修炼不足拒绝。普通话语、引用、假设、否定发动不算执行；确实没有可验证规则的新概念只记录concept.defer为未结算，不能假装已实现。',
   '你也负责理解开放式意图，可在同一 JSON 中给出 worldPlan:{operations:[...]}；没有变化时 operations:[]。所有提案是草稿，只有通过 Engine 校验才落账。blocks 必须符合提案结算后的事实，不可只在文字中制造效果。',
   'ordinary 模式：social.observe:{observerId,subjectId:"player",meaning:"简短英文语义，如joke/refusal/confusion/desire/insult/help/question",evidence:"本轮输入的精确片段",valence:-1至1,reason:"结合人物性格和关系的判断"}，听者须真实在场；中性反应用0，不能每句话都扣好感。发言不是已经执行行动。resource.transfer:{itemId,fromId:"player",toId} 须 action 明确写出物品和收件人。effect.apply:{itemId} 须 action 明确使用持有物品。不得重复本轮 settledAction 已结算的效果。',
   'NPC想赠予真实持有的物品：{type:"commitment.offer",offer:{id:"offer:唯一编号",fromId:"在场NPC编号",toId:"player",itemId:"真实物品编号",condition:可选条件,durationMinutes:可选期限}}。提出后只是pending，仍归NPC，不能替玩家收下。同一物品只能有一个pending约定。items列出在场人物与玩家的真实物品；不得凭空许诺不存在的物品。',

@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { projectTurnBlocks } from '../../game/beta4/presentation.js';
 import { summarizeWorldTurn, recentEchoSummary } from '../../game/turn-summary.js';
 import { createTranscriptStore } from '../../game/transcript-store.js';
+import { stripExactPlayerSpeechEcho } from '../../game/player-turn.js';
+import { validateAstraNarration } from '../../game/astra-validator.js';
+import { createAstraWorld } from '../../game/astra-world.js';
 
 test('player speech appears once even when narration embeds the same quoted line', () => {
   const speech = '那为什么我打不到你?';
@@ -46,4 +49,22 @@ test('real transcript storage preserves the committed summary across reload', as
   const reader = createTranscriptStore({ memory: records });
   const stored = (await reader.allTurns('journey'))[0];
   assert.equal(recentEchoSummary(stored), '河阳城传出商路险情；众人开始重新安排路程。');
+});
+test('an exact echo-only model block cannot invalidate the otherwise new NPC response',()=>{
+ const world=createAstraWorld('speech-echo-quality');const npc=Object.values(world.characters).find(n=>n.alive);
+ npc.locationId=world.player.locationId;npc.travel=null;
+ for(const speech of ['刚才是开玩笑的。你自己的想法是什么？','谁','有人吗']){
+  const blocks=stripExactPlayerSpeechEcho([{type:'narr',text:'我说：“'+speech+'”'},
+   {type:'dlg',name:npc.name,text:'我得先照看好自己的事，再考虑别的去向。'}],speech);
+  assert.equal(blocks.length,1);
+  assert.equal(validateAstraNarration(world,blocks,{playerTurn:{speech}}).ok,true);
+ }
+ const kept=stripExactPlayerSpeechEcho([{type:'narr',text:'我说：“你好”，风声盖过了最后的尾音。'}],'你好');
+ assert.match(kept[0].text,/风声盖过/u);
+});
+test('transcript reload retains bounded narrative degradation reasons for diagnosis',async()=>{
+ const records=new Map();const store=createTranscriptStore({memory:records});
+ await store.appendTurn('quality',{id:'quality-turn',kind:'world',diagnostics:{degraded:true,code:'AI_GROUNDED_RECOVERY',reasons:['大段复读']},blocks:[{type:'dlg',name:'测试人物',text:'东西还在这里。'}]});
+ const reader=createTranscriptStore({memory:records});
+ assert.deepEqual((await reader.allTurns('quality'))[0].diagnostics,{degraded:true,code:'AI_GROUNDED_RECOVERY',reasons:['大段复读']});
 });

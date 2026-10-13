@@ -10,9 +10,22 @@ const memoryStorage = () => {
 const response = (data, status = 200) => ({ ok: status < 400, status,
   headers: { get: () => null }, json: async () => data });
 
-test('new settings prefer local and Local mode never sends a cloud generation', async () => {
+test('local scene and repair budgets leave room for both world operations and narrative',async()=>{
+ for(const requestType of ['world','repair']){
+  let sent;
+  const client=createV31HybridClient({storage:memoryStorage(),fetchImpl:async(path,options)=>{
+   if(path==='/api/ai/status')return response({ready:true});
+   if(path==='/api/ai/cloud/status')return response({configured:{}});
+   sent=JSON.parse(options.body);return response({text:'{"blocks":[]}'});
+  }});
+  await client.narrate({mode:'local'},{requestType,messages:[]});
+  assert.ok(sent.maxTokens>=768);
+ }
+});
+
+test('new settings prefer Groq while an explicit Local mode never sends a cloud generation', async () => {
   const storage = memoryStorage();
-  assert.equal(loadV31AiSettings(storage).mode, 'local');
+  assert.equal(loadV31AiSettings(storage).mode, 'groq');
   const paths = [];
   const fetchImpl = async path => {
     paths.push(path);
@@ -56,9 +69,44 @@ test('long provider quota waits do not trigger a premature second request or loc
   const fetchImpl=async path=>{
     if(path==='/api/ai/status')return response({ready:true});
     if(path==='/api/ai/cloud/status')return response({configured:{groq:true}});
-    requests++;return response({code:'AI_CLOUD_FAILED',error:'provider HTTP 429: Please try again in 5m0s.'},429);
+    requests++;return response({code:'AI_CLOUD_FAILED',error:'provider HTTP 429: Please try again in 21m0s.'},429);
   };
   const client=createV31HybridClient({fetchImpl,storage});
-  await assert.rejects(()=>client.narrate({mode:'groq'},{messages:[]}),e=>e.code==='AI_RATE_LIMITED'&&e.retryAfterMs===300000);
+  await assert.rejects(()=>client.narrate({mode:'groq'},{messages:[]}),e=>e.code==='AI_RATE_LIMITED'&&e.retryAfterMs===1260000);
   assert.equal(requests,1);
+});
+
+test('terminal durable job failure is not submitted six times',async()=>{
+ let submissions=0;
+ const client=createV31HybridClient({storage:memoryStorage(),fetchImpl:async path=>{
+  if(path==='/api/ai/status')return response({});
+  if(path==='/api/ai/cloud/status')return response({configured:{groq:true}});
+  if(path==='/api/ai/cloud/generate'){submissions++;return response({jobId:'safe-job',state:'queued'},202);}
+  return response({code:'AI_TIMEOUT',error:'timeout',terminalJob:true},504);
+ }});
+ await assert.rejects(()=>client.narrate({mode:'groq'},{transactionId:'stable-turn',messages:[]}),e=>e.terminalJob===true);
+ assert.equal(submissions,1);
+});
+
+test('transient queue polling failure keeps the old job instead of generating twice',async()=>{
+ let submissions=0,polls=0;
+ const client=createV31HybridClient({storage:memoryStorage(),fetchImpl:async path=>{
+  if(path==='/api/ai/status')return response({});
+  if(path==='/api/ai/cloud/status')return response({configured:{groq:true}});
+  if(path==='/api/ai/cloud/generate'){submissions++;return response({jobId:'safe-job',state:'queued'},202);}
+  polls++;return polls===1?response({code:'AI_UPSTREAM_FAILED'},503):response({text:'原任务已经完成。'});
+ }});
+ assert.equal(await client.narrate({mode:'groq'},{transactionId:'same-turn',messages:[]}),'原任务已经完成。');
+ assert.equal(submissions,1);assert.equal(polls,2);
+});
+
+test('connection probes each have a fresh transaction after changing keys',async()=>{
+ const transactions=[];const client=createV31HybridClient({storage:memoryStorage(),fetchImpl:async(path,options)=>{
+  if(path.endsWith('/test'))transactions.push(JSON.parse(options.body).transactionId);
+  return response({text:'ok'});
+ }});
+ await client.testProvider('groq','qwen/qwen3.8-27b');
+ await client.saveCredential('groq','gsk_example');
+ await client.testProvider('groq','qwen/qwen3.8-27b');
+ assert.ok(transactions.every(Boolean));assert.notEqual(...transactions);
 });

@@ -13,6 +13,7 @@ import { directAstraScene } from './astra-director.js';
 import { consumeGeneratedItem } from './astra-effects.js';
 import { resolveAstraConversation, validateAstraConversation, fallbackAstraConversation, conversationEvidence } from './astra-interaction.js';
 import { buildAstraLocalMessages } from './astra-local-prompt.js';
+import { compactNarrativePacket } from './astra-narrative-budget.js';
 import { sceneAffordances } from './astra-affordances.js';
 import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
 import { applyWorldPlan, settleWorldRules } from './astra-operations.js';
@@ -48,13 +49,24 @@ const questVerbs = {
   'carry-warning': /送达警报|传达警告/u
 };
 
+function explicitRealityStatement(value) {
+  if (isSpeculativeInput(value) || /[‘'『《]/u.test(value)) return null;
+  const match = value.match(/^(?:(?:我|本人)?\s*(?:(?:现在|此刻|立刻)\s*)?(?:(?:要|将|决定)\s*)?(?:用|使用|发动|施展|施放|启用|动用|以)\s*)?言出法随\s*(?:[:：，,]\s*|(?=让|使|将|把|令|创造|变出|制造|改写|重写|改变|复活|杀死|抹杀|毁灭|治愈|恢复|传送|瞬移))(.+)$/u);
+  if (!match) return null;
+  const statement = match[1].trim();
+  if (/^(?:我|本人)?\s*(?:不想|不打算|不准备|不会|不能|不要|别|没有)(?:再|继续)?/u.test(statement)) return null;
+  return '言出法随：' + statement;
+}
+
 function mechanicalAction(world, input) {
   const action = clean(input.action, 1800);
   const speech = clean(input.speech, 1200);
-  if ((action || /^言出法随\s*[:：]/u.test(speech)) && isSpeculativeInput(action || speech))
+  if (action && (isSpeculativeInput(action) || /[‘'『《]/u.test(action)))
     return { type: 'speech', minutes: 5 };
-  if (/^言出法随\s*[:：]/u.test(speech)) return { type: 'reality', statement: speech };
-  if (/^言出法随\s*[:：]/u.test(action)) return { type: 'reality', statement: action };
+  const statement = explicitRealityStatement(action) || explicitRealityStatement(speech);
+  if (statement) return { type: 'reality', statement };
+  // Referring to, quoting or declining the power does not execute its embedded verbs.
+  if (action.includes('言出法随')) return { type: 'speech', minutes: 5 };
   if (/(?:服下|服用|吃下|吞下|使用)/u.test(action)) {
     const item = Object.values(world.items || {}).find(entry => entry.generated && !entry.destroyed
       && entry.ownerId === world.player.id && action.includes(entry.name));
@@ -195,6 +207,7 @@ export function projectAstraWorld(source, world) {
 function asError(error, input, transactionId, state) {
   return { ok: false, error: clean(error?.message || error || '回合失败。', 600),
     code: error?.code || 'ASTRA_TURN_FAILED', retryAfterMs: error?.retryAfterMs || 0,
+    terminalJob: Boolean(error?.terminalJob), status: error?.status,
     retry: { input, transactionId }, state };
 }
 
@@ -223,6 +236,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     let world, events, narration;
     let engineConversation = false;
+    const engineAction=!turnInput.speech&&['wait','travel'].includes(action.type);
     let degradation = null;
     if (knownRealityPlan) {
       const plan = knownRealityPlan;
@@ -235,6 +249,19 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         { type: 'narr', text: `言出法随落定：${outcome?.summary || plan.request}` },
         { type: 'sys', text: `【因果】改写范围：${plan.type}；实际代价：${outcome?.cost ?? plan.cost}。世界状态已由命簿结算。` }
       ] };
+    } else if(engineAction) {
+      const settled=advanceAstraWorld(state.astraWorld,action.minutes,action.type==='travel'
+        ? {type:'travel',destinationId:action.destinationId}:{type:'wait'});
+      world=settled.world;events=settled.events;
+      captureWorldChanges(state.astraWorld,world,{turnId:txId,action:action.type});
+      propagateCausality(world);
+      settleWorldRules(world,Object.values(ensureSimulation(world).events).filter(event=>!previousCausalIds.has(event.id)));
+      const scene=sceneAffordances(world);
+      const trip=world.player.travel;
+      narration={blocks:[{type:'narr',text:trip
+        ? `我沿着通往${world.locations[trip.to]?.name||'目的地'}的道路继续前行；还需${Math.max(1,Math.ceil(trip.arriveAt-world.minute))}分钟。沿途的时辰、人物和局势照常变化。`
+        : `我在${scene.locationName||world.locations[world.player.locationId]?.name||'此地'}度过了${action.minutes}分钟。命簿已结算这段时间里的人物行动、道路变化与任务期限。`},
+        ...events.filter(e=>e.playerWitnessed&&e.summary).slice(-6).map(e=>({type:'sys',text:e.summary}))]};
     } else {
       const conversation = action.type !== 'reality' && !turnInput.action && turnInput.speech
         ? resolveAstraConversation(state.astraWorld, turnInput.speech, recent) : null;
@@ -267,7 +294,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       packet.turnStart = {minute:state.astraWorld.minute,locationId:state.astraWorld.player.locationId,
         locationName:state.astraWorld.locations[state.astraWorld.player.locationId]?.name||'',
         travel:structuredClone(state.astraWorld.player.travel||null)};
-      if (globalThis.lxNative && typeof globalThis.nativeAction === 'function') {
+      if ((globalThis.lxNative||globalThis.lxCloud) && typeof globalThis.nativeAction === 'function') {
         try {
           packet.recalledSummaries = (await globalThis.nativeAction('world-memory-search', {
             worldId: state.journeyId, query: turnInput.action || turnInput.speech
@@ -291,27 +318,31 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         packet.affordances = sceneAffordances(world,conversation.targetId);
       }
       const visibleEvents = events.filter(event => event.playerWitnessed).slice(-6);
+      const authorPacket=compactNarrativePacket(packet);
       const messages = [
         { role: 'system', content: '你是《落仙》的叙事作者。Game Engine 世界状态是唯一事实来源。只写主角第一人称所见所闻，不替玩家说话，不生成物品、修行、移动、死亡或任务效果。NPC 只能在场且存活才可发言，只能知道其已知事实。世界事件已经结算，不可倒退。conversation.targetId 是本轮真实在场的说话对象：若非空，必须让该人物针对玩家本轮话语作出有内容的新回应；不知情就明确说不知情，不要复读上一轮或空泛应声。若 absentName 非空，此人缺席，不得让其发言。传闻不等于人在眼前。不要重述上一轮景物或留下“我说，”一类空句。数值只供引擎计算，不作为人物口中的刻度。仅返回严格 JSON：{"blocks":[{"type":"narr","text":"..."},{"type":"dlg","name":"...","text":"..."}]}。不可填 effects。' },
-        { role: 'user', content: `世界事实：${JSON.stringify(packet)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。先理解并回应本轮真实含义：离题、粗俗、玩笑或暧昧也要接住，不能每句话都拉回任务。人物依据自己的性格、关系和认知反应；有真实变化就用worldPlan落账。只有自然相关时承接directorHook，玩家可以另外选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
+        { role: 'user', content: `世界事实：${JSON.stringify(authorPacket)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n玩家输入按 playerTurn.speech 与 playerTurn.action 分开；只说话时绝不当成动作。先理解并回应本轮真实含义：离题、粗俗、玩笑或暧昧也要接住，不能每句话都拉回任务。人物依据自己的性格、关系和认知反应；有真实变化就用worldPlan落账。只有自然相关时承接directorHook，玩家可以另外选择。\n请据此写出当下场景与明确结果，不能杜撰 Engine 结果。` }
       ];
-      messages[0].content += '\n' + WORLD_PLAN_PROMPT;
+      const planPrompt=action.type==='reality'?WORLD_PLAN_PROMPT:WORLD_PLAN_PROMPT.split('\n')
+        .filter(line=>!line.startsWith('reality 模式：')&&!line.startsWith('relation.upsert/remove:')).join('\n');
+      messages[0].content += '\n' + planPrompt;
       messages[0].content += '\n玩家表达困惑（如“？”）时，要帮助他理解所在地点、眼前人物与可行的下一步，不要把困惑当成未知具体事件。affordances 来自当局状态，供自然承接；围绕真实目标商量行动，提出新委托须经 quest.create 落账。';
       messages[0].content = messages[0].content.replace('不生成物品、修行、移动、死亡或任务效果。', '不在文字中直接生成物品、修行、移动、死亡或任务效果；新变化须经 worldPlan。');
+      messages[1].content += '\n写一段正在发生的小说场面，通常180–420中文字，按反应、对白和新局势连贯展开，不重复铺景。旁白提到主角只能用“我”，NPC对白才可以称我为“你”。dlg.text只放该人物直接说的话；神态、动作放narr。recentTurns是记忆证据，不能复制其中的对白。若玩家再次问同一问题，人物可以指出已经说过并说明当前的新变化或自己的下一步，而不是重新介绍或复述原答。回应人物自己的判断和动机，允许偏离seed，不替玩家选择。';
       const baseDraft = structuredClone(world);
       const localName = settings.mode === 'local' ? await localModelName(settings) : '';
       let raw = '';
       let errors = [];
-      const attempts = settings.mode === 'hybrid-assist' ? 3 : 2;
+      const attempts = settings.mode === 'local' ? 2 : 3;
       for (let attempt = 0; !narration && attempt < attempts; attempt++) {
         if (signal?.aborted) throw new Error('本回合已取消。');
         onProgress(attempt ? 'repair' : 'generating');
         try {
           const requestMessages = settings.mode === 'local'
             ? buildAstraLocalMessages(packet, visibleEvents, localName, attempt ? errors : [])
-            : attempt ? [...messages, { role: 'user', content: `上一候选违反世界事实：${errors.join('；')}。仅修正内容，勿改变世界。` }] : messages;
-          raw = await aiClient.narrate(attempt === 2 ? { ...settings, forceCloudAssist: true } : settings,
-            { requestType: attempt ? 'repair' : 'world', transactionId: txId,
+            : attempt ? [...messages, { role: 'user', content: `上一候选未通过：${errors.join('；')}。重新写出本轮有效场面，不要复制近期对白，不要再使用原来重复的段落。旁白只能以“我”作为主角，dlg仅直接对白。重复的想法可以简短承认已讲过，再针对本轮的新意思作出不同反应与下一步。保留已结算事实和人物的真实目标，不能在文字中偷偷改世界。` }] : messages;
+          raw = await aiClient.narrate(attempt === 2 && settings.mode==='hybrid-assist' ? { ...settings, forceCloudAssist: true } : settings,
+            { requestType: attempt ? 'repair' : 'world', transactionId: `${txId}:narrative:${attempt}`,
               messages: requestMessages,
               signal, protectBudget: true });
         } catch (error) {
@@ -344,12 +375,15 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         const candidatePacket = compileAstraContext(projectAstraWorld(state, candidateWorld), turnInput.action || turnInput.speech, recent,{conversation:packet.conversation});
         candidatePacket.playerTurn = packet.playerTurn;
         candidatePacket.conversation = packet.conversation;
+        candidatePacket.planMode = packet.planMode;
+        candidatePacket.realityApplied = action.type === 'reality'
+          && parsed.worldPlan?.operations?.some(operation => operation.type !== 'concept.defer');
         const checked = validateAstraNarration(candidateWorld, parsed.blocks, candidatePacket);
         const answered = validateAstraConversation(checked.blocks, conversation, recent);
         if (checked.ok && answered.ok) { world = candidateWorld; narration = { blocks: checked.blocks }; break; }
         errors = [...checked.errors.map(error => error.message), ...answered.errors];
       }
-      if (!narration && conversation?.targetId && action.type !== 'reality') {
+      if (!narration && settings.mode==='local' && conversation?.targetId && action.type !== 'reality') {
         const fallback = fallbackAstraConversation(state.astraWorld, conversation);
         const checked = fallback && validateAstraNarration(world, fallback.blocks, { ...packet, recentTurns: [] });
         if (checked?.ok) { narration = { blocks: checked.blocks }; engineConversation = true;
@@ -389,11 +423,11 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       ...narration.blocks.filter(block => block.type === 'sys').map(block => ({ role: 'system', text: block.text }))].slice(-24);
     committed.updatedAt = new Date(now()).toISOString();
     const summary = summarizeWorldTurn({ before: state.astraWorld, after: world, input: turnInput, action, events });
-    const actualProvider = knownRealityPlan || engineConversation ? 'engine' : aiClient.loadSticky?.(state.journeyId)?.provider || settings.provider || 'local';
+    const actualProvider = knownRealityPlan || engineConversation || engineAction ? 'engine' : aiClient.loadSticky?.(state.journeyId)?.provider || settings.provider || settings.mode || 'groq';
     const turn = { id: txId, kind: 'world', userText: rawInput, speech: turnInput.speech,
       actionText: turnInput.action, provider: actualProvider,
       cloudAssist: settings.mode === 'hybrid-assist' && actualProvider !== 'local' && actualProvider !== 'engine',
-      model: knownRealityPlan ? 'reality-mutation' : engineConversation ? 'grounded-interaction' : settings.model || '',
+      model: knownRealityPlan ? 'reality-mutation' : engineAction ? 'world-clock' : engineConversation ? 'grounded-interaction' : settings.model || '',
       ...(degradation ? { diagnostics: degradation } : {}),
       summary, blocks: narration.blocks, createdAt: committed.updatedAt };
     onProgress('saving');

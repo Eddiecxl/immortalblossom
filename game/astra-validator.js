@@ -55,6 +55,14 @@ export function validateAstraNarration(world, blocks, packet = {}) {
     const prose = block.text;
     const speaker = block.type === 'dlg' ? speakerOf(block, characters) : null;
     const reject = (code, message) => errors.push({ index, code, message });
+    if (packet.planMode === 'reality' && /言出法随|言灵/u.test(prose)) {
+      const realmGate = /(?:凡人|凡俗|尚未修炼|未修炼).{0,24}(?:不能|无法|不可|用不了|施展不了)|(?:境界|修为|灵力).{0,16}(?:不足|不够|太低|低微).{0,16}(?:不能|无法|失败|用不了)|(?:不能|无法|不可|用不了|施展不了)(?!因|由于).{0,30}(?:凡人|凡俗|境界|修为|灵力)|(?:必须|需要|须|只有|等到).{0,24}(?:境界|修为|修炼|灵力).{0,24}(?:才能|才可|方能|方可)/u;
+      if (realmGate.test(prose)) reject('reality-realm-gate', '言出法随在凡人及任何境界都100%成功，不能以修为或境界拒绝明确改写。');
+      const applied = packet.realityApplied === true || packet.settledAction === 'reality'
+        && list(source.history).some(event => event.type === 'reality_mutation' && event.applied && event.minute >= minute - 1);
+      if (applied && /(?:言出法随|言灵).{0,16}(?:失败|失效|未生效|没有生效|未能生效|尚未生效|无法生效|无效)|(?:世界|现实).{0,12}(?:没有|并未|未)(?:发生)?(?:改变|变化|改写)/u.test(prose))
+        reject('settled-reality-denied', '已由Engine落账的言出法随不能被叙事描述为失败或未改变现实。');
+    }
     if (block.type === 'narr' && /你/u.test(prose))
       reject('second-person-protagonist', 'Narration addresses the player in second person instead of first person.');
     const playerSpeech = normalized(packet?.playerTurn?.speech);

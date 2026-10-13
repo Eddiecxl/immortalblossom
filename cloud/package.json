@@ -1,0 +1,12 @@
+{
+  "name": "immortalblossombeta-worker",
+  "version": "4.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test ../Source/tests/cloud-worker.test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {"wrangler": "4.149.0"}
+}

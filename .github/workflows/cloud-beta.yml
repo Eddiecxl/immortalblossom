@@ -1,0 +1,36 @@
+name: Deploy immortalblossombeta
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: immortalblossombeta-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm --prefix cloud install --no-package-lock
+      - run: node --test Source/tests/*.test.mjs
+        env:
+          LX_MINIFLARE_MODULE: ${{ github.workspace }}/cloud/node_modules/miniflare/dist/src/index.js
+      - run: node cloud/build-web.mjs
+      - name: Deploy Worker from tested main
+        if: ${{ env.CF_TOKEN != '' }}
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: cloud/node_modules/.bin/wrangler deploy --config cloud/wrangler.jsonc
+      - name: Explain missing deployment token
+        if: ${{ env.CF_TOKEN == '' }}
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo 'Worker source and assets verified. Configure the repository CLOUDFLARE_API_TOKEN secret to enable automatic deploys.'

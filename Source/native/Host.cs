@@ -47,6 +47,7 @@ static class Program {
    try {
     if(IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().AnyPort(24824)) throw new IOException("游戏服务端口 24824 仍被占用。可能有其他版本或后台服务正在运行；本启动器不会强制关闭未知进程。");
     var executable=Path.Combine(Root,"RuntimeHost.exe"); if(!File.Exists(executable)) throw new FileNotFoundException("缺少 RuntimeHost.exe，请完整解压游戏。",executable);
+    ModelManager.PrepareNarrativeBudget();
     RuntimeJob=new RuntimeLifetime(); Backend=RuntimeJob.Start(executable,Root);
     hideTimer=new System.Windows.Forms.Timer{Interval=100}; hideTimer.Tick+=(s,e)=>HideBackend(); hideTimer.Start();
     Launcher=new Shell(false); Application.Run(Launcher);

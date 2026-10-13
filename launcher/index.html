@@ -87,7 +87,7 @@
         <button id="checkButton">检查更新</button>
       </section>
 
-      <button class="start-game" id="startButton">
+      <button class="start-game" id="startButton" disabled>
         <span class="blossom blossom-a" aria-hidden="true">✿</span><span class="blossom blossom-b" aria-hidden="true">✦</span>
         <span class="start-copy"><b>开始游戏</b><small>START JOURNEY</small></span>
         <i>›</i>
@@ -163,7 +163,8 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-  <script src="./launcher-v4.js"></script>
+  <script type="module" src="../game/cloud-bridge.js"></script>
+  <script defer src="./launcher-v4.js"></script>
   <script type="module" src="./v4-audio.js"></script>
 </body>
 </html>

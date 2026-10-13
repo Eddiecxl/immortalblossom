@@ -5,7 +5,7 @@ $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $utf8=New-Object Text.UTF8Encoding($false)
 $releaseVersion=(Get-Content -LiteralPath (Join-Path $root 'version.json') -Raw | ConvertFrom-Json).version
 if($releaseVersion -notmatch '^4\.\d+\.\d+$'){throw 'Expected a Beta 4 release version.'}
-$version=@{version=$releaseVersion;launcher_min='7.2.0';save_schema=6;edition='beta-v4-astra-world';display_version='Game Beta v4'}
+$version=@{version=$releaseVersion;launcher_min='7.2.0';save_schema=6;edition='beta-v4-astra-world';display_version="Game Beta v$releaseVersion"}
 [IO.File]::WriteAllText((Join-Path $root 'game\version.json'),($version|ConvertTo-Json -Compress),$utf8)
 $files=@(Get-ChildItem -LiteralPath (Join-Path $root 'game') -File -Recurse | Where-Object Name -ne 'manifest.json' | Sort-Object FullName | ForEach-Object {
  @{path=$_.FullName.Substring($root.Length+1).Replace('\','/');sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant();size=$_.Length}

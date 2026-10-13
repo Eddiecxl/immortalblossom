@@ -17,3 +17,10 @@ Saves/
 *.pdb
 *.key
 *.log
+node_modules/
+cloud-public/
+.wrangler/
+.dev.vars*
+.env*
+*.secret
+.local/

@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -36,6 +38,28 @@ public static class ModelManager {
  static string CatalogPath { get { return Path.Combine(Program.Root,"launcher","model-catalog.json"); } }
  static string ProfilePath { get { return Path.Combine(Program.Root,"runtime","models","profiles.json"); } }
  static string ProfileBackup { get { return Path.Combine(DataRoot,"original-profiles.json"); } }
+ public static bool UpgradeNarrativeBudget(string path) {
+  if(!File.Exists(path))return false;
+  lock(guard) {
+   var data=Patches.Json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));
+   object value;if(data==null||!data.TryGetValue("profiles",out value)||!(value is IEnumerable))return false;
+   bool changed=false;
+   foreach(var entry in (IEnumerable)value) {
+    var profile=entry as Dictionary<string,object>;object budget,context;
+    if(profile==null||!profile.TryGetValue("maxOutputTokens",out budget)||!profile.TryGetValue("contextSize",out context))continue;
+    int tokens,window;if(!Int32.TryParse(Convert.ToString(budget),out tokens)||!Int32.TryParse(Convert.ToString(context),out window))continue;
+    // Migrate only the two shipped legacy defaults. Keep explicit custom limits,
+    // model selections, GPU/thread settings and unknown future profile fields.
+    if(window>=4096&&(tokens==512||tokens==640)){profile["maxOutputTokens"]=1024;changed=true;}
+   }
+   if(!changed)return false;
+   var temp=path+".narrative-"+Guid.NewGuid().ToString("N")+".tmp";
+   try {File.WriteAllText(temp,Patches.Json.Serialize(data));File.Replace(temp,path,null);}
+   finally {if(File.Exists(temp))File.Delete(temp);}
+   return true;
+  }
+ }
+ public static void PrepareNarrativeBudget() {UpgradeNarrativeBudget(ProfilePath);}
  static CatalogFile ReadCatalog() {
   var catalog=Patches.Json.Deserialize<CatalogFile>(File.ReadAllText(CatalogPath));
   if(catalog==null||catalog.schemaVersion!=1||catalog.models==null)throw new InvalidDataException("模型目录版本无法读取。");

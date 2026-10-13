@@ -45,6 +45,10 @@ function sanitizeTurn(turn) {
   if (turn.summary) output.summary = cleanText(turn.summary, 240);
   if (Number.isFinite(Number(turn.importance))) output.importance = Math.max(0, Math.min(5, Number(turn.importance)));
   if (turn.cloudAssist) output.cloudAssist = true;
+  if(turn.diagnostics?.degraded===true){
+    output.diagnostics={degraded:true,code:cleanId(turn.diagnostics.code,60),
+      reasons:Array.isArray(turn.diagnostics.reasons)?turn.diagnostics.reasons.slice(0,3).map(reason=>cleanText(reason,240)):[]};
+  }
   if (provider) output.provider = provider;
   if (model) output.model = model;
   if (createdAt) output.createdAt = createdAt;

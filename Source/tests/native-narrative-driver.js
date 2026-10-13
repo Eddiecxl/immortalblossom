@@ -15,7 +15,8 @@
       system: document.getElementById('systemLine')?.textContent,
       chronicle: document.getElementById('storyScroll')?.innerText };
   };
-  const results = [];
+  const results = [], rateWaits=[];
+  const {aiHttpError}=await import('/game/ai-errors.js');
   try {
     window.__playtestStage = 'boot';
     await wait(() => document.getElementById('bootVeil')?.hidden, 'boot');
@@ -55,23 +56,41 @@
     if(road&&scenario==='normal'){inputs.push({speech:'',action:'前往'+currentWorld.locations[road.to].name});inputs.push('这里是哪里？我刚才从哪里过来？');inputs.push({speech:'',action:'等待'+Math.max(1,road.minutes-10)+'分钟'});}
     for (const [index, input] of inputs.entries()) {
       const {speech,action=''}=typeof input==='string'?{speech:input}:input;
+      let rateAttempt=0;
+      while(true){
       await wait(() => !document.getElementById('sendButton').disabled, 'ready to send');
       const before = read()?.endId, requestCount = window.__aiTrace.length;
+      window.__playtestProgress={index,speech,action,rateAttempt,results,rateWaits,checkpoint:before,phase:'generating'};
       document.getElementById('speechInput').value = speech;
       document.getElementById('actionInput').value = action;
       document.getElementById('sendButton').click(); window.__playtestStage = 'generating-' + index;
       await delay(500);
       await wait(() => !document.getElementById('speechInput').disabled, 'turn ' + index);
       await delay(500);
+      const newRequests=window.__aiTrace.slice(requestCount),last=newRequests.at(-1);
+      if(read()?.endId===before&&last?.status===429){
+        const error=aiHttpError({status:429,headers:{get:()=>last.retryAfter||null}},last.response,true);
+        const retryAt=Date.now()+Math.max(1000,error.retryAfterMs||10000);
+        rateWaits.push({index,rateAttempt,retryAt,code:error.code,seconds:Math.ceil((retryAt-Date.now())/1000)});
+        window.__playtestProgress={index,speech,action,rateAttempt,results,rateWaits,checkpoint:before,phase:'rate-wait',retryAt};
+        window.__playtestStage='rate-wait-'+index;
+        if(retryAt-Date.now()>600000||rateAttempt++>=10)throw Object.assign(Error('Provider quota wait deferred; resume the same input at retryAt.'),{resume:window.__playtestProgress});
+        while(Date.now()<retryAt)await delay(Math.min(10000,retryAt-Date.now()));
+        continue;
+      }
       const {createTranscriptStore}=await import('/game/transcript-store.js');
       const recorded=(await createTranscriptStore().allTurns(read()?.state?.journeyId)).at(-1);
-      results.push({ speech, action, committed: read()?.endId !== before, requests: window.__aiTrace.slice(requestCount), turn:recorded, after: snapshot() });
+      const committed=read()?.endId !== before;
+      results.push({ speech, action, committed, requests: window.__aiTrace.slice(requestCount), turn:committed?recorded:null, after: snapshot() });
       window.__playtestStage = 'turn-' + index; await delay(1000);
+      window.__playtestProgress={index:index+1,results,rateWaits,checkpoint:read()?.endId,phase:'committed-or-failed'};
+      break;
+      }
     }
     const durable = await window.nativeAction('world-load');
-    window.__playtestReport = { results, trace: window.__aiTrace, durable: { endId: durable?.endId, minute: durable?.state?.astraWorld?.minute,
+    window.__playtestReport = { results, rateWaits, trace: window.__aiTrace, durable: { endId: durable?.endId, minute: durable?.state?.astraWorld?.minute,
       items:Object.values(durable?.state?.astraWorld?.items||{}),commitments:Object.values(durable?.state?.astraWorld?.simulation?.commitments||{}),
       beliefs:Object.values(durable?.state?.astraWorld?.simulation?.beliefs||{}) }, errors: window.__playtestErrors };
-  } catch (error) { window.__playtestReport = { error: String(error.stack || error), results, trace: window.__aiTrace, errors: window.__playtestErrors }; }
+  } catch (error) { window.__playtestReport = { error: String(error.stack || error), resume:error.resume,results,rateWaits,trace: window.__aiTrace, errors: window.__playtestErrors }; }
   window.__playtestDone = true;
 })();

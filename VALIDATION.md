@@ -1,4 +1,12 @@
-# Game Beta v4.1.3 验证记录
+# Game Beta v4.2.0 验证记录
+
+2026-10-13：源代码、实际安装的根版本与游戏清单已更新至4.2.0。279项Node回归全过（含真实workerd SQLite），原生更新器构建测试通过。实际安装116条游戏SHA-256清单匹配，窗口/DPI/全屏/退出/音乐交接/运行器生命周期smoke通过；SQLite自测检索、回滚、因果投影和完整性通过。
+
+真实云端五轮正常/离题/澄清/偏离路线/记忆连续通过，无机械兜底；第五轮记起先前“会说话的鱼”。明确等待60分钟后刷新保留446分钟。另一个seed验证凡人言出法随、三个手动档、分支和刷新，无需AI请求。详见docs/ACTUAL_PLAYTEST_V420.md。完整ZIP与补丁使用Source内的构建和哈希验证流程；发布状态继续记入docs/CODEX_CONTINUATION.md。
+
+当前官网：https://immortalblossombeta.eddiechanxule.workers.dev 。服务商配额、网络和模型输出仍有实际限制；本地模型没有被宣称达到云端相同表现。旧模型、存档、凭据和旧版文件全部保留。
+
+## 4.1.3 历史验证
 
 根 version.json、game/version.json 与游戏 manifest 均为 4.1.3。实际游戏已更新，启动器读取根版本；无需再次给本安装应用补丁。
 

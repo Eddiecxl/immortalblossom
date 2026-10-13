@@ -379,10 +379,22 @@ for (const button of document.querySelectorAll('[data-native-action]')) {
 }
 
 async function bootLauncher() {
+  if(!window.lxNative)await import('../game/cloud-bridge.js');
   installPetals();
   installParallax();
   await refresh();
+  if(window.lxCloud){
+    $('checkButton').hidden=true;$('updatesButton').hidden=true;$('repairButton').hidden=true;
+    $('saveButton').hidden=true;$('modelPanel').hidden=true;
+    $('updateTitle').textContent='云端版本已就绪';
+    $('updateText').textContent='直接启程。更新由云端发布，命簿在游戏中管理。';
+    $('startButton').onclick=()=>{window.lxLauncherAudio?.setBlocked(true);location.assign('/game/v4/');};
+    $('startButton').addEventListener('click',e=>{e.stopImmediatePropagation();window.lxLauncherAudio?.setBlocked(true);location.assign('/game/v4/');},true);
+    $('startButton').disabled=false;
+    return;
+  }
   await refreshModels();
+  $('startButton').disabled=false;
 
   // The window is already rendered at this point. Detection is read-only and
   // may only open a confirmation dialog; it can never install by itself.

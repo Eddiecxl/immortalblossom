@@ -16,7 +16,7 @@ window.__aiTrace=[];window.__playtestErrors=[];
 window.addEventListener('error',e=>window.__playtestErrors.push(e.message));
 window.addEventListener('unhandledrejection',e=>window.__playtestErrors.push(String(e.reason)));
 const originalFetch=window.fetch.bind(window);
-window.fetch=async (...args)=>{const target=String(args[0]);if(!target.includes('/api/ai/generate')&&!target.includes('/api/ai/cloud/generate'))return originalFetch(...args);const row={request:JSON.parse(args[1].body),started:Date.now()};window.__aiTrace.push(row);try{const r=await originalFetch(...args);row.status=r.status;row.response=await r.clone().json();row.seconds=(Date.now()-row.started)/1000;return r;}catch(e){row.error=String(e);throw e;}};
+window.fetch=async (...args)=>{const target=String(args[0]);if(!target.includes('/api/ai/generate')&&!target.includes('/api/ai/cloud/generate'))return originalFetch(...args);const row={request:JSON.parse(args[1].body),started:Date.now()};window.__aiTrace.push(row);try{const r=await originalFetch(...args);row.status=r.status;row.retryAfter=r.headers.get('retry-after');row.response=await r.clone().json();row.seconds=(Date.now()-row.started)/1000;return r;}catch(e){row.error=String(e);throw e;}};
 window.__interactionScenario='__SCENARIO__';
 const originalUUID=crypto.randomUUID.bind(crypto);let firstUUID=true;
 crypto.randomUUID=()=>{if(firstUUID){firstUUID=false;return '__SEED__';}return originalUUID();};
@@ -31,9 +31,11 @@ $replacement=@'
  async Task Smoke() {
   if(!isGame){await web.CoreWebView2.ExecuteScriptAsync("window.nativeAction('launch-game');");return;}
   await web.CoreWebView2.ExecuteScriptAsync("__DRIVER__");
-  var watch=Stopwatch.StartNew();string last="";
+  var watch=Stopwatch.StartNew();string last="",lastProgress="";
   while(watch.ElapsedMilliseconds<1200000){
    string stage=await web.CoreWebView2.ExecuteScriptAsync("window.__playtestStage||''");
+   string progress=await web.CoreWebView2.ExecuteScriptAsync("JSON.stringify(window.__playtestProgress||null)");
+   if(progress!=lastProgress){lastProgress=progress;File.WriteAllText(Path.Combine(Path.GetDirectoryName(Program.SmokeLog),"progress.json"),Patches.Json.Deserialize<string>(progress));}
    if(stage!=last){last=stage;Program.SmokeWrite("STAGE "+stage);using(var file=File.Create(Path.Combine(Path.GetDirectoryName(Program.SmokeLog),"screen-"+watch.ElapsedMilliseconds+".png"))){await web.CoreWebView2.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png,file);}}
    if(await web.CoreWebView2.ExecuteScriptAsync("window.__playtestDone===true")=="true")break;
    await Task.Delay(500);

@@ -6,7 +6,7 @@
   "hero_image": "../game/assets/celestial-gate.png",
   "medallion_image": "assets/medallion.webp",
   "hero": {
-    "kicker": "GAME BETA III · 山海长歌",
+    "kicker": "GAME BETA IV · 山海长歌",
     "verse": "此世山河\n由你落笔",
     "quote": "世界照常运行。你可以用嘴改变命运，也可能真正死在其中。",
     "seal": "落仙"
@@ -37,6 +37,11 @@
     }
   ],
   "announcements": [
+    {
+      "date": "2026-10-13",
+      "detail": "默认 Groq 云端叙事。限流排队保留原输入，重载继续原任务；命簿保存完整世界与关联记忆。明确言出法随不受境界限制。保留原动漫封面、电影 Logo 与落仙配乐。网页版本随 GitHub 发布更新。",
+      "title": "Beta v4.2.0 · 山河续章"
+    },
     {
       "date": "2026-10-01",
       "detail": "新增真实物品交付约定：提出、接受、拒绝和撤回会改变所有权及关联任务；跨回合记住人物判断和原话。修正种子物品名称、条件奖励、承诺召回和离开时的交谈上下文。减少本地复读；Groq 按实际限流时间等待，长等待保留输入与世界。保留原封面、开场和音乐。",
