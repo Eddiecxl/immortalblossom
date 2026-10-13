@@ -13,3 +13,6 @@
 验证进度：新增9项回归已观察RED→GREEN，涵盖三seed在场、生死/旅行、弹窗策略、任务终态、不复读、内部数值与自然价格、言灵真实落账、系统修复及静音曲目。真实 Groq 多轮试玩及发布状态继续记录在 Maintenance/Verification/v421-*；测试通过不等于所有叙事质量已完美。
 
 真实试玩新增发现：一次候选返回普通小说文本，缺少JSON，导致耗费额外修复请求。Worker现在对system指令明确要求JSON blocks的回合使用response_format:json_object；普通连接探测保持文本模式，不锁定worldPlan的动态结构，仍由Engine验证。边界回归已观察失败后修复。官方依据：https://console.groq.com/docs/structured-outputs 。
+
+
+2026-10-14 当前最终状态：4.2.1已安装并发布main；Cloudflare经GitHub Actions run38426906543成功部署，291/291。实际8轮unusual和另一seed2轮normal已提交；扩展normal第三轮及tone比较尚未完成，Groq完整请求已实测429 TPD，短JSON模式请求200。UI/关系/死亡复活/刷新/静音已验证，不宣称所有文风已完美。恢复：Verification中运行node v421-playtest.mjs v421-natural-18 normal resume，使用保留的同一事务与job，不重新发生成；成功后LX_PLAY_OUT=v421-tone-retested运行same-seed tone。先遵守v421-direct-tone/quota.json记录的等待再试。源码/安装/补丁已一致；包装和发布最终状态查看v421-release-state.json。保留全部原文件、模型与存档。

@@ -97,3 +97,6 @@
 ### 2026-10-13 v4.2.1 当前续作
 
 真实8轮云端 unusual 完成，死亡/复活人物栏、关系与记忆、刷新、普通掉血不弹窗、静音无播放源全部验证。发现普通询问被过度敌意化及未记录的昨日交往；增强日常反应的相称性与既往事实边界，另seed normal及same-seed tone继续实测。测试290/290，详见 NARRATIVE_PRESENTATION_V421.md 与 Maintenance/Verification/v421-*。所有原文件保留。
+
+
+2026-10-14 当前最终状态：4.2.1已安装并发布main；Cloudflare经GitHub Actions run38426906543成功部署，291/291。实际8轮unusual和另一seed2轮normal已提交；扩展normal第三轮及tone比较尚未完成，Groq完整请求已实测429 TPD，短JSON模式请求200。UI/关系/死亡复活/刷新/静音已验证，不宣称所有文风已完美。恢复：Verification中运行node v421-playtest.mjs v421-natural-18 normal resume，使用保留的同一事务与job，不重新发生成；成功后LX_PLAY_OUT=v421-tone-retested运行same-seed tone。先遵守v421-direct-tone/quota.json记录的等待再试。源码/安装/补丁已一致；包装和发布最终状态查看v421-release-state.json。保留全部原文件、模型与存档。
