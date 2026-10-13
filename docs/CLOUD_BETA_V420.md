@@ -24,6 +24,6 @@ Groq 是默认路线。网页使用私密共享 Key，个人 Groq Key 保存在�
 
 ## 部署
 
-网页启动器不检查桌面补丁；GitHub main 的工作流先测试、构建静态资源，再部署同名Worker。使用仓库部署Secret与Worker私密Groq配置。公共构建只能含game/launcher许可类型资源，不包含模型、桌面运行器、私密Key、用户存档或开发日志。免费供应商配额真实存在；共享队列减少重复和无效请求，无法承诺无限同时在线。
+网页启动器不检查桌面补丁。GitHub main工作流测试并构建静态资源；用户2026-10-13选择先保留手动部署，因为现有CI Token被Cloudflare以9109拒绝。实际生产已通过本机现有登录部署并验证。以后配置有效CLOUDFLARE_API_TOKEN后，可启用仓库Variable CLOUDFLARE_AUTO_DEPLOY=true，或手动运行workflow的deploy选项。Worker私密Groq配置保持。公共构建只能含game/launcher许可类型资源，不包含模型、桌面运行器、私密Key、用户存档或开发日志。免费供应商配额真实存在；共享队列减少重复和无效请求，无法承诺无限同时在线。
 
 真实网页/原生验证结果在VALIDATION.md及ACTUAL_PLAYTEST_V420.md记录，测试数量不等于模型文学质量。

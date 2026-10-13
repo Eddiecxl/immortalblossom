@@ -15,6 +15,6 @@ Tasks:
 - [x] Client: Groq default/migration, queued polling and countdown/cancel, retry deadline consistent across gate/proxy; browser native bridge for saves/recall/preferences, game/launcher close and fullscreen, Groq console link.
 - [x] Engine: nonrepeating director hooks from recorded changes; explicit local wait/action path without narrative API calls, memory continuity; multi-seed regressions and actual cloud normal/unusual play.
 - [x] Build web assets from release+source, test browser launcher/intro/game/save/load/settings and HTTP media; update desktop version and register supplied key via existing endpoint.
-- [ ] Push tested main and GitHub deployment workflow, deploy fresh Worker+secret, verify live website/new journey/Groq response, update installed folder/manifest/repair/full ZIP preserving originals. Save precise continuation record on interruption.
+- [x] Push tested main and GitHub workflow, deploy fresh Worker+secret, verify live website/new journey/Groq response, update installed folder/manifest/repair/full ZIP preserving originals. GitHub test/build pass; automatic publishing deferred by user's explicit choice after CI Token9109. Manual production deployed and verified.
 
 Review focus: concurrent visitors share free quota; refresh/cancel cannot duplicate worlds; 429 waits must not send early; all recalled ownership/consent dependencies survive budget; static site cannot execute desktop-only bridge; no API keys in build/logs/Git; cloud save reload retains transcript boundary.

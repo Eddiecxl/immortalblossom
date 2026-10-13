@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy to Cloudflare using the repository API Token
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -24,7 +29,7 @@ jobs:
           LX_MINIFLARE_MODULE: ${{ github.workspace }}/cloud/node_modules/miniflare/dist/src/index.js
       - run: node cloud/build-web.mjs
       - name: Deploy Worker from tested main
-        if: ${{ env.CF_TOKEN != '' }}
+        if: ${{ env.CF_TOKEN != '' && ((github.event_name == 'workflow_dispatch' && inputs.deploy) || vars.CLOUDFLARE_AUTO_DEPLOY == 'true') }}
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -34,3 +39,6 @@ jobs:
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: echo 'Worker source and assets verified. Configure the repository CLOUDFLARE_API_TOKEN secret to enable automatic deploys.'
+      - name: Manual publication selected
+        if: ${{ env.CF_TOKEN != '' && !((github.event_name == 'workflow_dispatch' && inputs.deploy) || vars.CLOUDFLARE_AUTO_DEPLOY == 'true') }}
+        run: echo 'Tests and web build verified. Production is published manually. Enable CLOUDFLARE_AUTO_DEPLOY only after configuring a valid Cloudflare token.'
