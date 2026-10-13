@@ -19,6 +19,12 @@ foreach ($file in Get-ChildItem -LiteralPath $root -File -Force) { if ($file.Nam
 foreach ($name in @('game','launcher','Licenses','repair','runtime','Source','docs')) {
  foreach ($file in Get-ChildItem -LiteralPath (Join-Path $root $name) -File -Recurse -Force) { $included.Add($file) }
 }
+# Include the cloud source required by the shipped cloud regression tests.
+# Enumerate the public source files; never include .dev.vars, caches or tokens.
+foreach ($name in @('build-web.mjs','groq-queue.mjs','worker.mjs','package.json','wrangler.jsonc')) {
+ $cloudFile=Join-Path $root ('cloud\'+$name)
+ if([IO.File]::Exists($cloudFile)) { $included.Add([IO.FileInfo]::new($cloudFile)) }
+}
 foreach ($name in @('Patches\README.txt','Updates\README.txt')) { $included.Add([IO.FileInfo]::new((Join-Path $root $name))) }
 $files=@($included | Sort-Object FullName)
 $prefix='Luoxian Beta v4/'
