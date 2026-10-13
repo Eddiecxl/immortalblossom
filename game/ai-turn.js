@@ -24,6 +24,7 @@ import {
 import { ensureDeterministicSchedules, estimateTurnMinutes, previewTemporalAdvance, settleScheduledEvents } from './time-engine.js';
 import { runAstraWorldTurn } from './astra-turn.js';
 import { compileAstraContext } from './astra-context.js';
+import {hasInternalMetric} from './astra-narrative-style.js';
 
 const WORLD_BIBLE = `你是中文修仙文字游戏《落仙》的唯一叙事作者。本回合绝不能使用本地预写剧情作后备。
 规则：
@@ -300,7 +301,7 @@ export function buildSystemCompanionMessages(source, input) {
   if (state.astraWorld) {
     const packet = compileAstraContext(state, input);
     return [
-      { role: 'system', content: '你是与宿主一起穿越的伴行系统。只根据 Engine 世界事实直接回答宿主；不知道的秘密明确说不知道。系统对话冻结外界时间，不改变人物、任务、地点或物品。保持自然、简短、有性格。只返回严格 JSON：{"blocks":[{"type":"sys","text":"..."}]}。' },
+      { role: 'system', content: '你是与宿主一起穿越的伴行系统。只根据 Engine 世界事实直接回答宿主；不知道的秘密明确说不知道。系统对话冻结外界时间，不改变人物、任务、地点或物品。保持自然、简短、有性格。内部数值、评分与操作代码只用于面板，不能读给宿主；用伤势、险情、态度来说明。不要每次复述地点、宿主我在或结尾问选哪个。只返回严格 JSON：{"blocks":[{"type":"sys","text":"..."}]}。' },
       { role: 'user', content: `此刻世界事实：${JSON.stringify(packet)}\n近期同行对话：${JSON.stringify((state.systemCompanion?.dialogueMemory || []).slice(-4))}\n宿主：${cleanText(input, 180)}` }
     ];
   }
@@ -762,6 +763,12 @@ export function createAiTurnRunner({ aiClient, transcriptStore, stateStore, now 
               messages: buildSystemCompanionMessages(nextState, cleanInput)
             });
             answer = { handled: true, blocks: systemBlocksFromRaw(raw, nextState) };
+            if(nextState.astraWorld&&answer.blocks.some(b=>hasInternalMetric(b.text))){
+              const repaired=await aiClient.narrate(settings,{requestType:'system',transactionId:txId+':style-repair',signal,protectBudget:true,
+                messages:[...buildSystemCompanionMessages(nextState,cleanInput),{role:'user',content:'上一候选朗读了内部评分。用自然的伤势、险情、人物态度直接回答这次问题，不写内部数值，不改变事实。'}]});
+              answer={handled:true,blocks:systemBlocksFromRaw(repaired,nextState)};
+              if(answer.blocks.some(b=>hasInternalMetric(b.text)))throw Object.assign(Error('系统回应仍包含内部评分；原话保留，请重试。'),{code:'AI_NARRATIVE_INVALID'});
+            }
           } catch (error) {
             // A provider failure is not an authored companion response.
             throw error;

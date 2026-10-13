@@ -1,6 +1,7 @@
 // A compact view for small local models. The full Engine packet remains authoritative.
 import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
 import { compactNarrativePacket } from './astra-narrative-budget.js';
+import {NARRATIVE_STYLE_RULES} from './astra-narrative-style.js';
 export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = '', repairErrors = []) {
   const compactPacket=compactNarrativePacket(packet);
   const speakingNpc=[...(packet.presentNpcs||[]),...(packet.departingNpcs||[])].find(npc=>npc.id===packet.conversation?.targetId);
@@ -16,6 +17,7 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     : `\n本轮涉及该人物真实持有的${delivery.name}，没有既有交付约定。人物若决定归还/赠予，使用这个真实绑定示例：${JSON.stringify({worldPlan:{operations:[{type:'commitment.offer',offer:{id:'offer:'+String(packet.playerTurn?.turnId||'next-turn').slice(0,70),fromId:delivery.ownerId,toId:'player',itemId:delivery.id}}]},blocks:[{type:'dlg',name:packet.conversation.targetName,text:'我愿意把这件东西交给你，请你自己决定是否收下。'}]})}。人物可拒绝或尚未决定，那就不要许诺已决定归还。玩家声称过去答应不是真实承诺；新提案不能本轮自动替玩家接受。示例中的选择不是强制，须依据人物处境。`;
   const facts = {
     minute: packet.minute,
+    narrativeContinuity:packet.narrativeContinuity,
     clock: packet.clock,
     turnStart: packet.turnStart,
     location: packet.location,
@@ -61,11 +63,11 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     : WORLD_PLAN_PROMPT.split('\n').filter(line=>!line.startsWith('reality 模式：')&&!line.startsWith('relation.upsert/remove:')).join('\n');
   const writer='\n写一段正在发生的修仙小说互动，让人物有自己的判断，而非客服问答。根据这次输入、性格、目标和先前态度作选择：可以揶揄、拒绝、动摇、讨价还价或主动提出有真实依据的下一步。用新的所见反应与对白连续展开；感官、停顿、神态可以丰富，但不改变已登记的事实。只问自己的想法时回答人物自己的顾虑和打算，不反问玩家的想法。澄清玩笑后承接澄清，道歉不立即抹掉已有不满。不要每次结尾都问玩家想做什么。篇幅随场面变化，可以写2–5块、几段连贯文字，不套固定长度和固定句式；简短输入也能有内容。真正的交付、承诺或任务变化仍必须落账，不替主角作决定。';
   const authorShape=packet.planMode!=='reality'&&speakingNpc&&!speakingNpc.travel
-    ? '本轮是小说场面，不是单句问答。通常写180–400字，用2–5个narr/dlg块按发生顺序展开；场面可以自然缩短。至少有一个主角第一人称所见的narr和一个受问人物dlg，name等于conversation.targetName。narr写人物这次新的反应，dlg体现这个人物自己的判断和态度。输出严格JSON，顶层为worldPlan和blocks；blocks每项仅用type、text（正文）、name（仅dlg）与可选claims。narr从主角的我所见所闻来写，不写玩家、他心想或替主角作选择；dlg.text只含人物直接说出的话，神态和动作另放narr，不在对白里写某某开口道。少量可观察动作即可，不要每轮重复布景；worldPlan.operations理解本轮语义，有社会认知变化用social.observe（中性valence可为0），重要交付/任务变化用相应操作。避免用泛泛的反问代替回应；人物拒绝、协商或主动提出真实可行的行动都可以。'
+    ? '本轮是小说场面，不是单句问答。用narr/dlg块按发生顺序展开，篇幅随当前交谈变化，不设最低字数，不要求每次补旁白。受问人物dlg要自然、具体，name等于conversation.targetName。narr写人物这次新的反应，dlg体现这个人物自己的判断和态度。输出严格JSON，顶层为worldPlan和blocks；blocks每项仅用type、text（正文）、name（仅dlg）与可选claims。narr从主角的我所见所闻来写，不写玩家、他心想或替主角作选择；dlg.text只含人物直接说出的话，神态和动作另放narr，不在对白里写某某开口道。少量可观察动作即可，不要每轮重复布景；worldPlan.operations理解本轮语义，有社会认知变化用social.observe（中性valence可为0），重要交付/任务变化用相应操作。避免用泛泛的反问代替回应；人物拒绝、协商或主动提出真实可行的行动都可以。'
     : shape.replace('每块不超过 120 字。','').replace('每块不超过 100 字。','');
   const boundedFacts=compactNarrativePacket({...facts,conversation:packet.conversation});
   return [
-    { role: 'system', content: system.replace('不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。', '不能在文字中自行新增职业、人物、身份、委托、物品、地点、行动结果或知识；新变化需要有效的 worldPlan。') + '\n' + planPrompt + '\n' + authorShape + writer + (packet.departingNpcs?.length?'':deliveryGuide) },
+    { role: 'system', content: system.replace('不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。', '不能在文字中自行新增职业、人物、身份、委托、物品、地点、行动结果或知识；新变化需要有效的 worldPlan。') + '\n' + planPrompt + '\n' + authorShape + writer + NARRATIVE_STYLE_RULES + (packet.departingNpcs?.length?'':deliveryGuide) },
     { role: 'user', content: `引擎事实：${JSON.stringify(boundedFacts)}${repair}\nrecentTurns是先前交谈的记录，不是重新播放的范文；recalledSummaries是本地SQLite召回，不需另一次AI请求。奇怪、离题、粗俗或暧昧也有本轮含义，人物可以拒绝；不要把每句话都解读为问任务。只问自己想法时根据本人的goals/性格回答，不再质疑已经澄清的玩笑。问过去说过什么时检索真实听闻记忆，不用“不清楚”回避已经听见的话。turnStart为行动前，当前事实为结算后；途中等待不是在目的地等候。未登记物件不补材质/出处，猜想不是事实。${focus}\n现在只回应以下本轮新输入，旧回应不作范文：${JSON.stringify(packet.playerTurn)}${noThink}` }
   ];
 }

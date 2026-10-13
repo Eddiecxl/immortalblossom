@@ -22,6 +22,7 @@ export function compactNarrativePacket(source,{maxChars=7000}={}) {
   const recalling=/(?:我|你).*(?:说过|说了|说的|讲过|提过|答复)|记得|复述|此前|承诺|约定/u.test(input);
   const recent=(packet.recentTurns||[]).slice(-4);
   packet.recentTurns=recent.map((turn,index)=>({id:turn.id,userText:turn.userText,summary:turn.summary,
+    narrativeOpening:String(turn.narrativeOpening||(turn.blocks||[]).find(b=>b.type==='narr'&&!b.engineOwnedPlayerSpeech)?.text||'').slice(0,80),
     ...(recalling||index===recent.length-1?{dialogue:(turn.dialogue||(turn.blocks||[]).filter(b=>b.type==='dlg')).slice(-2)
       .map(b=>({name:b.name,text:String(b.text||'').slice(0,recalling?140:240)}))}:{})}));
   const referenced=row=>[row?.id,row?.name,row?.name?.split('·')[0],row?.title]

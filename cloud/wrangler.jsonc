@@ -17,6 +17,6 @@
     ]
   },
   "migrations": [{"tag": "v1", "new_sqlite_classes": ["GroqQueue", "SessionStore"]}],
-  "vars": {"CLOUD_VERSION": "4.2.0"},
+  "vars": {"CLOUD_VERSION": "4.2.1"},
   "observability": {"enabled": false}
 }

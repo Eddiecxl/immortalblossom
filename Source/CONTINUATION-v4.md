@@ -1,3 +1,5 @@
+当前接续：4.2.1 修复真实在场人物显示，改进连续互动/自然表达/内部评分隐藏、普通伤势不弹窗及游戏默认静音。源码仍在 Maintenance/Repository。全套290项含实际workerd SQLite通过；真实云端8轮 unusual 已通过，关系负向变化、死亡/复活/记忆/刷新及默认零音乐源已验证。普通聊天与轻短身份询问正在另一seed复测，发布结果见 Maintenance/Verification/v421-release-state.json。保留所有旧文件、存档、模型与密钥，不重复已完成的4.2.0工作。
+
 # Game Beta v4 continuation
 
 Original full ZIP: `Luoxian-Beta-v4-Full.zip`, root version `4.0.0`. Working release folder is now `4.0.4`; direct 4.0.0-to-4.0.4 and 4.0.3-to-4.0.4 patches belong in `Luoxian-v4.0.4-Patches`. Player-facing Launcher reads the exact installed version from `game/version.json` and confirms a successful patch after health validation. Old v3.4 patches are not v4 inputs. Read `docs/ENGINE_CONTRACT.md`, `docs/ENGINE_MUTATION_DESIGN.md` and `AGENTS.md` before future engine changes. The new variable engine covers registered fields and explicit wording, not arbitrary natural-language mechanics.

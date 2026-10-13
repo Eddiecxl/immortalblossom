@@ -1,4 +1,11 @@
 import {ITEMS,QUESTS,REALMS,TECHNIQUES} from '../game-data.js';
+export function nearbyCharacterRows(state){
+ const world=state.astraWorld;
+ if(!world)return (state.codex?.characters||[]).slice(-5).map(name=>({id:name,name}));
+ if(world.player.travel)return [];
+ return Object.values(world.characters||{}).filter(n=>n.alive&&!n.travel&&n.locationId===world.player.locationId)
+  .map(n=>({id:n.id,name:n.name}));
+}
 export function inventoryRows(state){
  const assets=Object.values(state.rpg?.assets||{}).filter(a=>a.kind==='item');
  const names=new Set([...Object.keys(state.inventory?.items||{}),...Object.keys(state.inventory?.materials||{}),...assets.map(a=>a.name)]);

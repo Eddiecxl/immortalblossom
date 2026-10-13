@@ -8,6 +8,7 @@ export function createScore(getSettings, options = {}) {
  let ctx,master,music,effects,timer,scene=options.initialScene||'title',enabled=true,current=null,loading=null,disposed=false,unlocked=false,blocked=Boolean(options.blocked),generation=0,restartPending=false;
  const active=new Set(),crossfade=3;
  const clamp=value=>Math.max(0,Math.min(100,Number(value)||0))/100;
+ const musicAudible=()=>clamp(getSettings().music)>0;
  function ensure(){
   if(ctx||disposed||blocked)return;
   const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -19,6 +20,7 @@ export function createScore(getSettings, options = {}) {
  }
  function apply(){
   if(!ctx)return;
+  if(!musicAudible()&&(current||loading)){generation++;loading=null;retire();current=null;}
   const s=getSettings(),now=ctx.currentTime;
   master.gain.setTargetAtTime(enabled&&!blocked?clamp(s.master):0,now,.08);
   music.gain.setTargetAtTime(clamp(s.music)*.82,now,.12);
@@ -58,7 +60,7 @@ export function createScore(getSettings, options = {}) {
   if(gain.cancelAndHoldAtTime)gain.cancelAndHoldAtTime(at);else gain.cancelScheduledValues(at);
   gain.setValueAtTime(from,at);gain.setValueCurveAtTime(curve,at,duration);
  }
- function prefetch(){const track=nextCandidate();if(track)void load(track).catch(()=>{});}
+ function prefetch(){if(!musicAudible()||!enabled||blocked)return;const track=nextCandidate();if(track)void load(track).catch(()=>{});}
  function retire(){
   for(const entry of active){
    entry.gain.gain.cancelScheduledValues(ctx.currentTime);entry.gain.gain.setValueAtTime(0,ctx.currentTime);
@@ -75,14 +77,14 @@ export function createScore(getSettings, options = {}) {
  async function advance(manual=false,first=false){
   if(manual&&ctx&&!options.smoothManual)retire();
   if(loading)return loading;
-  if(!ctx||disposed||blocked||!enabled)return null;
+  if(!ctx||disposed||blocked||!enabled||!musicAudible())return null;
   const epoch=generation;
   const task=(async()=>{
    const track=first?pool()[0]:nextCandidate();if(!track)return null;
    if(manual&&!options.smoothManual)current=null;
    let buffer;
    try{buffer=await load(track);}catch(error){console.warn('落仙音乐载入失败',error);return metadata();}
-   if(disposed||blocked||!enabled||epoch!==generation)return null;
+   if(disposed||blocked||!enabled||!musicAudible()||epoch!==generation)return null;
    const source=ctx.createBufferSource(),gain=ctx.createGain(),at=ctx.currentTime+.025;
    source.buffer=buffer;source.connect(gain);gain.connect(music);
    const overlap=Math.min(crossfade,buffer.duration/3);
@@ -104,14 +106,14 @@ export function createScore(getSettings, options = {}) {
   loading=task;
   try{return await task;}finally{if(loading===task)loading=null;}
  }
- function tick(){if(!disposed&&!blocked&&enabled&&ctx?.state==='running'&&!loading&&(restartPending||!current||ctx.currentTime>=current.end-current.overlap))void advance(false,restartPending);}
+ function tick(){if(!disposed&&!blocked&&enabled&&musicAudible()&&ctx?.state==='running'&&!loading&&(restartPending||!current||ctx.currentTime>=current.end-current.overlap))void advance(false,restartPending);}
  async function unlock(){
   if(blocked||!enabled||disposed)return false;
   ensure();if(!ctx)return false;unlocked=true;
   if(!(doc?.hidden&&getSettings().muteBackground))await ctx.resume().catch(()=>{});
   if(blocked||!enabled||disposed){apply();return false;}
   apply();if(!timer)timer=every(tick,250);
-  if(!current||restartPending)await advance(false,restartPending);return ctx.state==='running';
+  if(musicAudible()&&(!current||restartPending))await advance(false,restartPending);return ctx.state==='running';
  }
  function note(freq,duration,volume,delay=0){
   if(!ctx||ctx.state!=='running')return;

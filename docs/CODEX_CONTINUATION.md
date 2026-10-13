@@ -1,3 +1,5 @@
+当前接续：4.2.1 修复真实在场人物显示，改进连续互动/自然表达/内部评分隐藏、普通伤势不弹窗及游戏默认静音。源码仍在 Maintenance/Repository。全套290项含实际workerd SQLite通过；真实云端8轮 unusual 已通过，关系负向变化、死亡/复活/记忆/刷新及默认零音乐源已验证。普通聊天与轻短身份询问正在另一seed复测，发布结果见 Maintenance/Verification/v421-release-state.json。保留所有旧文件、存档、模型与密钥，不重复已完成的4.2.0工作。
+
 # Game Beta v4 continuation
 
 Active release work on 2026-10-13: source and actual local installation are 4.2.0. Read NARRATIVE_QUALITY_WORKLOG.md and CLOUD_BETA_V420.md first. The user authorizes default cloud Groq, Worker immortalblossombeta, GitHub main deployment and a local update. Preserve ALL originals; this overrides the earlier cleanup request. Never put the supplied private beta key in Git, reports, public assets or ZIPs. It is configured as the Worker secret and native protected credential.

@@ -17,10 +17,17 @@ function fixture(extra={}){
  const node=()=>({gain:param(),connect(destination){this.connection=destination;},disconnect(){this.disconnected=true;}});
  const ctx={state:'running',currentTime:0,createGain(){const n=node();nodes.push(n);return n;},createDynamicsCompressor:node,createBufferSource(){const n={...node(),stops:[],start(t){this.startTime=t;},stop(t=ctx.currentTime){this.stops.push(t);}};sources.push(n);return n;},async resume(){this.state='running';},async suspend(){this.state='suspended';},async close(){this.state='closed';}};
  const doc={hidden:false,addEventListener(){},removeEventListener(){},dispatchEvent(){}};
- const score=createScore(()=>({master:75,music:60,sfx:65}),{contextFactory:()=>ctx,document:doc,tracks,playlists,initialScene:'intro',smoothManual:true,setInterval(fn){tick=fn;return 1;},clearInterval(){},loadBuffer:async track=>({duration:40,id:track.id}),...extra});
+ const score=createScore(extra.getSettings||(()=>({master:75,music:60,sfx:65})),{contextFactory:()=>ctx,document:doc,tracks,playlists,initialScene:'intro',smoothManual:true,setInterval(fn){tick=fn;return 1;},clearInterval(){},loadBuffer:async track=>({duration:40,id:track.id}),...extra});
  return {score,ctx,sources,nodes,tick:()=>tick?.(),async settle(){await Promise.resolve();await Promise.resolve();await Promise.resolve();},endOld(){for(const s of sources)if(s.stops.some(t=>t<=ctx.currentTime)&&!s.disconnected)s.onended?.();}};
 }
 
+test('muted music starts no recording, scene changes remain silent and opt-in starts the game playlist',async()=>{
+ let volume=0;const f=fixture({getSettings:()=>({master:75,music:volume,sfx:65})});
+ await f.score.unlock();assert.equal(f.sources.length,0);assert.equal(f.score.isEnabled(),true);
+ f.score.setScene('game');f.tick();await f.settle();assert.equal(f.sources.length,0);
+ volume=60;await f.score.unlock();assert.equal(f.score.getNowPlaying().id,'loop');
+ volume=0;f.score.apply();f.endOld();assert.equal(f.score.getPlaybackState().activeSources,0);f.score.dispose();
+});
 test('opening plays the requested songs in order and retains position at the cover',async()=>{
  const f=fixture();await f.score.unlock();assert.equal(f.score.getNowPlaying().id,'wish');assert.equal(f.score.getNowPlaying().scene,'intro');
  f.ctx.currentTime=5;f.score.setScene('title');await f.settle();assert.equal(f.sources.length,1);assert.equal(f.score.getNowPlaying().position,4.975);

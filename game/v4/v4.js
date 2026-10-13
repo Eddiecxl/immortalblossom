@@ -15,7 +15,7 @@ import { createTranscriptStore } from '../transcript-store.js';
 import { createAiTurnRunner } from '../ai-turn.js';
 import { createV31HybridClient, V31_PROVIDER_DEFAULTS } from '../v4-hybrid-client.js';
 import { normalizePlayerTurnInput, playerTurnIsEmpty, serializePlayerTurn, playerTurnDisplay } from '../player-turn.js';
-import { inventoryRows, questRows, characterRows, commitmentRows } from '../beta4/rpg-view.js';
+import { inventoryRows, questRows, characterRows, commitmentRows, nearbyCharacterRows } from '../beta4/rpg-view.js';
 import { commitInventoryAction } from '../beta4/inventory-command.js';
 import { createExperience } from '../beta4/experience.js';
 const $ = (id) => document.getElementById(id);
@@ -263,9 +263,9 @@ function renderHud() {
   dom.questHeadline.textContent = guidance.title;
   dom.questDetail.textContent = `${guidance.objective}　${guidance.why}`;
   dom.characterChips.replaceChildren();
-  const known = state.codex.characters?.slice(-5) || [];
-  if (!known.length) dom.characterChips.append(node('span', '', '尚未确认'));
-  for (const name of known) dom.characterChips.append(node('span', '', name));
+  const nearby = nearbyCharacterRows(state);
+  if (!nearby.length) dom.characterChips.append(node('span', '', state.astraWorld?.player.travel?'正在路途中':'此处暂无可交谈的人'));
+  for (const character of nearby) dom.characterChips.append(node('span', '', character.name));
 
   const recent = (state.memory.facts || []).slice().reverse().find(f => f.predicate === 'turn-outcome' || f.predicate === 'moved');
   dom.memoryPreview.textContent = recent?.object || (state.astraWorld

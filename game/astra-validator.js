@@ -1,5 +1,6 @@
 // A conservative guard for model prose. Rejected blocks never become Engine mutations.
 import { validateConditionReferences, evaluateCondition } from './astra-expression.js';
+import {hasInternalMetric,repeatsOpening} from './astra-narrative-style.js';
 const list = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const idOf = value => typeof value === 'string' ? value : value?.id ?? '';
 const placeOf = value => value?.locationId ?? value?.location ?? value?.at ?? '';
@@ -45,6 +46,7 @@ export function validateAstraNarration(world, blocks, packet = {}) {
   const recentText = list(packet?.recentTurns).flatMap(turn => list(turn?.blocks).map(block => normalized(block?.text))).filter(x => x.length >= 12);
   const errors = [];
   const accepted = [];
+  const firstNarr=candidates.find(b=>b?.type==='narr'&&!b.engineOwnedPlayerSpeech);
 
   for (const [index, block] of candidates.entries()) {
     const start = errors.length;
@@ -226,6 +228,12 @@ export function validateAstraNarration(world, blocks, packet = {}) {
       const actor = characters.find(x => idOf(x) === (arrival?.payload?.actorId ?? arrival?.actorId));
       if (arrival && (!actor || mentions(prose, actor))) reject('stale-eta', 'Due arrival is still described as pending.');
     }
+    if(block.type==='narr'&&!source.player?.travel&&characters.some(n=>!dead(n)&&!n.travel&&placeOf(n)===currentId)
+      &&/(?:周围|身边|眼前)(?:确实|已|竟|却)?(?:空无一人|没有(?:任何人|一个人|别人)|一个人也没有)/u.test(prose))
+      reject('presence-contradiction','真实存活人物仍在场，不能将周围写成无人；根据当前人物位置续写。');
+    if(hasInternalMetric(prose))reject('internal-metric','不要朗读内部数值、评分、代价或操作代码；依据相同事实写成自然伤势、险情或人物态度。');
+    if(block===firstNarr&&packet.narrativeContinuity?.sameScene&&repeatsOpening(prose,packet.narrativeContinuity.recentOpenings))
+      reject('repeated-opening','场景正在延续，开头再次铺陈了近期同样的环境。直接承接人物这次的新反应，不重写布景。');
     const line = normalized(prose);
     if (line.length >= 12 && recentText.some(previous => previous === line || previous.includes(line) || line.includes(previous) && previous.length >= 12))
       reject('repetition', 'Narration repeats a substantial recent passage.');
