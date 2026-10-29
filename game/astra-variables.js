@@ -14,23 +14,24 @@ const fieldNames = Object.freeze({
   location: { 人口: 'population', 危险: 'risk' }
 });
 
-export function numericRule(world, kind, field) {
+export function numericRule(world, kind, field, target) {
   const base = Object.hasOwn(DEFAULTS, kind) && Object.hasOwn(DEFAULTS[kind], field) ? DEFAULTS[kind][field] : null;
   if (!base) throw new Error('Engine 不支持修改该数值字段。');
-  const override = world.rules?.variables?.[kind]?.[field];
-  const candidate = override && typeof override === 'object' && !Array.isArray(override) ? override : {};
   const result = { ...base };
-  for (const key of ['min', 'max']) if (Object.hasOwn(candidate, key)) {
-    const value = Number(candidate[key]);
-    if (!Number.isFinite(value)) throw new Error('世界数值边界无效。');
-    result[key] = value;
+  for (const override of [world.rules?.variables?.[kind]?.[field], target?.numericBounds?.[field]]) {
+    const candidate = override && typeof override === 'object' && !Array.isArray(override) ? override : {};
+    for (const key of ['min', 'max']) if (Object.hasOwn(candidate, key)) {
+      const value = Number(candidate[key]);
+      if (!Number.isFinite(value)) throw new Error('世界数值边界无效。');
+      result[key] = value;
+    }
   }
   if (result.max !== undefined && result.min > result.max) throw new Error('世界数值上下界冲突。');
   return result;
 }
 
 export function clampNumeric(world, kind, field, value, target) {
-  const rule = numericRule(world, kind, field);
+  const rule = numericRule(world, kind, field, target);
   const ref = rule.maxRef ? Number(target?.[rule.maxRef]) : Infinity;
   if (!Number.isFinite(ref) && ref !== Infinity) throw new Error('关联的数值上限无效。');
   const max = Math.min(rule.max ?? Infinity, ref);
@@ -38,21 +39,38 @@ export function clampNumeric(world, kind, field, value, target) {
   return Math.max(rule.min ?? -Infinity, Math.min(max, value));
 }
 
-export function applyNumericMutation(world, mutation) {
+export function applyNumericMutation(world, mutation, { reality = false } = {}) {
   const { kind, id, field, operation } = mutation || {};
   const rule = numericRule(world, kind, field);
   if (!['set', 'delta'].includes(operation)) throw new Error('数值操作无效。');
   const amount = Number(mutation.value);
-  if (!Number.isSafeInteger(amount) || Math.abs(amount) > 1000000) throw new Error('数值变化幅度无效。');
+  if (!Number.isSafeInteger(amount) || !reality && Math.abs(amount) > 1000000) throw new Error('数值变化幅度无效。');
   const target = kind === 'player' && id === world.player?.id ? world.player : world[ENTITY_MAP[kind]]?.[id];
-  if (!target || target.id !== id || kind === 'character' && !target.alive
-    || kind === 'faction' && !target.active || kind === 'location' && target.destroyed)
+  if (!target || target.id !== id || !reality && (kind === 'character' && !target.alive
+    || kind === 'faction' && !target.active || kind === 'location' && target.destroyed))
     throw new Error('数值目标当前不可结算。');
   const before = Number(target[field]);
   if (!Number.isFinite(before)) throw new Error('目标的原有数值无效。');
-  const after = clampNumeric(world, kind, field, operation === 'set' ? amount : before + amount, target);
-  target[field] = after;
   const related = [];
+  const requested = operation === 'set' ? amount : before + amount;
+  if (!Number.isSafeInteger(requested)) throw new Error('数值结果超出了可精确保存的整数范围。');
+  if (reality) {
+    const current = numericRule(world, kind, field, target);
+    // A law changes its named target. Persist only the necessary local bounds,
+    // so ordinary effects cannot immediately clamp away the successful rewrite.
+    if (requested < current.min || requested > (current.max ?? Infinity)) {
+      target.numericBounds ||= {};
+      target.numericBounds[field] = { ...(target.numericBounds[field] || {}),
+        ...(requested < current.min ? { min: requested } : {}),
+        ...(requested > (current.max ?? Infinity) ? { max: requested } : {}) };
+    }
+    if (rule.maxRef && requested > target[rule.maxRef]) {
+      const capacity = applyNumericMutation(world, { kind, id, field: rule.maxRef, operation: 'set', value: requested }, { reality: true });
+      related.push({ field: rule.maxRef, from: capacity.before, to: capacity.after });
+    }
+  }
+  const after = reality ? requested : clampNumeric(world, kind, field, requested, target);
+  target[field] = after;
   if (kind === 'player' && field === 'maxHealth' && target.health > after) {
     related.push({ field: 'health', from: target.health, to: after });
     target.health = after;
@@ -80,7 +98,7 @@ export function applyNumericMutation(world, mutation) {
 }
 
 export function parseNumericWish(world, request) {
-  const match = String(request).match(/(气血上限|气血|财富|安全|实力|稳定|人口|危险)\s*(增加|提升|提高|减少|降低|设为|改为|变成)\s*(\d{1,7})/u);
+  const match = String(request).match(/(气血上限|气血|财富|安全|实力|稳定|人口|危险)\s*(增加|提升|提高|减少|降低|设为|改为|变成)\s*(\d+)(?!\d)/u);
   if (!match) return null;
   const [, label, verb, digits] = match;
   const named = [
@@ -95,7 +113,7 @@ export function parseNumericWish(world, request) {
   const field = fieldNames[target.kind][label];
   if (!field) throw new Error('目标没有可以这样改写的属性。');
   const value = Number(digits);
-  if (value > 1000000) throw new Error('数值变化幅度无效。');
+  if (!Number.isSafeInteger(value)) throw new Error('数值超出了可精确保存的整数范围。');
   const operation = /设为|改为|变成/u.test(verb) ? 'set' : 'delta';
   return { kind: target.kind, id: target.entity.id, field, operation,
     value: /减少|降低/u.test(verb) ? -value : value };

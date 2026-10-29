@@ -1,14 +1,17 @@
 // The director chooses an affordance from Engine facts. After repeated quiet
 // turns it records a real local rumor, rather than asking the narrator to
 // manufacture progress in prose.
+import { selectAstraHandoff } from './astra-handoff.js';
 const dangerText = {
   bandits: '商路有山匪活动的消息', flood: '上游水势正在上涨的消息',
   illness: '附近有人染病的消息', monster: '山野出现陌生兽迹的消息',
   'political dispute': '地方权势争执影响生计的消息'
 };
 
-export function directAstraScene(world, events = []) {
-  if(world.player?.travel){const trip=world.player.travel,to=world.locations?.[trip.to]?.name||'目的地';return {hook:`我正在前往${to}的途中；还需${Math.max(1,Math.ceil(trip.arriveAt-world.minute))}分钟。可以继续赶路，尚不能与出发地或目的地的人交谈。`,event:null};}
+export function directAstraScene(world, events = [], options = {}) {
+  const handoff = selectAstraHandoff(world, { ...options, events });
+  const result = event => ({ hook: handoff?.text || '', event, handoff });
+  if (!handoff || world.player?.travel) return result(null);
   world.flags ||= {};
   const director = world.flags.sceneDirector ||= { quietTurns: 0, sequence: 0 };
   const local = (events || []).filter(event => event?.playerWitnessed && event.summary
@@ -17,17 +20,17 @@ export function directAstraScene(world, events = []) {
   const causalOpportunity = Object.values(world.characters || {}).find(npc => npc.alive && !npc.travel
     && npc.locationId === world.player.locationId && npc.currentPlan?.causeEventId && npc.currentPlan?.type === 'support'
     && ['pending', 'acting'].includes(npc.currentPlan.state));
-  if (causalOpportunity) return { hook: causalOpportunity.name + '记得此前的事情，有意相助；可以问问对方愿意提供什么。', event: null };
+  if (causalOpportunity) return { hook: causalOpportunity.name + '记得此前的事情，有意相助；可以问问对方愿意提供什么。', event: null,
+    handoff: selectAstraHandoff(world, { ...options, events, targetId: options.targetId || causalOpportunity.id }) };
   if (local.length) {
     director.quietTurns = 0;
-    return { hook: local.at(-1).summary, event: null };
+    return result(null);
   }
   director.quietTurns += 1;
   const quest = Object.values(world.quests || {}).find(entry =>
     ['active', 'available', 'mutated'].includes(entry.state) && entry.targetLocationId === world.player.locationId);
   if (director.quietTurns < 3) {
-    return { hook: quest ? `${quest.title}仍在推进，期限和相关人物不会停等。`
-      : `我仍在${current?.name || '此地'}，身边人物与世界时辰继续变化。`, event: null };
+    return result(null);
   }
   director.quietTurns = 0;
   const id = `director:${world.minute}:${director.sequence++}`;
@@ -39,10 +42,9 @@ export function directAstraScene(world, events = []) {
     ? `${current?.name || '此地'}传出警示：通往${world.locations[road.to]?.name || '邻地'}的路近来不太平，出发前最好先打听。`
     : `${current?.name || '此地'}出现${dangerText[world.flags.earlyDanger] || '局势变化的消息'}，当地人开始留意。`;
   if((world.rumors||[]).some(r=>r.locationId===world.player.locationId&&r.summary===summary)) {
-    return {hook:quest?`${quest.title}的当前状态是${quest.state}；按真实条件继续推进，不能重放任务开端。`
-      : '当前没有新的公开变故；人物仍会回应这次输入，时辰和各自计划继续推进。不要重播旧传闻或重新介绍已经见过的人。',event:null};
+    return result(null);
   }
-  const present = Object.values(world.characters || {}).filter(npc => npc.alive && npc.locationId === world.player.locationId);
+  const present = Object.values(world.characters || {}).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId);
   const rumorId = `rumor:${id}`;
   world.rumors ||= [];
   world.rumors.push({ id: rumorId, originEventId: id, locationId: world.player.locationId,
@@ -57,5 +59,5 @@ export function directAstraScene(world, events = []) {
   const event = { id, minute: world.minute, type: 'scene_director', locationId: world.player.locationId,
     actors: present.slice(0, 5).map(npc => npc.id), summary, playerWitnessed: true };
   world.history.push(event);
-  return { hook: summary, event };
+  return result(event);
 }

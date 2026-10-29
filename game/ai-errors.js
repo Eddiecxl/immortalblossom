@@ -1,4 +1,10 @@
 // Shared, sanitized error classification. Never display raw upstream bodies or keys.
+export function aiFormatError(code = 'AI_INVALID_JSON') {
+  return Object.assign(new Error(code === 'AI_OUTPUT_TRUNCATED'
+    ? 'AI 回复达到输出上限，尚未完整；输入和世界保持原样。'
+    : 'AI 返回的 JSON 不完整或格式无效；输入和世界保持原样。'), {code});
+}
+
 export function retryAfterMs(response, data, fallback = 10000, now = Date.now()) {
   if (Number.isFinite(data?.retryAfterMs) && data.retryAfterMs > 0) return Math.ceil(data.retryAfterMs);
   const header = response?.headers?.get?.('retry-after');
@@ -24,6 +30,10 @@ export function aiHttpError(response, data = {}, trustedProxy = false) {
   const status = response.status;
   const upstreamCode = String(data?.code || data?.error?.code || data?.error?.type || '');
   const message = String(data?.error?.message || data?.error || '');
+  if ((trustedProxy && ['AI_OUTPUT_TRUNCATED', 'AI_INVALID_JSON'].includes(upstreamCode))
+    || upstreamCode === 'json_validate_failed') {
+    return Object.assign(aiFormatError(upstreamCode === 'AI_OUTPUT_TRUNCATED' ? upstreamCode : 'AI_INVALID_JSON'), {status});
+  }
   if (trustedProxy && ['AI_TOKEN_COOLDOWN', 'AI_INPUT_BUDGET', 'AI_RATE_LIMITED', 'AI_SITE_LIMITED'].includes(upstreamCode) && typeof data.error === 'string') {
     const retry = upstreamCode === 'AI_INPUT_BUDGET' ? 0 : retryAfterMs(response, data);
     return Object.assign(new Error(data.error.slice(0, 300)), { code: upstreamCode, status, ...(retry ? { retryAfterMs: retry } : {}) });

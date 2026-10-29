@@ -95,6 +95,44 @@ test('structured game turns request JSON object mode while plain connection prob
  assert.equal(sent[1].response_format,undefined);
 });
 
+test('an output-limited cloud completion is a terminal format failure and is never sent again', async () => {
+  let calls=0;
+  const app=harness({upstream:async()=>{
+    calls++;
+    return Response.json({choices:[{message:{content:'{"blocks":[{"type":"narr","text":"这一段表面完整。"}]}'},finish_reason:'length'}],usage:{prompt_tokens:15,completion_tokens:256}});
+  }});
+  const player=app.visitor();
+  const job=await (await player.request('/api/ai/cloud/generate',payload('truncated-output'))).json();
+  await app.fire();
+  const response=await player.request(jobPath(job));
+  const failure=await response.json();
+  assert.equal(response.status,422);
+  assert.equal(failure.code,'AI_OUTPUT_TRUNCATED');
+  assert.equal(failure.terminalJob,true);
+  assert.equal(failure.text,undefined);
+  await player.request('/api/ai/cloud/generate',payload('truncated-output'));
+  await app.fire();
+  assert.equal(calls,1);
+});
+
+test('cloud JSON validation failures remain repairable format errors without exposing failed generations', async () => {
+  let calls=0;
+  const app=harness({upstream:async()=>{
+    calls++;
+    return Response.json({error:{code:'json_validate_failed',message:'private upstream account details',failed_generation:'private partial candidate'}},{status:400});
+  }});
+  const player=app.visitor();
+  const job=await (await player.request('/api/ai/cloud/generate',payload('invalid-json-output'))).json();
+  await app.fire();
+  const response=await player.request(jobPath(job));
+  const failure=await response.json();
+  assert.equal(response.status,422);
+  assert.equal(failure.code,'AI_INVALID_JSON');
+  assert.equal(failure.terminalJob,true);
+  assert.doesNotMatch(JSON.stringify(failure),/private/);
+  assert.equal(calls,1);
+});
+
 test('cloud status uses the shared server secret without exposing it and disables local AI', async () => {
   const app = harness();
   const player = app.visitor();

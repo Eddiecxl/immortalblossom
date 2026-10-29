@@ -255,6 +255,7 @@ function narrationFrom(raw, requestType) {
 }
 
 function systemBlocksFromRaw(raw, state) {
+  if(state?.astraWorld)return narrationFrom(raw,'system').blocks;
   try {
     const parsed = narrationFrom(raw, 'system');
     if (Array.isArray(parsed?.blocks) && parsed.blocks.some(block => cleanText(block?.text, 2000))) return parsed.blocks;
@@ -758,11 +759,16 @@ export function createAiTurnRunner({ aiClient, transcriptStore, stateStore, now 
         }
         if (!answer.handled) {
           try {
-            const raw = await aiClient.narrate(settings, {
-              requestType: 'system', transactionId: txId, signal, protectBudget: true,
-              messages: buildSystemCompanionMessages(nextState, cleanInput)
-            });
-            answer = { handled: true, blocks: systemBlocksFromRaw(raw, nextState) };
+            for(let attempt=0;attempt<2;attempt++){
+              try{
+                const raw = await aiClient.narrate(settings, {
+                  requestType: 'system', transactionId: attempt?txId+':format-repair':txId, signal, protectBudget: true,
+                  ...(attempt?{maxTokens:600}:{}),
+                  messages: [...buildSystemCompanionMessages(nextState, cleanInput),...(attempt?[{role:'user',content:'上一条回复格式不完整。用一两句自然中文回应，并输出完整闭合的JSON：{"blocks":[{"type":"sys","text":"正文"}]}。'}]:[])]
+                });
+                answer = { handled: true, blocks: systemBlocksFromRaw(raw, nextState) };break;
+              }catch(error){if(attempt||!['AI_INVALID_JSON','AI_OUTPUT_TRUNCATED'].includes(error?.code))throw error;}
+            }
             if(nextState.astraWorld&&answer.blocks.some(b=>hasInternalMetric(b.text))){
               const repaired=await aiClient.narrate(settings,{requestType:'system',transactionId:txId+':style-repair',signal,protectBudget:true,
                 messages:[...buildSystemCompanionMessages(nextState,cleanInput),{role:'user',content:'上一候选朗读了内部评分。用自然的伤势、险情、人物态度直接回答这次问题，不写内部数值，不改变事实。'}]});

@@ -2,6 +2,7 @@ import { normalizeAstraWorld } from './astra-world.js';
 import { advanceAstraWorld } from './astra-scheduler.js';
 import { sceneAffordances } from './astra-affordances.js';
 import { seedHash } from './astra-seed.js';
+import { selectAstraHandoff } from './astra-handoff.js';
 
 const BACKGROUND = {
   'farming household': '农家子弟', 'merchant family': '商户子弟',
@@ -39,6 +40,7 @@ export function createAstraOpening(source) {
   const chance = CHANCES[world.flags.earlyOpportunity] || '眼前也有新的机会';
   const people = Object.values(world.characters || {}).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId);
   const affordance = sceneAffordances(world);
+  const handoff = selectAstraHandoff(world);
   const witnessed = people[0]?.name ? `${people[0].name}在这里；这位${affordance.role}${affordance.goal ? `眼下牵挂着${affordance.goal}` : '可以问话'}` : '眼前暂无可以直接问话的熟面孔';
   const cue = `${danger}；${chance}。${witnessed}。`;
   const rumorId = 'rumor:opening-opportunity';
@@ -58,7 +60,7 @@ export function createAstraOpening(source) {
   state.worldState.origin = `我穿越后在${location.name}醒来，这具身体原本是${background}。`;
   state.worldState.sceneLabel = location.name;
   state.codex.locations = [...new Set([...(state.codex.locations || []), location.name])];
-  state.director.sceneGoal = affordance.nextStep;
+  state.director.sceneGoal = handoff?.nextAction || affordance.nextStep;
   state.story.flags.seededOpening = true;
   world.flags.transmigrated = true;
   const arrivals = [
@@ -69,11 +71,34 @@ export function createAstraOpening(source) {
   const blocks = [
     { type: 'narr', text: arrivals[seedHash(world.seed,'opening:arrival') % arrivals.length] },
     { type: 'narr', text: cue },
-    { type: 'sys', text: `宿主，先别慌。你现在身处${location.name}。可以先${affordance.nextStep}。刚听到的消息尚是传闻，要核实才能行动；你也可以查看地图，另选去向。` }
+    { type: 'sys', text: `宿主，你现在身处${location.name}。刚听到的消息尚是传闻，还得亲自核实。` }
   ];
+  if (handoff?.targetId) {
+    const npc = world.characters[handoff.targetId];
+    // First contact concerns this encounter, not abstract life-goal advice.
+    const questions = npc.personality==='guarded'||npc.personality==='proud'
+      ? [`喂，你在这儿站半天了。找谁？`, `你刚才怎么了？还能听见我说话吗？`]
+      : [`哎，你醒了？先别急着起来。你叫什么？`,
+        `你脸色不太好。要不要先歇一会儿？`,
+        `怎么一个人在这儿发愣？是迷路了，还是在等人？`,
+        `刚才叫你都没反应。现在好些了吗？`];
+    const text = questions[seedHash(world.seed, 'opening:contact') % questions.length];
+    blocks.push({ type: 'dlg', name: npc.name, text });
+    const id = 'opening:contact';
+    const summary = `${npc.name}向我开口：“${text}”`;
+    world.history.push({ id, type: 'opening_contact', minute: world.minute, locationId: location.id,
+      actors: [npc.id, 'player'], summary, playerWitnessed: true });
+    npc.memories ||= [];
+    npc.memories.push({ id: `memory:${id}:${npc.id}`, eventId: id, minute: world.minute,
+      locationId: location.id, summary, source: 'opening-contact' });
+    npc.knowledge = [...new Set([...(npc.knowledge || []), id])];
+    world.player.knowledge = [...new Set([...(world.player.knowledge || []), id])];
+    npc.metPlayer = true;
+    world.flags.conversation = { npcId: npc.id, locationId: location.id, minute: world.minute };
+  } else if (handoff) blocks.push({ type: 'narr', text: handoff.text });
   const turn = {
     id: 'opening:astra', kind: 'world', userText: '', speech: '', actionText: '',
-    provider: 'engine', model: 'seeded-world', summary: cue, blocks, createdAt: state.updatedAt
+    provider: 'engine', model: 'seeded-world', summary: cue, blocks, handoff, createdAt: state.updatedAt
   };
   return { state, turn };
 }

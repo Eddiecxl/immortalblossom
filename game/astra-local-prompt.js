@@ -1,5 +1,5 @@
 // A compact view for small local models. The full Engine packet remains authoritative.
-import { WORLD_PLAN_PROMPT } from './astra-plan-prompt.js';
+import { worldPlanPrompt } from './astra-plan-prompt.js';
 import { compactNarrativePacket } from './astra-narrative-budget.js';
 import {NARRATIVE_STYLE_RULES} from './astra-narrative-style.js';
 export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = '', repairErrors = []) {
@@ -42,6 +42,7 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     recalledSummaries:packet.recalledSummaries,
     rumors: packet.rumors,
     directorHook: packet.directorHook,
+    turnHandoff: packet.turnHandoff,
     settledEvents: visibleEvents
   };
   const system = '你是《落仙》的中文叙事作者。只根据给定的引擎事实写本回合，不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。presentNpcs 才是眼前真实人物；传闻不等于在场人物的身份、职业或委托。不得把传闻里的事安在眼前人物身上。玩家说“我来帮你”时，只能根据该人物已登记的 goals 与 activeQuests 回答；没有求助事实时不得替人物新造求助或具体任务，可以请玩家说明想帮什么。conversation.targetId 有值时，该在场人物必须直接回答玩家本轮问话；不知道就明确说不知道，不要答非所问或重复旧话。玩家原话由游戏展示，不要复述，不要写“我说，”。不得替玩家决定行动或发言。引擎已结算的事件不得重算。只输出严格 JSON，不要 effects、代码围栏或额外文字。';
@@ -59,8 +60,7 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     +(/决定|后果|接下来|下一步/u.test(packet.playerTurn?.text||packet.playerTurn?.speech||'')?'\n玩家问已作决定的后果：依据当前归属、约定、任务和关系说明已发生的变化；没有另一个已约定的行动，就说明尚未另作约定。不重说上一轮的归属答句，不重新自我介绍，也不编造新的后果。':'')
     + (repairErrors.length ? `\n上一候选未通过事实校验：${repairErrors.join('；').slice(0, 240)}。仅纠正这些错误。` : '');
   const noThink = /^qwen3(?:[.\-]|\d)/iu.test(String(modelName).split(/[\\/]/u).at(-1)) ? '\n/no_think' : '';
-  const planPrompt = packet.planMode === 'reality' ? WORLD_PLAN_PROMPT
-    : WORLD_PLAN_PROMPT.split('\n').filter(line=>!line.startsWith('reality 模式：')&&!line.startsWith('relation.upsert/remove:')).join('\n');
+  const planPrompt = worldPlanPrompt(packet.planMode);
   const writer='\n写一段正在发生的修仙小说互动，让人物有自己的判断，而非客服问答。根据这次输入、性格、目标和先前态度作选择：可以揶揄、拒绝、动摇、讨价还价或主动提出有真实依据的下一步。用新的所见反应与对白连续展开；感官、停顿、神态可以丰富，但不改变已登记的事实。只问自己的想法时回答人物自己的顾虑和打算，不反问玩家的想法。澄清玩笑后承接澄清，道歉不立即抹掉已有不满。不要每次结尾都问玩家想做什么。篇幅随场面变化，可以写2–5块、几段连贯文字，不套固定长度和固定句式；简短输入也能有内容。真正的交付、承诺或任务变化仍必须落账，不替主角作决定。';
   const authorShape=packet.planMode!=='reality'&&speakingNpc&&!speakingNpc.travel
     ? '本轮是小说场面，不是单句问答。用narr/dlg块按发生顺序展开，篇幅随当前交谈变化，不设最低字数，不要求每次补旁白。受问人物dlg要自然、具体，name等于conversation.targetName。narr写人物这次新的反应，dlg体现这个人物自己的判断和态度。输出严格JSON，顶层为worldPlan和blocks；blocks每项仅用type、text（正文）、name（仅dlg）与可选claims。narr从主角的我所见所闻来写，不写玩家、他心想或替主角作选择；dlg.text只含人物直接说出的话，神态和动作另放narr，不在对白里写某某开口道。少量可观察动作即可，不要每轮重复布景；worldPlan.operations理解本轮语义，有社会认知变化用social.observe（中性valence可为0），重要交付/任务变化用相应操作。避免用泛泛的反问代替回应；人物拒绝、协商或主动提出真实可行的行动都可以。'

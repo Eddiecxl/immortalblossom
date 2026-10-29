@@ -2,7 +2,9 @@ import { assertSafeData, worldEntity, validateCondition, validateConditionRefere
 import { ensureSimulation, recordCausalEvent, captureWorldChanges, companionNotification, isSpeculativeInput } from './astra-causality.js';
 import { applyNumericMutation } from './astra-variables.js';
 import { resolveStructuredEffect, consumeGeneratedItem } from './astra-effects.js';
-import { killNpc } from './astra-reality.js';
+import { killNpc, relocateRealityActor, resurrectRealityNpc } from './astra-reality.js';
+import { rewriteCultivation } from './astra-rules.js';
+import {explicitRealityStatement} from './astra-reality-intent.js';
 import { checkTerminalWorld } from './astra-terminal.js';
 import { reconcileQuestArcs, respondQuestArc } from './astra-quests.js';
 import { transferOwnedItem, offerCommitment, respondCommitment } from './astra-commitments.js';
@@ -37,10 +39,13 @@ function actionNamesItem(context,item,action){
     &&row.ownerId==='player'&&String(row.name||'').split('·')[0]===alias).length===1;
 }
 const worldScope = value => /天下|全世界|整个世界|世界规则|世界法则|所有(?:人|生命|人物|势力|地点)|全部(?:人|生命|人物|势力|地点)/u.test(value);
+const realityInput = context => String(context.realityStatement
+  || [context.input?.action, context.input?.speech].find(value => value?.includes('言出法随'))
+  || context.input?.action || context.input?.speech || '');
 function authorizeScope(world, op, context) {
   if (!context.enforceScope || context.mode !== 'reality' || op.type === 'concept.defer') return;
-  const input = String(context.input?.action || context.input?.speech || '');
-  if (isSpeculativeInput(input)) fail('假设或询问不授权执行言灵。');
+  const input = realityInput(context);
+  if (!explicitRealityStatement(input)) fail('假设或询问不授权执行言灵。');
   if (worldScope(input)) return;
   const creative = /创造|诞生|变出|制造|炼成|出现|召唤|生成|造出/u.test(input);
   if (op.type === 'entity.create' && !creative) fail('本轮没有授权创造新实体。');
@@ -51,11 +56,12 @@ function authorizeScope(world, op, context) {
         : op.type === 'effect.apply' ? [op.itemId] : [];
   if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟/u.test(input)) fail('本轮没有授权改写关系。');
   for (const id of targetIds) {
-    const entity = requireEntity(world, id);
+    const entity = context.scopeEntities?.[id] || requireEntity(world, id);
     if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name))) fail('言灵超出了明确指令中的目标范围。');
   }
   const remoteLocation = op.type === 'entity.create' ? op.entity.locationId || op.entity.homeId
-    : op.type === 'quest.create' ? op.quest.targetLocationId : null;
+    : op.type === 'quest.create' ? op.quest.targetLocationId
+      : op.type === 'entity.update' ? op.changes?.locationId : null;
   if (remoteLocation && remoteLocation !== world.player.locationId
     && !input.includes(world.locations[remoteLocation]?.name || '\u0000')) fail('未指定新实体的远处落点。');
 }
@@ -113,12 +119,17 @@ function updateEntity(world, op, context) {
   if (!changes || typeof changes !== 'object' || Array.isArray(changes)) fail('实体变化无效。');
   const kind = target.id === 'player' ? 'player' : Object.entries(domains).find(([, domain]) => world[domain]?.[target.id])?.[0];
   if (context.enforceScope) {
-    const input = String(context.input?.action || context.input?.speech || '');
+    const input = realityInput(context);
     const global = worldScope(input);
-    if (!global && !(target.id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(target.name)))
+    const namedTarget = context.scopeEntities?.[target.id] || target;
+    if (!global && !(target.id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(namedTarget.name)))
       fail('言灵提案超出了玩家明确指定的目标范围。');
   }
-  for (const [field, value] of Object.entries(changes)) {
+  // JSON object key order has no gameplay meaning. Restore life before applying
+  // requested attributes, and relocate last so resurrection's fallback location
+  // cannot overwrite the explicit destination. Separate operations retain order.
+  const priority = field => field === 'alive' ? 0 : field === 'locationId' ? 2 : 1;
+  for (const [field, value] of Object.entries(changes).sort(([a], [b]) => priority(a) - priority(b))) {
     if (context.mode !== 'reality') fail('直接属性改写需要言出法随；普通动作须用有前置条件的效果或转移。');
     if (['name', 'gender', 'occupation', 'description', 'physicalCondition'].includes(field)) {
       if (typeof value !== 'string' || !clean(value)) fail('身份属性无效。');
@@ -127,15 +138,16 @@ function updateEntity(world, op, context) {
       if (!Array.isArray(value) || value.some(x => typeof x !== 'string')) fail('人物目标无效。');
       target[field] = value.map(x => clean(x, 100)).slice(0, 8);
     } else if (['health', 'maxHealth', 'wealth', 'safety', 'power', 'stability', 'population', 'risk'].includes(field)) {
-      applyNumericMutation(world, { kind, id: target.id, field, operation: 'set', value });
+      applyNumericMutation(world, { kind, id: target.id, field, operation: 'set', value }, { reality: true });
+    } else if (field === 'locationId' && ['player', 'character'].includes(kind)) {
+      relocateRealityActor(world, target, value);
+    } else if (field === 'cultivation' && ['player', 'character'].includes(kind)) {
+      rewriteCultivation(world, target, value);
+    } else if (field === 'invincible' && kind === 'player' && typeof value === 'boolean') {
+      target.invincible = value;
     } else if (field === 'alive' && kind === 'character' && typeof value === 'boolean') {
       if (!value) killNpc(world, target, context.turnId);
-      else {
-        const locationId = target.lastKnownLocationId || target.homeId || world.player.locationId;
-        if (world.locations[locationId]?.destroyed) fail('复生人物没有可用的落点。');
-        target.alive = true; target.deathAt = null; target.locationId = locationId;
-        target.travel = null; target.physicalCondition = 'recovering';
-      }
+      else resurrectRealityNpc(world, target);
     }
     else fail('属性尚无机械规则：' + field);
   }
@@ -213,7 +225,7 @@ function social(world, op, context) {
   if (!npc || !present(world, npc.id) || op.subjectId !== 'player') fail('社会认知必须有真实听者和主体。');
   const input = String(context.input?.speech || '') + String(context.input?.action || '');
   if (!op.evidence || !input.includes(op.evidence)) fail('社会认知缺少本轮输入证据。');
-  if (typeof op.meaning !== 'string' || !/^[a-z][a-z_-]{1,39}$/u.test(op.meaning)
+  if (typeof op.meaning !== 'string' || !/^[\p{L}][\p{L}\p{N}_ -]{1,39}$/u.test(op.meaning)
     || !Number.isFinite(op.valence) || Math.abs(op.valence) > 1) fail('社会认知类型无效。');
   const sim = ensureSimulation(world);
   const id = context.turnId + ':social:' + npc.id;
@@ -235,14 +247,21 @@ export function applyWorldPlan(source, plan, context) {
   if (!context?.turnId || !['ordinary', 'reality'].includes(context.mode)) fail('提案缺少回合或执行范围。');
   if (JSON.stringify(plan).length > 18000 || !Array.isArray(plan?.operations) || plan.operations.length > 24)
     fail('提案超出本轮有界预算。');
+  if (context.mode === 'reality' && plan.operations.some(op => op.type === 'concept.defer')
+    && plan.operations.some(op => op.type !== 'concept.defer'))
+    fail('言灵计划仍有未结算部分，必须完整执行或保留整个请求待处理。');
   const world = structuredClone(source);
-  context={...context,actionItems:Object.values(source.items).map(item=>({id:item.id,name:item.name,
+  context={...context,scopeEntities:Object.fromEntries([source.player, ...Object.values(source.characters),
+    ...Object.values(source.factions), ...Object.values(source.locations), ...Object.values(source.items)]
+    .map(entity => [entity.id, { id: entity.id, name: entity.name }])),actionItems:Object.values(source.items).map(item=>({id:item.id,name:item.name,
     ownerId:item.ownerId,destroyed:item.destroyed}))};
   let sim = ensureSimulation(world);
   if (sim.transactions[context.turnId]) return { world, events: [] };
   const eventStart = new Set(Object.keys(sim.events));
   const consumed = new Set();
+  const changedOperations = [];
   for (const op of plan.operations) {
+    const beforeTarget = op.type === 'entity.update' ? JSON.stringify(worldEntity(world, op.targetId)) : null;
     sim = ensureSimulation(world);
     authorizeScope(world, op, context);
     if (op.condition) {
@@ -271,7 +290,7 @@ export function applyWorldPlan(source, plan, context) {
       }
       case 'rule.upsert': {
         if (context.mode !== 'reality') fail('世界规则改写需要明确的言出法随。');
-        if (context.enforceScope && !worldScope(context.input?.action || context.input?.speech || ''))
+        if (context.enforceScope && !worldScope(realityInput(context)))
           fail('个人言灵不能暗中改写整个世界规则。');
         const rule = op.rule;
         if (!rule?.id || !rule.trigger || !clean(rule.trigger, 60)) fail('规则缺少事件触发条件。');
@@ -289,26 +308,38 @@ export function applyWorldPlan(source, plan, context) {
         break;
       default: fail('未知世界操作：' + op.type);
     }
+    if (op.type !== 'entity.update' || beforeTarget !== JSON.stringify(worldEntity(world, op.targetId))) changedOperations.push(op);
   }
   captureWorldChanges(source, world, { ...context, action: context.mode === 'reality' ? 'rewrite' : 'change' });
+  let settledCost=0;
   if (context.mode === 'reality') {
     const costs = { 'entity.create': 24, 'entity.update': 8, 'relation.upsert': 6, 'relation.remove': 6,
       'rule.upsert': 30, 'quest.create': 12, 'resource.transfer': 4, 'effect.apply': 4 };
-    const cost = plan.operations.reduce((sum, op) => {
-      if (op.type === 'entity.update') {
-        const prior = worldEntity(source, op.targetId);
-        if (prior && Object.entries(op.changes).every(([field, value]) => JSON.stringify(prior[field]) === JSON.stringify(value))) return sum;
+    const charged=new Set();
+    const cost = changedOperations.reduce((sum, op) => {
+      if(op.type!=='entity.update')return sum+(costs[op.type]||0);
+      if(charged.has(op.targetId))return sum;
+      charged.add(op.targetId);
+      const before=worldEntity(source,op.targetId)||{},after=worldEntity(world,op.targetId);
+      const fields=new Set(changedOperations.filter(row=>row.type==='entity.update'&&row.targetId===op.targetId).flatMap(row=>Object.keys(row.changes)));
+      for(const field of fields){
+        if(JSON.stringify(before[field])===JSON.stringify(after[field]))continue;
+        if(typeof before[field]==='number'&&typeof after[field]==='number')sum+=8+Math.ceil(Math.log10(1+Math.abs(after[field]-before[field])))*3;
+        else sum+=field==='alive'?(after[field]?45:30):field==='cultivation'?40:8;
       }
-      return sum + (costs[op.type] || 0);
+      return sum;
     }, 0);
+    settledCost=cost;
     if (cost) {
       world.flags.causalDebt = Number(world.flags.causalDebt || 0) + cost;
-      if (!world.player.invincible) world.player.health = Math.max(0, world.player.health - Math.min(40, Math.ceil(cost / 3)));
-      companionNotification(world, 'cost:' + context.turnId, '言灵已落账，新增因果债：' + cost + '。', context.turnId);
+      const protectsHealth=changedOperations.some(op=>op.type==='entity.update'&&op.targetId==='player'
+        &&Object.keys(op.changes).some(key=>['health','maxHealth','alive','physicalCondition'].includes(key)));
+      if (!world.player.invincible&&!protectsHealth) world.player.health = Math.max(0, world.player.health - Math.min(40, Math.ceil(cost / 3)));
+      companionNotification(world, 'cost:' + context.turnId, '成了。这次改写牵动的因果，我会替你记着。', context.turnId);
     }
   }
   reconcileQuestArcs(world); checkTerminalWorld(world);
-  world.simulation.transactions[context.turnId] = { id: context.turnId, minute: world.minute, operations: plan.operations.length };
+  world.simulation.transactions[context.turnId] = { id: context.turnId, minute: world.minute, mode:context.mode, cost:settledCost, operations: plan.operations.length };
   return { world, events: Object.values(world.simulation.events).filter(event => !eventStart.has(event.id)) };
 }
 

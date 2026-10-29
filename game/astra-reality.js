@@ -14,6 +14,10 @@ const factionByName = (world, request) => Object.values(world.factions || {})
 const locationByName = (world, request) => Object.values(world.locations || {})
   .filter(location => request.includes(location.name)).sort((a, b) => b.name.length - a.name.length)[0];
 
+function semanticRequired(message = '这条言灵需要完整的语义计划，不能只执行其中一部分。') {
+  throw Object.assign(new Error(message), { code: 'REALITY_SEMANTIC_REQUIRED' });
+}
+
 export function planRealityMutation(world, statement) {
   const request = text(statement).replace(/^言出法随\s*[:：]?\s*/u, '');
   if (!request) throw new Error('言灵没有写下要实现的结果。');
@@ -21,6 +25,17 @@ export function planRealityMutation(world, statement) {
   const npc = aliveNpcByName(world, request);
   const faction = factionByName(world, request);
   const location = locationByName(world, request);
+  // This fast path can execute one fully understood effect only. Compositions
+  // and several targets belong to the atomic semantic planner, never first-hit
+  // keyword execution. The checks describe syntax, not individual stories.
+  const clauses = request.replace(/[，,。；;！？!?\s]+$/u, '');
+  const syntax = [world.player, ...Object.values(world.characters || {}), ...Object.values(world.locations || {}), ...Object.values(world.factions || {}), ...Object.values(world.items || {})]
+    .filter(row => row.name).sort((a, b) => b.name.length - a.name.length)
+    .reduce((remaining, row) => remaining.split(row.name).join(''), clauses);
+  const namedActors = Object.values(world.characters || {}).filter(row => row.name && request.includes(row.name));
+  if (/不再|不要|不得|不许|不能|不会|没有|无须|别让|如果|除非|只要|每当|一旦|取消|解除/u.test(request)) semanticRequired();
+  if (/[，,。；;！？!?]/u.test(clauses) || /并且|并|而且|同时|以及|然后|之后|且|再把|再让|再将/u.test(clauses)
+    || /和|与|及/u.test(syntax) || namedActors.length > 1) semanticRequired();
   if (/(?:全宇宙|宇宙|世界|天下).*(?:所有|一切).*(?:生命|生灵).*(?:消失|死亡|毁灭|灭绝)|(?:杀死|抹去|消灭).*(?:全宇宙|天下|世界).*(?:生命|生灵)/u.test(request)) {
     type = 'all_life_extinction'; scale = 100;
   } else if (/(?:毁灭|摧毁|抹去).*(?:星球|世界|天地)/u.test(request)) {
@@ -69,9 +84,40 @@ export function planRealityMutation(world, statement) {
     if (!template) throw new Error('要创造的物品不在 Engine 物品目录中。');
     type = 'create_item'; targetId = template.id; scale = 25;
   } else throw new Error('此言灵尚不能被 Engine 解析为明确的现实变更；世界没有被改写。');
+  if (['invincible', 'heal', 'teleport', 'cultivation_set_to_cap', 'cultivation_rewrite_cap', 'resurrect_player'].includes(type)
+    && npc) semanticRequired('指定人物的改写须按其真实目标执行，不能改到主角身上。');
+  if (['invincible', 'heal', 'teleport', 'create_item', 'create_generated_item'].includes(type)
+    && /所有|全体|每个|每人|全部|天下|全世界|整个世界/u.test(request)) semanticRequired();
+  if (type === 'invincible' && !/^(?:让|使|将|把|令)?(?:我|自己|本人|主角)(?:变得|变成|成为|获得|拥有)?(?:无敌|不死|永生|刀枪不入)[。！!\s]*$/u.test(request)) semanticRequired();
   const jitter = seedHash(world.seed, `wish:${world.minute}:${request}`) % 7;
   return { type, targetId, generatedItem, realmName, scope, numericMutation, request, cost: scale + jitter,
     id: `reality:${world.minute}:${seedHash(world.seed, request).toString(16)}` };
+}
+
+export function relocateRealityActor(world, actor, locationId) {
+  if (!actor || actor.id !== world.player.id && !world.characters[actor.id] || !world.locations[locationId])
+    throw new Error('传送须引用真实人物与地点。');
+  actor.locationId = locationId;
+  actor.travel = null;
+  if (actor.id === world.player.id) world.locations[locationId].discovered = true;
+  world.eventQueue = world.eventQueue.filter(event => !(actor.id === world.player.id
+    ? event.type === 'player_arrival'
+    : event.type === 'npc_arrival' && (event.payload?.actorId === actor.id || event.payload?.characterId === actor.id)));
+  for (const id of actor.inventory || []) if (world.items[id]?.ownerId === actor.id) world.items[id].locationId = locationId;
+}
+
+export function resurrectRealityNpc(world, npc) {
+  if (!npc || !world.characters[npc.id]) throw new Error('复生目标不在世界中。');
+  if (npc.alive) return;
+  const locations = [npc.lastKnownLocationId, npc.homeId, world.player.locationId, ...Object.keys(world.locations)];
+  const locationId = locations.find(id => world.locations[id] && !world.locations[id].destroyed)
+    || locations.find(id => world.locations[id]);
+  if (!locationId) throw new Error('世界缺少可以记录复生人物的地点。');
+  npc.alive = true;
+  npc.physicalCondition = 'recovering';
+  npc.deathAt = null;
+  npc.currentPlan = { type: 'recover' };
+  relocateRealityActor(world, npc, locationId);
 }
 
 export function killNpc(world, npc, mutationId) {
@@ -125,7 +171,7 @@ export function applyRealityMutation(source, plan) {
   let changed = true;
   switch (plan.type) {
     case 'numeric_mutation': {
-      const outcome = applyNumericMutation(world, plan.numericMutation);
+      const outcome = applyNumericMutation(world, plan.numericMutation, { reality: true });
       changed = outcome.applied;
       summary = outcome.summary;
       break;
@@ -161,11 +207,7 @@ export function applyRealityMutation(source, plan) {
     case 'resurrect_npc': {
       const npc = world.characters[plan.targetId];
       if (!npc) throw new Error('复生目标不在世界中。');
-      npc.alive = true;
-      npc.physicalCondition = 'recovering';
-      npc.deathAt = null;
-      npc.locationId = npc.lastKnownLocationId || npc.homeId || world.player.locationId;
-      npc.currentPlan = { type: 'recover' };
+      resurrectRealityNpc(world, npc);
       summary = `${npc.name}因明确的言灵改写而复活。`;
       break;
     }
@@ -232,8 +274,7 @@ export function applyRealityMutation(source, plan) {
     }
     case 'resurrect_player': world.player.alive = true; world.player.health = Math.max(1, world.player.maxHealth / 2); break;
     case 'teleport': {
-      if (!world.locations[plan.targetId] || world.locations[plan.targetId].destroyed) throw new Error('言灵目标地点不存在。');
-      world.player.locationId = plan.targetId; world.player.travel = null; world.locations[plan.targetId].discovered = true;
+      relocateRealityActor(world, world.player, plan.targetId);
       break;
     }
     case 'heal': world.player.health = world.player.maxHealth; break;
@@ -289,7 +330,9 @@ export function applyRealityMutation(source, plan) {
   // silently deny a valid rewrite. Invincibility diverts lethal cost into debt.
   const actualCost = changed ? plan.cost : 0;
   world.flags.causalDebt = Number(world.flags.causalDebt || 0) + actualCost;
-  if (!world.player.invincible && !world.terminal.ended && plan.type !== 'resurrect_player')
+  const protectsHealth=['resurrect_player','heal'].includes(plan.type)
+    || plan.type==='numeric_mutation'&&plan.numericMutation.id==='player'&&['health','maxHealth'].includes(plan.numericMutation.field);
+  if (!world.player.invincible && !world.terminal.ended && !protectsHealth)
     world.player.health = Math.max(0, Number(world.player.health || 0) - Math.min(40, Math.ceil(actualCost / 3)));
   world.history.push({ id: plan.id, minute: world.minute, type: 'reality_mutation',
     summary, scope: plan.type, targetId: plan.targetId, locationId: world.player.locationId,

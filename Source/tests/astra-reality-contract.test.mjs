@@ -107,15 +107,15 @@ test('the validator rejects denying a settled reality rewrite while accepting th
   assert.equal(validateAstraNarration(state,[{type:'sys',text:'言出法随不受凡人境界限制，改写已经落账。'}],packet).ok,true);
 });
 
-test('an unsupported reality concept remains honestly deferred without a fabricated success', async () => {
+test('an unexecutable reality concept retains the whole input without a fabricated successful turn', async () => {
   const state=createGameState('试行者','ai',()=> 'law-deferred');
   const h=harness(state,[{worldPlan:{operations:[{type:'concept.defer',description:'让时间长出蓝色翅膀',reason:'缺少可验证的时间形貌规则'}]},
     blocks:[{type:'narr',text:'我将这条尚无可验证规则的改写留在命簿中，眼前世界仍保持原样。'}]}]);
   const result=await h.run({speech:'我用言出法随让时间长出蓝色翅膀',action:''});
-  assert.equal(result.ok,true,result.error);
-  assert.equal(result.state.astraWorld.simulation.commitments['law-contract:turn'].state,'unresolved');
+  assert.equal(result.ok,false);
+  assert.deepEqual(result.state.astraWorld,state.astraWorld);
   assert.equal(result.state.astraWorld.player.cultivation.realm,'none');
-  assert.ok(result.blocks.some(block=>/暂未生效/u.test(block.text)));
+  assert.equal(result.retry.input,'我用言出法随让时间长出蓝色翅膀');
   const requestFacts=JSON.parse(h.calls[0].messages[1].content.split('\n')[0].slice('世界事实：'.length));
   assert.equal(requestFacts.planMode,'reality');
 });

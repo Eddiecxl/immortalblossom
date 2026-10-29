@@ -118,7 +118,7 @@ test('natural-language numeric wishes use current entity IDs across seeds and su
     const location = Object.values(source.locations).find(value => !value.destroyed);
     const npc = Object.values(source.characters).find(value => value.alive);
     let world = wish(source, `言出法随：将${faction.name}的实力增加25`);
-    const expectedPower = Math.min(100, source.factions[faction.id].power + 25);
+    const expectedPower = source.factions[faction.id].power + 25;
     assert.equal(world.factions[faction.id].power, expectedPower);
     world = wish(world, `言出法随：将${location.name}的人口增加30`);
     assert.equal(world.locations[location.id].population, source.locations[location.id].population + 30);
@@ -149,15 +149,16 @@ test('zero faction strength closes its dependent territories and associations', 
   if (quest) assert.equal(quest.state, 'mutated');
 });
 
-test('mutable numeric bounds and no-op history are read at settlement time', () => {
+test('explicit numeric laws exceed mutable bounds while ordinary effects retain them', () => {
   let world = createAstraWorld('variable-bounds');
   world.rules.variables.player.safety.max = 60;
   world.player.safety = 60;
   const changed = wish(world, '言出法随：将我的安全增加20');
   const record = changed.history.at(-1);
-  assert.equal(changed.player.safety, 60);
-  assert.equal(record.applied, false);
-  assert.equal(record.cost, 0);
+  assert.equal(changed.player.safety, 80);
+  assert.equal(record.applied, true);
+  assert.ok(record.cost > 0);
+  assert.equal(changed.rules.variables.player.safety.max, 60);
   world = wish(changed, '言出法随：将我的财富增加20');
   assert.equal(world.player.wealth, changed.player.wealth + 20);
   assert.equal(world.history.at(-1).applied, true);

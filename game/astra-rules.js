@@ -72,6 +72,35 @@ export function setRealmToCap(world, actor) {
     reason: `境界改写为${realmLabel(world, to)}` };
 }
 
+// Direct reality changes are different from ordinary cultivation. They may
+// extend this actor's cap, while every unrelated actor keeps the existing law.
+export function rewriteCultivation(world, actor, changes) {
+  if (!actor?.cultivation || !changes || typeof changes !== 'object' || Array.isArray(changes)
+    || Object.keys(changes).some(key => !['realm', 'level', 'maxRealmId'].includes(key)))
+    throw new Error('境界改写缺少可验证的字段。');
+  let rules = realmRules(world);
+  let realm = rules.realms.find(row => row.id === changes.realm || row.name === changes.realm);
+  if (changes.realm !== undefined && !realm) {
+    if (typeof changes.realm !== 'string' || !/境$/u.test(changes.realm)) throw new Error('境界编号或新境界名称无效。');
+    const created = rewriteRealmCap(world, changes.realm, 'personal', actor);
+    rules = realmRules(world);
+    realm = rules.realms.find(row => row.id === created.id);
+  }
+  if (changes.maxRealmId !== undefined && !rules.realms.some(row => row.id === changes.maxRealmId))
+    throw new Error('个人境界上限编号无效。');
+  if (changes.level !== undefined && (!Number.isSafeInteger(changes.level) || changes.level < 0))
+    throw new Error('境界层数无效。');
+  const next = { ...actor.cultivation, ...changes, ...(realm ? { realm: realm.id } : {}) };
+  const rank = rules.realms.findIndex(row => row.id === next.realm);
+  const cap = rules.realms.findIndex(row => row.id === effectiveRealmCap(world, { cultivation: next }));
+  if (rank > cap) {
+    if (changes.maxRealmId !== undefined) throw new Error('提案的境界与指定上限相互冲突。');
+    next.maxRealmId = next.realm;
+  }
+  actor.cultivation = next;
+  return next;
+}
+
 export function rewriteRealmCap(world, name, scope = 'personal', actor = world.player) {
   const label = String(name || '').replace(/[<>\u0000-\u001f]/gu, '').trim().slice(0, 32);
   if (!label || !/境$/u.test(label)) throw new Error('请写明新的境界名称（以“境”结尾）。');

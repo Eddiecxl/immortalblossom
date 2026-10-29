@@ -1,4 +1,10 @@
-当前接续：4.2.1 修复真实在场人物显示，改进连续互动/自然表达/内部评分隐藏、普通伤势不弹窗及游戏默认静音。源码仍在 Maintenance/Repository。全套290项含实际workerd SQLite通过；真实云端8轮 unusual 已通过，关系负向变化、死亡/复活/记忆/刷新及默认零音乐源已验证。普通聊天与轻短身份询问正在另一seed复测，发布结果见 Maintenance/Verification/v421-release-state.json。保留所有旧文件、存档、模型与密钥，不重复已完成的4.2.0工作。
+当前接续（2026-10-29）：正在收尾 4.2.2；发布前基线仍为 4.2.1，main 基线 24a0bbe2d16fe2bfe243e2b88616428dbe00f229。不要重做旧版已完成的打包/试玩。源码有未提交的对白、言灵、JSON 与交接修正，先看 `git status`、NARRATIVE_QUALITY_WORKLOG.md 文末及 `docs/superpowers/plans/2026-10-28-narrative-reality.md`。保留全部旧文件、存档、模型与密钥。
+
+当前证据：`Maintenance/Verification/v422-tests-reviewed.txt` 已通过审查后的完整 328/328、0 skipped（含真实 workerd SQLite）；`v422-dialogue-compact` 4 轮、`v422-holdout` 2 轮、`v422-law-cloud` 3 轮已完成真实 Groq/引擎测试，直接读取 report/progress，不重复请求。对白仍有过度判断或装饰细节，不能宣称完美或本地云端等价。最后新增的询问/假设、NPC 传送、和/与/及复合指令、复活+移动字段顺序回归已修复并纳入全套。
+
+已完成发布前界面验证：`v422-browser-laws/report.json` passed，77 个本地 JS 模块接入真实网站服务；三个言灵的实际世界、HUD、默认零音乐源、在场者及刷新通过。该测试的请求计数监听旧路径，0 不能当作无 AI 请求证据。版本/公告、119 条 manifest 和 repair、本地安装已同步；4.2.1→4.2.2 补丁经构建器原生 Validate/Apply、哈希和存档哨兵检验后输出。尚待完整 ZIP 校验、main 推送、Cloudflare 发布及不覆盖模块的线上核验。维护脚本在 Verification；Worker 为 `immortalblossombeta`。GitHub push 默认只测/构建，发布须显式 dispatch `deploy:true`，不要无故恢复自动部署。私密 key 不进日志、Git、安装包或公开资产。
+
+以下是按时间保留的历史记录；版本号、实验进程和旧补丁基线以本段及最新 release-state 为准。
 
 # Game Beta v4 continuation
 

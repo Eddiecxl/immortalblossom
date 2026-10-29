@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGameState} from '../../game/game-state.js';
 import {createAiTurnRunner} from '../../game/ai-turn.js';
-test('ordinary author omits reality-only blueprints and repair explicitly asks for new first-person dialogue',async()=>{
+test('ordinary author omits reality-only blueprints and repair receives the failed candidate with the original facts',async()=>{
  const messages=[];const state=createGameState('旅人','ai',()=> 'cloud-author-a');
  const runner=createAiTurnRunner({transcriptStore:{recentTurns:async()=>[],appendTurn:async()=>{}},aiClient:{narrate:async(_,context)=>{
   messages.push(context.messages);return messages.length===1?'broken':JSON.stringify({blocks:[{type:'narr',text:'我看见晨风吹过眼前的街巷。'}]});
@@ -12,7 +12,8 @@ test('ordinary author omits reality-only blueprints and repair explicitly asks f
  assert.ok(!messages[0][0].content.includes('reality 模式：entity.update:'));
  assert.ok(messages[0][0].content.includes('commitment.offer'));
  assert.match(messages[0].at(-1).content,/旁白.*我/u);
- assert.match(messages[1].at(-1).content,/不要复制.*对白/u);
+ assert.equal(messages[1].find(m=>m.role==='assistant').content,'broken');
+ assert.deepEqual(messages[1].slice(0,2),messages[0]);
 });
 test('invalid cloud prose never advances the world using a canned NPC fallback',async()=>{
  const state=createGameState('旅人','ai',()=> 'cloud-invalid-a');

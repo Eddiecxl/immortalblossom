@@ -21,6 +21,8 @@ export function failure(code, status = 400, terminalJob = false) {
     AI_QUOTA_EXHAUSTED: 'Groq 账户预算或余额已用完，请检查账户。',
     AI_UPSTREAM_FAILED: 'Groq 服务暂时不可用；输入和世界保持原样。',
     AI_TIMEOUT: 'Groq 响应超时；输入和世界保持原样。',
+    AI_OUTPUT_TRUNCATED: 'Groq 回复达到输出上限，尚未完整；输入和世界保持原样。',
+    AI_INVALID_JSON: 'Groq 返回的 JSON 不完整或格式无效；输入和世界保持原样。',
     AI_REQUEST_INTERRUPTED: '这次 Groq 请求中断，无法确认结果；输入和世界保持原样，请重新尝试。',
     AI_TRANSACTION_CONFLICT: '该回合已经有不同的请求；请保留原输入并等待结果。',
     AI_SITE_LIMITED: '共享队列暂满，请稍后再试；输入和世界保持原样。',
@@ -427,6 +429,12 @@ export class GroqQueue {
       }
       if (!response.ok) {
         const status = response.status;
+        const rejected = status === 400 || status === 422 ? await response.clone().json().catch(() => null) : null;
+        if (rejected?.error?.code === 'json_validate_failed') {
+          await response.body?.cancel();
+          await this.finish(job, {code: 'AI_INVALID_JSON', status: 422});
+          return;
+        }
         const code = status === 401 || status === 403 ? 'AI_AUTH_FAILED'
           : status === 402 ? 'AI_QUOTA_EXHAUSTED'
           : status === 404 ? 'AI_MODEL_UNAVAILABLE'
@@ -437,6 +445,10 @@ export class GroqQueue {
       }
       const result = await response.json().catch(() => null);
       await this.observeQuota(job.payload, response, null, result?.usage);
+      if (result?.choices?.[0]?.finish_reason === 'length') {
+        await this.finish(job, {code: 'AI_OUTPUT_TRUNCATED', status: 422});
+        return;
+      }
       const text = result?.choices?.[0]?.message?.content;
       if (typeof text !== 'string' || !text.trim() || text.length > 65536) {
         await this.finish(job, {code: 'AI_UPSTREAM_FAILED', status: 502});

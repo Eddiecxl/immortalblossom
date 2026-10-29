@@ -1,9 +1,8 @@
 import { derivedPlayerStats } from './equipment.js';
 import { generationOptions, isGroqQwen38, throwIfCancelled } from './ai-policy.js';
-import { aiHttpError, retryAfterMs } from './ai-errors.js';
+import { aiFormatError, aiHttpError, retryAfterMs } from './ai-errors.js';
 import {createRequestGate} from './beta4/request-gate.js';
 import { estimateRequestTokens, withPersonalBudget } from './token-budget.js';
-import { recoverCompletedBlocks } from './narration-recovery.js';
 
 const SETTINGS_KEY = 'luoying_ai_v3';
 const QWEN_DEFAULT_MIGRATION_KEY = 'luoying_qwen_default_v1';
@@ -55,6 +54,9 @@ function findJsonObject(text) {
   const source = String(text ?? '').replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   const start = source.indexOf('{');
   if (start < 0) throw new Error('AI 没有返回 JSON 对象。');
+  // A complete inner object is not a complete response when its enclosing
+  // array or a following field/object is unfinished.
+  if (source.slice(0, start).includes('[')) throw new Error('AI 返回内容不是对象。');
   let depth = 0;
   let quoted = false;
   let escaped = false;
@@ -70,10 +72,32 @@ function findJsonObject(text) {
     else if (char === '{') depth += 1;
     else if (char === '}') {
       depth -= 1;
-      if (depth === 0) return source.slice(start, index + 1);
+      if (depth === 0) {
+        if (source.slice(index + 1).trim()) throw new Error('AI 返回了多余的 JSON 内容。');
+        return source.slice(start, index + 1);
+      }
     }
   }
   throw new Error('AI 返回的 JSON 不完整。');
+}
+
+function stripTrailingJsonCommas(source) {
+  let output = '', quoted = false, escaped = false;
+  for (let index = 0; index < source.length; index++) {
+    const char = source[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') quoted = false;
+    } else if (char === '"') quoted = true;
+    else if (char === ',') {
+      let next = index + 1;
+      while (/\s/u.test(source[next] || '') && next < source.length) next++;
+      if (source[next] === '}' || source[next] === ']') continue;
+    }
+    output += char;
+  }
+  return output;
 }
 
 function parseBlocks(data, requestType) {
@@ -99,7 +123,17 @@ function parseBlocks(data, requestType) {
     return output.text ? output : null;
   }).filter(Boolean);
   if (!blocks.length) throw new Error(requestType === 'system' ? 'AI 没有返回系统答复。' : 'AI 返回的剧情内容为空。');
-  return blocks;
+  return blocks.flatMap(block=>{
+    if(block.type!=='dlg'||!block.text.startsWith('“'))return [block];
+    const parts=[...block.text.matchAll(/“([^“”]*)”|([^“”]+)/gu)];
+    // Only normalize a complete quoted-speech layout. Quotes used as a book
+    // title within an ordinary sentence and unmatched quotes stay untouched.
+    if(parts.map(p=>p[0]).join('')!==block.text)return [block];
+    const outside=parts.filter(p=>p[2]?.trim());
+    if(outside.some(p=>!new RegExp('^(?:她|他|'+block.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','u').test(p[2].trim())))return [block];
+    return parts.map(p=>p[1]!==undefined?{...block,text:p[1].trim()}
+      :{type:'narr',text:p[2].trim(),...(block.claims?{claims:structuredClone(block.claims)}:{})}).filter(p=>p.text);
+  });
 }
 
 function normalizeProgress(progress) {
@@ -163,16 +197,16 @@ function normalizeEffects(effects) {
 export function parseNarration(text, requestType = 'world') {
   let data;
   try {
-    const json = findJsonObject(text).replace(/,(\s*[}\]])/g, '$1');
+    const json = stripTrailingJsonCommas(findJsonObject(text));
     data = JSON.parse(json);
-  } catch (error) {
-    if (requestType === 'system') {
+  } catch {
+    if (requestType === 'system' && !/[\[{]|```/u.test(String(text ?? ''))) {
       const fallback = cleanText(text, 1_200).replace(/^```(?:json)?\s*|\s*```$/giu, '').trim();
       if (fallback) return { blocks: [{ type: 'sys', text: fallback }] };
     }
-    const completed = recoverCompletedBlocks(text);
-    if (!completed) throw new Error(`AI 返回的 JSON 无法解析：${error.message}`);
-    data = { blocks: completed, recovered: true };
+    // Never discard an incomplete worldPlan/claims tail and accept its prose.
+    // The caller can repair the complete candidate under the normal turn quota.
+    throw aiFormatError();
   }
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('AI 返回内容不是对象。');
   const blocks = parseBlocks(data, requestType);
@@ -186,7 +220,6 @@ export function parseNarration(text, requestType = 'world') {
   return {
     blocks,
     ...(data.worldPlan !== undefined ? { worldPlan: data.worldPlan } : {}),
-    ...(data.recovered ? { recovered: true } : {}),
     reaction: data.reaction && typeof data.reaction === 'object' ? { result: cleanText(data.reaction.result, 140) } : null,
     cast: Array.isArray(data.cast) ? data.cast.slice(0, 4).map(c => ({ name: cleanText(c?.name, 32),
       mood: cleanText(c?.mood, 40), condition: cleanText(c?.condition, 50), realm: cleanText(c?.realm, 30),
@@ -274,12 +307,14 @@ function normalizeSettings(input = {}) {
 }
 
 function extractOpenAi(data) {
+  if (data?.choices?.[0]?.finish_reason === 'length') throw aiFormatError('AI_OUTPUT_TRUNCATED');
   const text = data?.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || !text.trim()) throw new Error('模型返回为空。');
   return text;
 }
 
 function extractGemini(data) {
+  if (data?.candidates?.[0]?.finishReason === 'MAX_TOKENS') throw aiFormatError('AI_OUTPUT_TRUNCATED');
   const parts = data?.candidates?.[0]?.content?.parts;
   const text = Array.isArray(parts) ? parts.map((part) => part?.text || '').join('') : '';
   if (!text.trim()) throw new Error(data?.promptFeedback?.blockReason ? `Gemini 拒绝了请求：${data.promptFeedback.blockReason}` : 'Gemini 返回为空。');
@@ -307,8 +342,6 @@ async function requestJson(fetchImpl, url, options, attempts = 2, sleep = delay,
       const data = await response.json().catch(() => ({}));
       throwIfCancelled(parentSignal);
       if (response.ok) return data;
-      const partial = data?.error?.failed_generation;
-      if (response.status === 400 && recoverCompletedBlocks(partial)) return { choices: [{ message: { content: partial } }] };
       const failure = aiHttpError(response, data, url.startsWith('/'));
       if (response.status === 429 || failure.retryAfterMs > 1500 || attempt === attempts - 1) {
         if (failure.retryAfterMs) {

@@ -1,4 +1,4 @@
-当前接续：4.2.1 修复真实在场人物显示，改进连续互动/自然表达/内部评分隐藏、普通伤势不弹窗及游戏默认静音。源码仍在 Maintenance/Repository。全套290项含实际workerd SQLite通过；真实云端8轮 unusual 已通过，关系负向变化、死亡/复活/记忆/刷新及默认零音乐源已验证。普通聊天与轻短身份询问正在另一seed复测，发布结果见 Maintenance/Verification/v421-release-state.json。保留所有旧文件、存档、模型与密钥，不重复已完成的4.2.0工作。
+当前接续（2026-10-29）：4.2.2 源码与安装已更新；328/328（含实际 workerd SQLite）通过。对白承接/回合交接、独立言灵及原子复合指令、完整 JSON 修复已落实，详见 docs/NARRATIVE_QUALITY_WORKLOG.md 和 docs/CODEX_CONTINUATION.md。隔离浏览器三次言灵、面板与刷新通过；4.2.1→4.2.2 补丁已由实际原生更新器验证。最后打包及云发布状态以 Maintenance/Verification/v422-release-state.json 为准，勿重复已完成的 AI 请求。保留所有旧文件、存档、模型、封面与配乐。
 
 # Game Beta v4 continuation
 
