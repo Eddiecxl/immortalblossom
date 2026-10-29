@@ -1,8 +1,8 @@
-当前接续（2026-10-29）：正在收尾 4.2.2；发布前基线仍为 4.2.1，main 基线 24a0bbe2d16fe2bfe243e2b88616428dbe00f229。不要重做旧版已完成的打包/试玩。源码有未提交的对白、言灵、JSON 与交接修正，先看 `git status`、NARRATIVE_QUALITY_WORKLOG.md 文末及 `docs/superpowers/plans/2026-10-28-narrative-reality.md`。保留全部旧文件、存档、模型与密钥。
+当前接续（2026-10-29）：4.2.2 引擎提交 0239ae19e9606877b87722da5cf5ecaff8755704 已推 main 并部署原 Worker，实际安装也是 4.2.2。GitHub Actions run 40827261300 测试、构建与部署成功；不覆盖本地模块的线上浏览器三次言灵与刷新复验通过。不要重做已完成的 AI 请求；维护依据见 NARRATIVE_QUALITY_WORKLOG.md。完整 ZIP 的哈希、体积与最终发布记录见 `Maintenance/Verification/v422-full-verified.json`、`v422-release-state.json`；恢复时先检查这些记录再决定是否需要打包。保留全部旧文件、存档、模型与密钥。
 
 当前证据：`Maintenance/Verification/v422-tests-reviewed.txt` 已通过审查后的完整 328/328、0 skipped（含真实 workerd SQLite）；`v422-dialogue-compact` 4 轮、`v422-holdout` 2 轮、`v422-law-cloud` 3 轮已完成真实 Groq/引擎测试，直接读取 report/progress，不重复请求。对白仍有过度判断或装饰细节，不能宣称完美或本地云端等价。最后新增的询问/假设、NPC 传送、和/与/及复合指令、复活+移动字段顺序回归已修复并纳入全套。
 
-已完成发布前界面验证：`v422-browser-laws/report.json` passed，77 个本地 JS 模块接入真实网站服务；三个言灵的实际世界、HUD、默认零音乐源、在场者及刷新通过。该测试的请求计数监听旧路径，0 不能当作无 AI 请求证据。版本/公告、119 条 manifest 和 repair、本地安装已同步；4.2.1→4.2.2 补丁经构建器原生 Validate/Apply、哈希和存档哨兵检验后输出。尚待完整 ZIP 校验、main 推送、Cloudflare 发布及不覆盖模块的线上核验。维护脚本在 Verification；Worker 为 `immortalblossombeta`。GitHub push 默认只测/构建，发布须显式 dispatch `deploy:true`，不要无故恢复自动部署。私密 key 不进日志、Git、安装包或公开资产。
+界面证据：`v422-browser-laws/report.json` 是 77 个本地 JS 模块接入真实网站服务的发布前测试，该测试旧路径请求计数 0 无效。`v422-browser-deployed/report.json` 则直接使用线上代码，3 回合、1 个真实生成请求、0 覆盖模块、0 JS 错误，改名/性别/500 气血/无敌、HUD、在场者、默认静音和刷新保持通过。版本/公告、119 条 manifest 和 repair、本地安装已同步；4.2.1→4.2.2 补丁经构建器原生 Validate/Apply、哈希和存档哨兵检验后输出。维护脚本在 Verification；Worker 为 `immortalblossombeta`。GitHub push 默认只测/构建，发布须显式 dispatch `deploy:true`，不要无故恢复自动部署。私密 key 不进日志、Git、安装包或公开资产。
 
 以下是按时间保留的历史记录；版本号、实验进程和旧补丁基线以本段及最新 release-state 为准。
 
