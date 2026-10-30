@@ -74,9 +74,11 @@ test('internal scores are rejected but prices, ages and ordinary quantities are 
 });
 test('explicit reality outcomes keep real mechanics while omitting debug types and cost from prose',async()=>{
  const {state,npc}=scene('law-prose');let requests=0;
- const runner=createAiTurnRunner({transcriptStore:{recentTurns:async()=>[],appendTurn:async()=>{}},aiClient:{narrate:async()=>{requests++;throw Error('No AI needed');}}});
+ const runner=createAiTurnRunner({transcriptStore:{recentTurns:async()=>[],appendTurn:async()=>{}},aiClient:{narrate:async()=>{
+  requests++;return JSON.stringify({blocks:[{type:'narr',text:`${npc.name}的气息骤然断了，身体失去支撑。我胸口的酸痛还未散去，眼前的结果已经无法收回。`}],worldPlan:{operations:[]}});
+ }}});
  const result=await runner.runWorld({state,input:{speech:'',action:`我使用言出法随让${npc.name}死去`},settings:{mode:'groq'}});
- assert.equal(result.ok,true,result.error);assert.equal(requests,0);
+ assert.equal(result.ok,true,result.error);assert.equal(requests,1);
  assert.equal(result.state.astraWorld.characters[npc.id].alive,false);
  assert.ok(result.state.astraWorld.flags.causalDebt>0);
  assert.doesNotMatch(result.turn.blocks.map(b=>b.text).join(' '),/kill_npc|实际代价|改写范围|气血减少\s*\d/u);

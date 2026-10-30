@@ -1,3 +1,5 @@
+当前接续（2026-10-29）：v4.2.3「此身入局」实现与完整回归已完成，361/361，0 skipped，含真实 workerd SQLite。发布阶段以 Maintenance/Verification/v423-release-state.json 为准，未存在或 complete=false 时不可声称整轮已交付。重点读 docs/PLAYABLE_SCENES_V423.md。不要重做 v4.2.2 的发布或已完成的真实 Groq 请求；保留所有文件、模型、存档与密钥。
+
 当前接续（2026-10-29）：4.2.2 引擎提交 0239ae19e9606877b87722da5cf5ecaff8755704 已推 main 并部署原 Worker，实际安装也是 4.2.2。GitHub Actions run 40827261300 测试、构建与部署成功；不覆盖本地模块的线上浏览器三次言灵与刷新复验通过。不要重做已完成的 AI 请求；维护依据见 NARRATIVE_QUALITY_WORKLOG.md。完整 ZIP 的哈希、体积与最终发布记录见 `Maintenance/Verification/v422-full-verified.json`、`v422-release-state.json`；恢复时先检查这些记录再决定是否需要打包。保留全部旧文件、存档、模型与密钥。
 
 当前证据：`Maintenance/Verification/v422-tests-reviewed.txt` 已通过审查后的完整 328/328、0 skipped（含真实 workerd SQLite）；`v422-dialogue-compact` 4 轮、`v422-holdout` 2 轮、`v422-law-cloud` 3 轮已完成真实 Groq/引擎测试，直接读取 report/progress，不重复请求。对白仍有过度判断或装饰细节，不能宣称完美或本地云端等价。最后新增的询问/假设、NPC 传送、和/与/及复合指令、复活+移动字段顺序回归已修复并纳入全套。

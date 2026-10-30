@@ -13,15 +13,19 @@ function scene(seed = 'handoff-fixture') {
   return { state, world, npc };
 }
 
-test('seeded openings end at a grounded response or action across occupied and empty starts', () => {
-  let contacts = 0, routes = 0;
+test('fresh seeded openings end at an actual first encounter even when their initial place was empty', () => {
+  let contacts = 0, initiallyEmpty = 0;
   for (let i = 0; i < 64; i++) {
     const source = createGameState('旅人', 'ai', () => `handoff-start-${i}`);
+    if (!Object.values(source.astraWorld.characters).some(npc => npc.alive && !npc.travel
+      && npc.locationId === source.astraWorld.player.locationId)) initiallyEmpty++;
     const before = JSON.stringify(source), { state, turn } = createAstraOpening(source);
     assert.ok(turn.handoff, 'opening must expose its concrete current opportunity');
     const last = turn.blocks.at(-1), world = state.astraWorld;
     assert.notEqual(last.type, 'sys', 'the final beat belongs to the current scene');
     assert.doesNotMatch(last.text, /你想做什么|另选去向|自由选择|接下来怎么办/u);
+    assert.equal(turn.handoff.kind, 'encounter');
+    assert.equal(turn.handoff.targetId, 'npc:lin-xiaoman');
     if (turn.handoff.targetId) {
       contacts++;
       const npc = world.characters[turn.handoff.targetId];
@@ -31,15 +35,11 @@ test('seeded openings end at a grounded response or action across occupied and e
       assert.equal(world.flags.conversation.npcId, npc.id);
       assert.ok(world.history.some(e => e.type === 'opening_contact' && e.actors.includes(npc.id) && e.summary.includes(last.text)));
       assert.ok(npc.memories.some(m => m.summary.includes(last.text)));
-    } else {
-      routes++;
-      assert.equal(turn.handoff.kind, 'route');
-      assert.ok(world.edges.some(e => e.id === turn.handoff.subjectId && !e.closed));
-      assert.ok(last.text.includes(world.locations[turn.handoff.destinationId].name));
     }
     assert.equal(JSON.stringify(source), before, 'opening must not mutate its source');
   }
-  assert.ok(contacts > 0 && routes > 0);
+  assert.equal(contacts, 64);
+  assert.ok(initiallyEmpty > 0, 'Sample includes places that previously had nobody to answer');
 });
 
 test('director returns a specific current contact on quiet turns without creating an encounter', () => {

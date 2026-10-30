@@ -8,7 +8,7 @@ import {sceneAffordances} from '../../game/astra-affordances.js';
 import {projectAstraWorld} from '../../game/astra-turn.js';
 import {directAstraScene} from '../../game/astra-director.js';
 import {createAiTurnRunner} from '../../game/ai-turn.js';
-test('continue travelling honours a minute count longer than 365',async()=>{
+test('continue travelling honours a minute count longer than 365 and authors only the completed arrival',async()=>{
  const state=createGameState('旅人','ai',()=> 'long-travel-wait'),w=state.astraWorld;
  const road=w.edges.find(e=>e.from===w.player.locationId&&!e.closed);
  w.player.travel={from:road.from,to:road.to,departAt:w.minute,arriveAt:w.minute+500};
@@ -18,8 +18,10 @@ test('continue travelling honours a minute count longer than 365',async()=>{
  const result=await runner.runWorld({state,input:{action:'等待500分钟'},settings:{mode:'local'}});
  assert.equal(result.ok,true,result.error);assert.equal(result.state.astraWorld.minute,w.minute+500);
   assert.equal(result.state.astraWorld.player.travel,null);assert.equal(result.state.astraWorld.player.locationId,road.to);
- assert.equal(prompt,undefined,'deterministic arrival does not require narrative quota');
- assert.equal(result.turn.provider,'engine');
+ assert.match(prompt,/"settledImpact":\{"kind":"arrival"/u);
+ assert.match(prompt,/"settledAction":"wait"/u);
+ assert.equal(result.turn.provider,'local');
+ assert.ok(result.blocks.some(block=>block.text==='我走完了漫长的路途，重新查看眼前的去向。'));
 });
 test('travel cannot attack or accept an origin commission through mechanical shortcuts',async()=>{
  for(const action of ['杀死林小满','接受任务']){

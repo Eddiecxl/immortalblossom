@@ -209,6 +209,23 @@ export function parseNarration(text, requestType = 'world') {
     throw aiFormatError();
   }
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('AI 返回内容不是对象。');
+  if(requestType!=='system'&&data.turnCue!==undefined){
+    const cue=data.turnCue;
+    if(!cue||!['dlg','narr'].includes(cue.type)||typeof cue.text!=='string'||!cue.text.trim()
+      ||cue.type==='dlg'&&typeof cue.name!=='string')throw new Error('回合交接须是具体的对白或现场动作，不是系统建议。');
+    const body=Array.isArray(data.blocks)?data.blocks:[];
+    const duplicate=b=>b?.type===cue.type&&b.name===cue.name&&b.text===cue.text;
+    const retained=body.filter(b=>!duplicate(b)),copies=[...body.filter(duplicate),cue];
+    if(retained.length>=8)throw new Error('本回合过长，请精简为最多八个场景块，保留完整事实声明和最后一拍。');
+    // Deduplication changes presentation only. Never erase claims that still
+    // need to be checked against the committed candidate world.
+    const merged={...cue};
+    for(const key of ['claims','factIds'])if(copies.some(b=>b[key]!==undefined)){
+      if(copies.some(b=>b[key]!==undefined&&!Array.isArray(b[key])))throw new Error('场景事实声明格式无效。');
+      merged[key]=copies.flatMap(b=>b[key]||[]);
+    }
+    data.blocks=[...retained,merged];
+  }
   const blocks = parseBlocks(data, requestType);
   if (requestType === 'system') return { blocks };
   const usedFactIdsByActor = {};

@@ -39,11 +39,14 @@ test('confusion prompts orient to current world instead of generic ignorance acr
     npc.locationId=w.player.locationId;npc.travel=null;npc.goals=['去找我的朋友'];npc.currentGoals=['去找我的朋友'];
     w.flags.conversation={npcId:npc.id,locationId:w.player.locationId,minute:w.minute};
     for(const speech of ['？','啥情况','这里是哪？','我来帮你','接下来怎么办？']) {
-      const reply=fallbackAstraConversation(w,resolveAstraConversation(w,speech));
+      const plan=resolveAstraConversation(w,speech);
+      const reply=fallbackAstraConversation(w,plan);
       assert.ok(reply);
       const text=reply.blocks.map(b=>b.text).join('');
       assert.doesNotMatch(text,/这件事我眼下不清楚|你能说得具体些吗/);
-      assert.ok(text.includes(w.locations[w.player.locationId].name)||text.includes('去找我的朋友'));
+      assert.ok(text.includes(w.locations[w.player.locationId].name)
+        || plan.facts.some(fact=>fact.summary && text.includes(fact.summary)),
+        'Orientation or an offered helping hand must respond using a real place or known encounter, not private-goal exposition');
     }
   }
 });

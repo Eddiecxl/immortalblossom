@@ -16,7 +16,7 @@ function harness(state, responses = [{blocks:neutral}]) {
     return JSON.stringify(responses[Math.min(calls.length-1,responses.length-1)]);
   }}});
   return {calls, transcriptStore, run:input => runner.runWorld({state,input,
-    transactionId:'law-contract:turn',settings:{mode:'groq',provider:'groq'}})};
+    transactionId:'law-contract:turn',settings:{mode:'groq',provider:'groq',renderSettledScenes:false}})};
 }
 
 test('explicit natural-language reality invocations succeed from the mortal realm in speech and action', async () => {

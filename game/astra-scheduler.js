@@ -69,6 +69,7 @@ function resolve(world, event) {
   switch (event.type) {
     case 'lin_first_encounter': {
       const lin = world.characters?.[payload.characterId || 'npc:lin-xiaoman'];
+      if(world.flags.encounterLinResolved||lin?.metPlayer)break;
       if (lin?.alive) {
         lin.locationId = world.player.locationId;
         lin.travel = null;

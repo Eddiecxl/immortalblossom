@@ -28,6 +28,11 @@ export function compactNarrativePacket(source,{maxChars=7000}={}) {
   const referenced=row=>[row?.id,row?.name,row?.name?.split('·')[0],row?.title]
     .some(label=>typeof label==='string'&&label.length>0&&input.includes(label));
   const pinned=new Set([packet.conversation?.targetId,packet.player?.id,packet.location?.id].filter(Boolean));
+  // An encounter can be aimed at the protagonist before the player names a
+  // listener. Keep its real actor and dependencies, not just the prose cue.
+  for(const key of ['targetId','subjectId','itemId','questId','locationId','destinationId']) {
+    const id=packet.turnHandoff?.[key];if(typeof id==='string'&&id)pinned.add(id);
+  }
   const collections=['presentNpcs','departingNpcs','items','activeQuests','numericFacts','nearbyLocations'];
   for(const key of collections)for(const row of packet[key]||[])if(referenced(row))pinned.add(row.id);
   const pinReferences=value=>{

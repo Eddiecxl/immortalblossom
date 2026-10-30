@@ -15,7 +15,8 @@ test('local prompt preserves speaker identity and separates rumor from presence'
   const messages = buildAstraLocalMessages(packet, [], 'Ministral-3-8B-Instruct.gguf');
   assert.equal(messages.length, 2);
   assert.match(messages[0].content, /传闻.*不等于.*身份/u);
-  assert.match(messages[0].content, /没有求助事实.*不得.*新造求助/u);
+  assert.match(messages[0].content, /没有求助事实.*不凭空制造任务/u);
+  assert.match(messages[0].content, /turnHandoff.*遭遇/u);
   assert.match(messages[0].content, /受问人物dlg/u);
   assert.match(messages[1].content, /"occupation":"guard"/u);
   assert.match(messages[1].content, /医者寻人帮忙/u);

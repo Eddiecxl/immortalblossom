@@ -46,7 +46,7 @@ test('bad model response cannot commit Engine world or transcript', async () => 
 test('reality command is applied mechanically and remains terminal after save normalization', async () => {
   const before = createGameState('试行者', 'ai', () => 'integration-end');
   const { runner } = harness('bad response should not be used');
-  const result = await runner.runWorld({ state: before, input: { speech: '', action: '言出法随：让全宇宙所有生命消失' }, settings: { provider: 'groq' } });
+  const result = await runner.runWorld({ state: before, input: { speech: '', action: '言出法随：让全宇宙所有生命消失' }, settings: { provider: 'groq', renderSettledScenes: false } });
   assert.equal(result.ok, true, result.error);
   assert.equal(result.state.astraWorld.terminal.ending, 'civilization_extinct');
   assert.equal(result.state.story.flags.playerDead, true);
@@ -118,7 +118,7 @@ test('speech command remains speech, while explicit spoken reality invocation us
   assert.equal(speech.ok, true, speech.error);
   assert.equal(speech.turn.provider, 'groq');
   const law = await runner.runWorld({ state: speech.state,
-    input: { speech: '言出法随：让全宇宙所有生命消失', action: '' }, settings: { provider: 'groq' } });
+    input: { speech: '言出法随：让全宇宙所有生命消失', action: '' }, settings: { provider: 'groq', renderSettledScenes: false } });
   assert.equal(law.ok, true, law.error);
   assert.equal(law.turn.provider, 'engine');
   assert.equal(law.state.astraWorld.terminal.ended, true);

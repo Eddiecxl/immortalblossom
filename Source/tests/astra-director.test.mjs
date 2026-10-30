@@ -13,12 +13,15 @@ test('opening advances the world and records a seeded live situation', () => {
   assert.ok(result.turn.summary);
 });
 
-test('anti-stall creates a persistent rumor and visible Engine event after quiet turns', () => {
+test('quiet turns expose the current situation without manufacturing repeated rumors or events', () => {
   const world = createGameState('试行者', 'ai', () => 'director-stall').astraWorld;
+  const rumors = structuredClone(world.rumors), history = structuredClone(world.history);
   let change;
-  for (let turn = 0; turn < 3; turn++) change = directAstraScene(world, []);
-  assert.equal(change.event?.type, 'scene_director');
-  assert.ok(world.rumors.some(rumor => rumor.originEventId === change.event.id));
-  assert.ok(world.history.some(event => event.id === change.event.id));
+  for (let turn = 0; turn < 9; turn++) {
+    change = directAstraScene(world, []);
+    assert.equal(change.event, null);
+  }
+  assert.deepEqual(world.rumors, rumors);
+  assert.deepEqual(world.history, history);
   assert.ok(change.hook);
 });

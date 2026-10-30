@@ -1,3 +1,5 @@
+当前接续（2026-10-29）：v4.2.3「此身入局」实现与完整回归已完成，361/361，0 skipped，含真实 workerd SQLite。发布阶段以 Maintenance/Verification/v423-release-state.json 为准，未存在或 complete=false 时不可声称整轮已交付。重点读 docs/PLAYABLE_SCENES_V423.md。不要重做 v4.2.2 的发布或已完成的真实 Groq 请求；保留所有文件、模型、存档与密钥。
+
 当前接续（2026-10-29）：4.2.2 源码与安装已更新；328/328（含实际 workerd SQLite）通过。对白承接/回合交接、独立言灵及原子复合指令、完整 JSON 修复已落实，详见 docs/NARRATIVE_QUALITY_WORKLOG.md 和 docs/CODEX_CONTINUATION.md。隔离浏览器三次言灵、面板与刷新通过；4.2.1→4.2.2 补丁已由实际原生更新器验证。最后打包及云发布状态以 Maintenance/Verification/v422-release-state.json 为准，勿重复已完成的 AI 请求。保留所有旧文件、存档、模型、封面与配乐。
 
 # Game Beta v4 continuation

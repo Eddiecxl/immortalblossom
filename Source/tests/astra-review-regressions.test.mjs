@@ -7,13 +7,13 @@ import { applyWorldPlan } from '../../game/astra-operations.js';
 import { recordCausalEvent, propagateCausality } from '../../game/astra-causality.js';
 import { compileAstraContext } from '../../game/astra-context.js';
 const ctx = { turnId: 'review:tx', mode: 'reality', input: { speech: '言出法随：改变世界' } };
-function runHarness(state, responses) {
+function runHarness(state, responses, settings = {}) {
   const turns = [], calls = [];
   const runner = createAiTurnRunner({ aiClient: { narrate: async (_, request) => {
     calls.push(request);
     return JSON.stringify(responses[Math.min(calls.length - 1, responses.length - 1)]);
   } }, transcriptStore: { recentTurns: async () => turns, appendTurn: async (_, turn) => turns.push(turn) } });
-  return { calls, run: input => runner.runWorld({ state, input, transactionId: 'review:turn', settings: { provider: 'test' } }) };
+  return { calls, run: input => runner.runWorld({ state, input, transactionId: 'review:turn', settings: { provider: 'test', ...settings } }) };
 }
 const narr = [{ type: 'narr', text: '我看清了眼前的路，晨风吹过衣袖。' }];
 function withPill(seed) {
@@ -74,7 +74,7 @@ test('review: known mechanical rewrite dispatches its causal event to declarativ
     condition: { op: 'eq', left: true, right: true },
     effects: [{ type: 'stat.delta', target: 'player', field: 'wealth', magnitude: 10 }] } } };
   const wealth = state.astraWorld.player.wealth;
-  const result = await runHarness(state, [{ blocks: narr }]).run({ speech: '言出法随：杀死' + npc.name, action: '' });
+  const result = await runHarness(state, [{ blocks: narr }], { renderSettledScenes: false }).run({ speech: '言出法随：杀死' + npc.name, action: '' });
   assert.equal(result.ok, true, result.error);
   assert.equal(result.state.astraWorld.player.wealth, wealth + 10);
 });

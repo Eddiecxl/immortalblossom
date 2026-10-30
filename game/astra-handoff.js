@@ -2,6 +2,7 @@
 // or a prescribed outcome. Recompute after proposals change the candidate world.
 import { npcGoalLabel } from './astra-affordances.js';
 import { evaluateCondition } from './astra-expression.js';
+import {playerSceneHandoff} from './astra-player-scene.js';
 
 const liveQuests = new Set(['available', 'active', 'mutated']);
 const clean = value => String(value || '').replace(/[<>\u0000-\u001f]/gu, ' ').trim().slice(0, 160);
@@ -55,6 +56,8 @@ export function selectAstraHandoff(world, { events = [], targetId = null } = {})
         : `「${clean(quest.title)}」的目标就在${locationName}；眼下可以先核对这里尚未满足的完成条件。` };
   }
   const event = currentEvents.at(-1);
+  const encounter=playerSceneHandoff(world);
+  if(encounter&&(!targetId||targetId===encounter.targetId))return encounter;
   if (event && !focused) {
     const witness = people.find(npc => event.actors?.includes(npc.id));
     return { kind: 'event', locationId, subjectId: event.id,
@@ -69,8 +72,7 @@ export function selectAstraHandoff(world, { events = [], targetId = null } = {})
     return { kind: 'contact', locationId, subjectId: npc.id, targetId: npc.id, targetName: npc.name,
       ...(goal ? { goal } : {}), focus: goal ? `${npc.name}眼下牵挂着${goal}` : `${npc.name}就在${locationName}`,
       nextAction: goal ? `与${npc.name}谈谈${goal}的难处` : `向${npc.name}问清其来意`,
-      text: goal ? `关于${goal}这件事，${npc.name}就在眼前，仍能当面问个明白。`
-        : `${npc.name}就在眼前；还没弄清对方来这里的缘由，可以从这句话问起。` };
+      text: `${npc.name}就在近处。` };
   }
   const road = (world.edges || []).find(edge => edge.from === locationId && !edge.closed
     && world.locations?.[edge.to] && !world.locations[edge.to].destroyed && !world.locations[edge.to].closed);

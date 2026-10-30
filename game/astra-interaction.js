@@ -114,11 +114,11 @@ export function fallbackAstraConversation(world, plan) {
   const askingMemory=/(?:刚才|之前|记得|上次|过去).*(?:我|说|话|讲)/u.test(speech);
   const heard=(npc.memories||[]).filter(row=>row.source==='player-speech'&&row.summary&&row.summary!==`玩家说过：“${speech.slice(0,120)}”`).slice(-5);
   const memoryAnswer=askingMemory&&heard.length?`我听你说过：${heard.map(row=>row.summary.replace(/^玩家说过：/u,'')).join('；')}。这些话我记得。`:'';
-  const orientation = `这里是${view.locationName}。我是${npc.name}，${view.role}。${view.goal ? `我眼下想${view.goal}。` : ''}${quest ? `${quest.summary}，可以先听听具体要求。` : '刚听到的消息还须核实，你可以问我知道哪一条。'}`;
+  const orientation = `这里是${view.locationName}。我是${npc.name}，${view.role}。${quest ? `${quest.summary}，可以先听听具体要求。` : '你是刚到这里吗？想找人还是问路？'}`;
   const answer = itemAnswer || memoryAnswer || (identity || isOrientationSpeech(speech) ? orientation
     : offer && quest ? `多谢。${quest.summary}，你愿意先听我说明吗？`
       : known ? `${known}。我知道的就这些；你还想问哪一处？`
-        : offer ? `多谢。${view.goal ? `我眼下想${view.goal}。` : `这里是${view.locationName}。`}尚没有约定委托；你想怎么相助，我们可以先商量。`
+        : offer ? `多谢。咱们还在${view.locationName}，眼下还没说定要做什么。你指的是刚才哪件事？`
           : question ? '这件事我眼下不清楚；你能说得具体些吗？'
             : '我记下你说的话了。眼下还有什么要紧的事？');
   return { targetId: npc.id, blocks: [{ type: 'dlg', name: npc.name, text: answer }] };

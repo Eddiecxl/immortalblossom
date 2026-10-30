@@ -34,3 +34,10 @@ GitHub Actions run 40827261300 测试、构建、Cloudflare 部署成功。线�
 - 完整包使用 SHA256SUMS 和游戏清单逐项验证，再清理上一完整 ZIP。包不含玩家正式存档、凭据或浏览器配置。
 
 可提交率不代表文学质量。小模型仍会复读或误解，事实检查失败可能产生明确标记的有限回应；Groq 免费额度仍受供应商限制。当前引擎也不能表达所有想象得到的新规则。没有将这些边界宣称为已解决。
+# 4.2.3 验证（2026-10-30）
+
+361/361，0 skipped（含真实 workerd SQLite）。256 个 seed 的初遇/位置/身世、开局重入与旧档、不重复相遇、NPC 死亡/旅行/终局、稳定居民、重大言灵一次结算及作者失败原子回滚、复合瞬移修复、回合结尾完整事实声明均已覆盖。新开局变体最后复跑记录为 Maintenance/Verification/v423-tests-release.txt。
+
+真实 Groq：v423-playable-final 五轮、五次成功请求；突破与瞬移目击延续至下一轮。另一 seed v423-holdout 三轮完成，一次服务商 400 失败后同输入恢复；仍存在过度职业化及装饰性虚构，不能将 tests pass 宣传为所有对白完美。详见 docs/PLAYABLE_SCENES_V423.md。
+
+本地、补丁、完整包、部署与网页刷新最终结果以 Maintenance/Verification/v423-release-state.json 为准；该文件 complete=true 才表示整个交付阶段完成。游戏清单为 122 个文件，保留现有美术、音乐默认关闭、所有旧文件及玩家数据。

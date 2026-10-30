@@ -4,8 +4,10 @@ import { compactNarrativePacket } from './astra-narrative-budget.js';
 import {NARRATIVE_STYLE_RULES} from './astra-narrative-style.js';
 export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = '', repairErrors = []) {
   const compactPacket=compactNarrativePacket(packet);
+  const encounterNpc=packet.turnHandoff?.kind==='encounter'
+    ?(packet.presentNpcs||[]).find(npc=>npc.id===packet.turnHandoff.targetId):null;
   const speakingNpc=[...(packet.presentNpcs||[]),...(packet.departingNpcs||[])].find(npc=>npc.id===packet.conversation?.targetId);
-  const focus=speakingNpc?`\n这一次主角在对${speakingNpc.name}说话。对话里的“你”指${speakingNpc.name}，“我”指主角；人物dlg里的“我”才指人物本人。${speakingNpc.name}的身份是${packet.affordances?.role||speakingNpc.occupation||''}，真实目标是${packet.affordances?.goal||speakingNpc.goals?.join('、')||'尚未明确'}，性格是${speakingNpc.personality||'依事实中的表现'}。先站在这个人物的立场作判断，再写出回应，不反过来替玩家回答。此刻是第${packet.clock?.day||1}日${packet.clock?.period||''}，${String(packet.clock?.hour??'').padStart(2,'0')}:${String(packet.clock?.minute??'').padStart(2,'0')}；未来计划不能写成眼下已经发生。`:'';
+  const focus=speakingNpc?`\n这一次主角在对${speakingNpc.name}说话。对话里的“你”指${speakingNpc.name}，“我”指主角；人物dlg里的“我”才指人物本人。${speakingNpc.name}的身份是${packet.affordances?.role||speakingNpc.occupation||''}，后台动机是${packet.affordances?.goal||speakingNpc.goals?.join('、')||'尚未明确'}，性格是${speakingNpc.personality||'依事实中的表现'}。后台动机用来判断态度，不代表主角已知，也不是自动生成的任务。先站在这个人物的立场作判断，再写出回应，不反过来替玩家回答。此刻是第${packet.clock?.day||1}日${packet.clock?.period||''}，${String(packet.clock?.hour??'').padStart(2,'0')}:${String(packet.clock?.minute??'').padStart(2,'0')}；未来计划不能写成眼下已经发生。`:'';
   const heldReferences=(packet.items||[]).filter(item=>item.ownerId===packet.conversation?.targetId
     &&String(item.name||'').split('·')[0].length>=2
     &&String(packet.playerTurn?.text||packet.playerTurn?.speech||'').includes(item.name.split('·')[0]));
@@ -45,7 +47,7 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     turnHandoff: packet.turnHandoff,
     settledEvents: visibleEvents
   };
-  const system = '你是《落仙》的中文叙事作者。只根据给定的引擎事实写本回合，不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。presentNpcs 才是眼前真实人物；传闻不等于在场人物的身份、职业或委托。不得把传闻里的事安在眼前人物身上。玩家说“我来帮你”时，只能根据该人物已登记的 goals 与 activeQuests 回答；没有求助事实时不得替人物新造求助或具体任务，可以请玩家说明想帮什么。conversation.targetId 有值时，该在场人物必须直接回答玩家本轮问话；不知道就明确说不知道，不要答非所问或重复旧话。玩家原话由游戏展示，不要复述，不要写“我说，”。不得替玩家决定行动或发言。引擎已结算的事件不得重算。只输出严格 JSON，不要 effects、代码围栏或额外文字。';
+  const system = '你是《落仙》的中文叙事作者。只根据给定的引擎事实写本回合，不能新增职业、人物、身份、委托、物品、地点、行动结果或知识。presentNpcs 才是眼前真实人物；传闻不等于在场人物的身份、职业或委托。不得把传闻里的事安在眼前人物身上。玩家说“我来帮你”时，结合真实goals、activeQuests和turnHandoff已发生的遭遇回应；眼前有人刚求助就承接求助，不再反问想帮什么。没有求助事实时可按当前处境商量，不凭空制造任务。conversation.targetId 有值时，该在场人物必须回应玩家本轮含义；未知事实可以坦言，但仍接住问候、困惑或玩笑，不用一句不清楚结束场面。玩家原话由游戏展示，不要复述，不要写“我说，”。不得替玩家决定行动或发言。引擎已结算的事件不得重算。只输出严格 JSON，不要 effects、代码围栏或额外文字。';
   const shape = packet.planMode === 'reality'
     ? '本轮是玩家明确发动言出法随：先将指令翻译为 worldPlan，再写结果。必须同时返回 worldPlan 与 blocks；仅返回 blocks 是无效回复。支持的字段改写无需再次确认。示例格式（使用事实包中的实际目标 ID 和玩家要求的字段）：{"worldPlan":{"operations":[{"type":"entity.update","targetId":"事实包中的实体ID","changes":{"gender":"玩家指定的新性别"}}]},"blocks":[{"type":"narr","text":"我亲眼见到已结算的改变。"}]}。性别/姓名/职业/目标改写已经受 Engine 支持，不得用 concept.defer 回避这些字段。'
     : packet.departingNpcs?.some(npc=>npc.id===packet.conversation?.targetId)
@@ -54,6 +56,8 @@ export function buildAstraLocalMessages(packet, visibleEvents = [], modelName = 
     ? '本轮写 1–3 个块，必须含被问人物的 dlg，name 等于 conversation.targetName；可以用一句新的所见反应承接，不重放旧景物。理解本轮语义与人物判断，用worldPlan.operations中的social.observe记录，valence可为0；另有赠予或任务决定时也给对应操作。格式：{"worldPlan":{"operations":[{"type":"social.observe","observerId":"conversation.targetId的实际值","subjectId":"player","meaning":"本轮英文语义","evidence":"原话片段","valence":0,"reason":"人物的判断"}]},"blocks":[{"type":"dlg","name":"在场人物姓名","text":"针对本轮的具体回答"}]}。每块不超过 120 字。玩家只说“？”或表达困惑时，解释所在地点、自己身份、已知线索；这不是未知具体问题，不要只答不清楚。想帮忙时，围绕真实 goals 商量具体方案；若提出委托，必须用有效 quest.create 落账后再叙述，不能口头假装已经有任务。目标、传闻与已接受的任务是三种不同状态。不要把英文原始字段读给玩家，译成自然中文。'
     : packet.presentNpcs?.length && packet.playerTurn?.speech
     ? '本轮写1–3个块。玩家未指定对象时，在场听者可以根据本轮话语自然回应；不得让缺席者回答，也不强迫所有人回应。dlg.name必须是真正在场人物；narr使用第一人称所见。不要把离题输入强拉回当前任务。'
+    : encounterNpc
+    ? `眼前遭遇尚在进行，${encounterNpc.name}真实在场。即使玩家本轮只做动作，人物也可以根据实际所见接着回应或发问；用narr/dlg连续写到主角下一次回应前。dlg.name用${JSON.stringify(encounterNpc.name)}，只写这个人的直接话语。不重复开场要求，不替主角答应；已结算动作不重做。`
     : '本轮只写 1–2 个 narr 块，旁白必须使用主角第一人称所见；不复述玩家原话或 recentTurns 景物。格式：{"worldPlan":{"operations":[]},"blocks":[{"type":"narr","text":"第一人称当前结果"}]}。每块不超过 100 字。普通动作若交付物品且对方收下，必须用resource.transfer落账；不能写成对方已接过却operations为空。也可以拒绝，但要明确写没有完成；settledAction已结算的使用/移动不要重复提案。';
   const repair = (packet.player?.travel ? '\n玩家尚在旅途：player.locationId 是记录用出发地，不能写成仍在原地或已经抵达，不得让两端居民说话。请按 affordances 与剩余时间叙述路途。' : '')
     +(packet.departingNpcs?.length?'\n departingNpcs是本轮发言时在场、随后动身的对象。用其真实记忆作最后回应并交代离开，不能忘记刚才的交谈；下一轮不再把此人当作在场。':'')
