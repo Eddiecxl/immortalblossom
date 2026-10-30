@@ -131,6 +131,6 @@
 实际安装与 119 条 manifest 一致，4.2.1→4.2.2 补丁已通过构建器真实原生 Validate/Apply、哈希、版本推进与存档哨兵。完整包最终哈希/文件数以 Verification/v422-full-verified.json 和 v422-release-state.json 为准。保留所有旧包、存档、模型及原封面配乐；恢复时直接读各实验 report/progress，不重发已经完成的请求。
 # 2026-10-30 v4.2.3 当前接续
 
-从 docs/PLAYABLE_SCENES_V423.md 与 Verification/v423-release-state.json 接续；不要再重跑 v4.2.2 已发布流程。本轮完成持久遭遇、256 seed 初遇覆盖、真实变化余波、人口居民、复合抵达先登记后校验、turnCue 保留事实声明，完整 361/361 含 workerd。实际 5 轮重大变化场次完成，另一 seed 3 轮也完成（一次服务商 400 后恢复原输入）；正文仍会职业化、补装饰，不宣称已达到真人/小说完美质量。
+从 docs/PLAYABLE_SCENES_V423.md 与 Verification/v423-release-state.json 接续；不要再重跑 v4.2.2 已发布流程。本轮完成持久遭遇、256 seed 初遇覆盖、真实变化余波、人口居民、复合抵达先登记后校验、turnCue 保留事实声明，完整 362/362 含 workerd。实际 5 轮重大变化场次完成，另一 seed 3 轮也完成（一次服务商 400 后恢复原输入）；正文仍会职业化、补装饰，不宣称已达到真人/小说完美质量。
 
 最后进一步将部分开局从醒后问诊改为认错人、挡路与临行邀约；网页实际检查使用 v423-browser-0，进度存 v423-browser-deployed。发布完成以 release-state.complete 为准，未写完成前不能声称线上/安装/包均已成功。保留全部原版文件与玩家数据。

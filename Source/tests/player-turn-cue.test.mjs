@@ -21,3 +21,10 @@ test('deduplicating a cue retains all claims and fact references for world valid
  assert.deepEqual(result.blocks[0].factIds,['a','b']);
  assert.throws(()=>parseNarration(JSON.stringify({blocks:[{...body,claims:'invalid'}],turnCue:cue})));
 });
+test('a final cue that repeats a complete question inside a longer block is merged without losing its remainder',()=>{
+ const cue={type:'dlg',name:'任意目击者',text:'你倒是说说，你是从哪条道走过来的？'};
+ const body={...cue,text:cue.text+'这街上风平浪静的，连个影子都没见着。',claims:[{type:'state',entityId:'player',field:'health',value:91}]};
+ const result=parseNarration(JSON.stringify({blocks:[body,{type:'narr',text:'她没有再靠近。'}],turnCue:cue}));
+ assert.equal(result.blocks.length,2);assert.equal(result.blocks.at(-1).text,body.text);assert.deepEqual(result.blocks.at(-1).claims,body.claims);
+ const another={...body,name:'另一人'};assert.equal(parseNarration(JSON.stringify({blocks:[another],turnCue:cue})).blocks.length,2);
+});
