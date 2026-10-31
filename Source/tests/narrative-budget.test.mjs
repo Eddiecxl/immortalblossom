@@ -29,6 +29,28 @@ test('assembled fact budget preserves input, focused NPC and actual delivery bin
  assert.equal(facts.items[0].id,'item:real');
  assert.deepEqual(packet,before);
 });
+
+test('full supported speech and action fit without counting lossless input aliases as separate facts',()=>{
+ const packet=structuredClone(base),speech='谈话'.repeat(595)+'请记住最后一句',action='动作'.repeat(890)+'；把凭证交给当局人物。';
+ packet.playerTurn={speech,action,text:speech,turnId:'tx:full-input'};
+ packet.input=speech+'\n'+action;
+ packet.turnHandoff={kind:'encounter',targetId:'npc:a',previousInput:packet.input,phase:'responding'};
+ packet.items=[{id:'item:credential',name:'凭证',ownerId:'player',quantity:1}];
+ packet.simulationFacts.commitments=[{id:'offer:credential',state:'pending',fromId:'player',toId:'npc:a',itemId:'item:credential'}];
+ const before=structuredClone(packet),result=compactNarrativePacket(packet,{maxChars:4300});
+ assert.equal(result.playerTurn.speech,speech);assert.equal(result.playerTurn.action,action);
+ assert.ok(JSON.stringify(result).length<=4300);
+ assert.equal(result.items[0].id,'item:credential');assert.deepEqual(result.simulationFacts.commitments,packet.simulationFacts.commitments);
+ assert.deepEqual(packet,before);
+});
+
+test('distinct input aliases and distinct previous statements are not silently discarded',()=>{
+ const packet=structuredClone(base);packet.input='额外授权线索';packet.playerTurn.text='另一个不同的描述';
+ packet.turnHandoff={kind:'encounter',previousInput:'这是上一轮的话'};
+ const result=compactNarrativePacket(packet);
+ assert.equal(result.input,packet.input);assert.equal(result.playerTurn.text,packet.playerTurn.text);
+ assert.equal(result.turnHandoff.previousInput,packet.turnHandoff.previousInput);
+});
 test('budget retains named action targets and recalled history before unrelated cast',()=>{
  const packet=structuredClone(base);
  packet.playerTurn={speech:'请看好了',action:'把远镇人口设为1000；记得此前守门人的话吗？'};

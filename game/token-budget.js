@@ -9,7 +9,11 @@ export function reserveTokens(raw, amount, id, now = Date.now()) {
   const minute = records.filter(e => e.at > now - 60000);
   const sum = rows => rows.reduce((n, e) => n + e.tokens, 0);
   let wait = Math.max(0, (raw?.pauseUntil || 0) - now);
-  if (!Number.isFinite(amount) || amount <= 0 || amount > TOKEN_LIMITS.minute) return { ok: false, code: 'AI_INPUT_BUDGET', retryAfterMs: 0, ledger: { records, pauseUntil: raw?.pauseUntil || 0 } };
+  if (!Number.isFinite(amount) || amount <= 0) return { ok: false, code: 'AI_INPUT_BUDGET', retryAfterMs: 0, ledger: { records, pauseUntil: raw?.pauseUntil || 0 } };
+  // This is a character-based estimate, not the provider's measured input.
+  // Reserve a full minute for a high estimate instead of permanently banning
+  // an otherwise valid turn; actual usage and provider429 still settle/pause it.
+  amount=Math.min(amount,TOKEN_LIMITS.minute);
   if (sum(minute) + amount > TOKEN_LIMITS.minute) {
     let freed = 0;
     for (const row of minute) { freed += row.tokens; if (sum(minute) + amount - freed <= TOKEN_LIMITS.minute) { wait = Math.max(wait, row.at + 60100 - now); break; } }

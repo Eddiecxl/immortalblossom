@@ -29,6 +29,12 @@ function world() {
   };
 }
 
+test('prose cannot place a player-owned object in an NPC hand as decoration',()=>{
+ const w=world(),packet=compileAstraContext(w,'',[]);
+ const bad=validateAstraNarration(w,[{type:'narr',text:'林小满往后退了半步，手指却还捏着那把青锋剑。'}],packet);
+ assert.equal(bad.ok,false);assert.ok(bad.errors.some(e=>e.code==='unsupported-item'));
+ assert.equal(validateAstraNarration(w,[{type:'narr',text:'林小满并未拿着青锋剑，剑仍在我手中。'}],packet).ok,true);
+});
 test('context is bounded and selects local graph, actors, knowledge and recent turns', () => {
   const w = world();
   for (let n = 0; n < 10_000; n++) w.history.push({ id: `h${n}`, timestamp: n, locationId: 'remote', summary: '远方消息'.repeat(20) });
@@ -172,7 +178,7 @@ test('context remains capped when individual saved fields are very large', () =>
   w.eventQueue[0].payload = { notes: '大量备注'.repeat(20_000) };
   const packet = compileAstraContext({ astraWorld: w }, '你好'.repeat(10_000), []);
   assert.ok(JSON.stringify(packet).length <= 18_000);
-  assert.equal(packet.input.length, 500);
+  assert.equal(packet.input.length, 3200); // Full supported speech/action can name its target at the end.
 });
 
 test('dialogue fact IDs must belong to the speaker knowledge set', () => {

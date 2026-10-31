@@ -1,9 +1,24 @@
 // Bound the author's view, never the durable world or its full validator packet.
 export function compactNarrativePacket(source,{maxChars=7000}={}) {
   const packet=structuredClone(source);
+  // The runtime keeps compatibility aliases for parsers, display and scene
+  // memory. The author needs the exact speech/action once, not three copies.
+  // Remove only byte-identical aliases; never shorten a player's command.
+  const turn=packet.playerTurn;
+  if(turn){
+    const canonical=[turn.speech,turn.action].filter(value=>typeof value==='string'&&value.length);
+    const aliases=new Set([...canonical,canonical.join('\n')]);
+    if(canonical.length&&aliases.has(turn.text))delete turn.text;
+    if(canonical.length&&aliases.has(packet.input))delete packet.input;
+    if(canonical.length&&aliases.has(packet.turnHandoff?.previousInput))delete packet.turnHandoff.previousInput;
+  }
   // Opaque lookup indexes are for the full validator, not prose generation.
   // The actual known evidence remains in memories/allowedSecrets/knownFacts.
-  for(const npc of [...(packet.presentNpcs||[]),...(packet.departingNpcs||[])])delete npc.knowledge;
+  for(const npc of [...(packet.presentNpcs||[]),...(packet.departingNpcs||[])]){
+    delete npc.knowledge;
+    // A feared future is not evidence that a relative is ill or an attack occurred.
+    delete npc.fears;
+  }
   // A witnessed appraisal is projected both as an NPC memory and as a
   // simulation belief. Carry one text with its evidence, within the same
   // holder's knowledge boundary; the full validator retains both records.

@@ -21,6 +21,7 @@ export const WORLD_PLAN_PROMPT = [
 export function worldPlanPrompt(mode='ordinary') {
   if(mode==='reality')return WORLD_PLAN_PROMPT;
   return [
+    '普通physical或法术攻击若尚未结算，可用combat.exchange {targetId:"真实在场对象",mode:"physical|spell|self_destruct",nonlethal:是否留命,evidence:"本轮action原文",techniqueName:可选已掌握功法ID}。你只理解意图，Engine按双方修为、伤势、装备和灵力计算伤害与反击；不能自定胜负、越境秒杀或凭形容词创造绝技。发言、假设、观察不是出手，settledAction为attack时禁止重放。',
     '先写blocks中的这次互动，再写worldPlan.operations中随之产生的真实变化。输出键顺序为blocks、worldPlan；没有实质变化用operations:[]。Engine会先执行操作再核对对白，任一部分无效均不提交。',
     'operations每项带type，使用事实包的真实ID。普通话语是发言，不自动成为动作、既往事实或言出法随；奇怪玩笑照样可以有人情味的回应。中性认识不用硬加好恶，social.observe只是记录真实态度变化，不是每句话必填的评语。同一听者每回合最多一条，evidence只能摘本轮玩家原话，不能摘自己生成的对白或替另一次互动记账。',
     '可用操作：social.observe {observerId,subjectId:"player",meaning:"短语义",evidence:"本轮原文片段",valence:-1至1,reason:"人物实际判断"}，须听者在场；resource.transfer {itemId,fromId:"player",toId}，须action明确交付该物给该人；effect.apply {itemId}，须action明确使用持有物品，勿重复settledAction。',

@@ -1,3 +1,7 @@
+## v4.2.4 主世界线、交锋与阅读
+
+先读 [PLAYABLE_RPG_V424.md](PLAYABLE_RPG_V424.md)。新旅程使用独立ID与固定主世界seed，旧档不重建。astra-combat统一普通攻击计算，astra-inventory以真实物品ID结算，astra-training记录修炼分钟；言灵独立。预测token成本仅调度，不作为服务商硬上限。其他约定仍适用。
+
 ## v4.2.3 有状态遭遇与真实余波
 
 game/astra-player-scene.js 为新旅程在第一次世界推进后建立 Lin 的初遇位置、听闻/对话记忆和 flags.playerScene，取消后续重复相遇事件。八种局面按 seed 选择；256 seed 回归覆盖 14 起点与 19 身世。旧档、死者、离开者不被开局重新摆位。开局缓存可重入，不再额外推进时间。

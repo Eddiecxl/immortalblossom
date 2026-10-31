@@ -291,8 +291,12 @@ export class GroqQueue {
   async preflight(payload) {
     const profile = await this.storage.get(`usage:${await fingerprint(payload.model)}`);
     const profiles = profile ? [] : [...(await this.storage.list({prefix: 'usage:'})).values()];
-    const density = profile?.density || Math.max(1, ...profiles.map(value => value.density || 0));
-    const baseInput = Math.ceil(promptUnits(payload) * density - 1e-9);
+    // Estimates reserve quota; they are not proof of an impossible request.
+    // Legacy lifetime-max density was easily poisoned by a tiny connection probe.
+    const requestFingerprint=await fingerprint(JSON.stringify({messages:payload.messages,maxTokens:payload.maxTokens}));
+    const measured=profile?.samples?.find(sample=>sample.requestFingerprint===requestFingerprint);
+    const density = profile?.schema===2 ? profile.density : Math.max(1, ...profiles.filter(value=>value.schema===2).map(value => value.density || 0));
+    const baseInput = measured?.promptTokens || Math.ceil(promptUnits(payload) * (density||1) - 1e-9);
     const input = Math.ceil(baseInput * 1.08);
     const costs = {requests: 1, 'input-tokens': input, 'output-tokens': payload.maxTokens,
       tokens: input + payload.maxTokens, 'day-tokens': input + payload.maxTokens};
@@ -301,7 +305,8 @@ export class GroqQueue {
     const now = this.clock();
     let retryAt = 0;
     for (const budget of budgets.values()) {
-      if (baseCosts[budget.kind] > budget.limit) return {error: {code: 'AI_INPUT_BUDGET', status: 413}};
+      const actualCost=measured?.costs?.[budget.kind] ?? (budget.kind==='input-tokens'?measured?.promptTokens:null);
+      if (budget.model===payload.model && actualCost>budget.limit) return {error: {code: 'AI_INPUT_BUDGET', status: 413}};
       // The prediction margin may reserve all capacity; it cannot turn a known
       // fitting prompt into an artificial oversized-input failure.
       const cost = Math.min(costs[budget.kind], budget.limit);
@@ -346,10 +351,17 @@ export class GroqQueue {
       if (inferred && (!entries[key] || availableQuota(inferred, now) < availableQuota(entries[key], now))) entries[key] = inferred;
     }
     const actual = Number(usage?.prompt_tokens || (errorInfo?.kind === 'input-tokens' ? errorInfo.requested : 0));
-    if (Number.isSafeInteger(actual) && actual > 0) {
+    if (Number.isSafeInteger(actual) && actual > 0 || errorInfo?.kind&&errorInfo.requested>0) {
       const key = `usage:${modelHash}`;
       const previous = await this.storage.get(key);
-      entries[key] = {model: payload.model, density: Math.max(previous?.density || 0, actual / promptUnits(payload)),
+      const units=promptUnits(payload),requestFingerprint=await fingerprint(JSON.stringify({messages:payload.messages,maxTokens:payload.maxTokens}));
+      const samples=[...(previous?.schema===2?previous.samples||[]:[]).filter(row=>row.requestFingerprint!==requestFingerprint),
+        {requestFingerprint,units,promptTokens:actual||null,costs:errorInfo?.kind?{[errorInfo.kind]:errorInfo.requested}:{},observedAt:now}].slice(-8);
+      // Tiny requests are mostly fixed chat-template overhead. Do not multiply
+      // that overhead across every character of the next long game scene.
+      const calibrated=samples.filter(row=>row.units>=128&&row.promptTokens>0);
+      const density=calibrated.length?calibrated.reduce((sum,row)=>sum+row.promptTokens,0)/calibrated.reduce((sum,row)=>sum+row.units,0):1;
+      entries[key] = {schema:2,model: payload.model,density,samples,
         promptTokens: actual, completionTokens: Number(usage?.completion_tokens) || 0, observedAt: now};
     }
     if (Object.keys(entries).length) await this.storage.put(entries);

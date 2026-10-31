@@ -41,7 +41,7 @@ test('review: mechanically consumed pills are not consumed again by the AI propo
   const result = await h.run({ speech: '', action: '服用回春丹' });
   assert.equal(result.ok, true, result.error);
   assert.equal(result.state.astraWorld.items['item:review:heal'].quantity, 1);
-  assert.equal(h.calls.length, 2);
+  assert.equal(h.calls.length, 0); // Known item use settles once without asking the author to replay it.
   assert.throws(() => applyWorldPlan(withPill('intra-repeat'), { operations: [
     { type: 'effect.apply', itemId: 'item:review:heal' }, { type: 'effect.apply', itemId: 'item:review:heal' }
   ] }, { ...ctx, turnId: 'review:use', mode: 'ordinary', input: { action: '服用回春丹' } }));

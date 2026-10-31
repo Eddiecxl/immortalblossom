@@ -4,6 +4,7 @@ import { sceneAffordances } from './astra-affordances.js';
 import { seedHash } from './astra-seed.js';
 import { selectAstraHandoff } from './astra-handoff.js';
 import {prepareOpeningScene} from './astra-player-scene.js';
+import {mainStoryOpening} from './astra-main-story.js';
 
 const BACKGROUND = {
   'farming household': '农家子弟', 'merchant family': '商户子弟',
@@ -40,14 +41,16 @@ export function createAstraOpening(source) {
   const location = world.locations[world.player.locationId];
   if (!location) throw new Error('开篇地点不在世界地图中。');
   const encounter=prepareOpeningScene(world,{fresh});
+  const mainBlocks=fresh?mainStoryOpening(world):null;
   const background = BACKGROUND[world.player.background] || world.player.background;
   const danger = DANGER[world.flags.earlyDanger] || '世道并不安宁';
   const chance = CHANCES[world.flags.earlyOpportunity] || '眼前也有新的机会';
   const people = Object.values(world.characters || {}).filter(npc => npc.alive && !npc.travel && npc.locationId === world.player.locationId);
   const affordance = sceneAffordances(world);
-  const handoff = selectAstraHandoff(world);
+  const handoff = mainBlocks ? {kind:'encounter',targetId:'npc:lin-xiaoman',targetName:'林小满',locationId:location.id,
+    text:mainBlocks.at(-1).text,nextAction:'先回应林小满，也可用药、读信、交涉或离开',focus:mainBlocks.at(-1).text} : selectAstraHandoff(world);
   const witnessed = encounter ? '一名姑娘已经注意到我的醒转，正等着我回应' : people[0]?.name ? `${people[0].name}在近处` : '此处的情形还需亲眼弄清';
-  const cue = `${danger}；${chance}。${witnessed}。`;
+  const cue = mainBlocks ? '我在赵府柴房带伤醒来；林小满进门问话，管事在门外催促。药草、旧信和木棍仍属于我，尚未作出选择。' : `${danger}；${chance}。${witnessed}。`;
   const rumorId = 'rumor:opening-opportunity';
   world.rumors.push({ id: rumorId, originEventId: 'opening:cue', locationId: world.player.locationId,
     summary: chance, truthConfidence: 0.6, sourceCredibility: 0.6,
@@ -73,7 +76,7 @@ export function createAstraOpening(source) {
     `我先记起了另一段人生，然后才认出${location.name}。穿越没有给我现成的答案：此世的身份是${background}，眼前的人和事，需要从头认识。`,
     `我在${location.name}睁开眼，记忆却来自另一世。此世我是${background}；身体记得这段生活，我仍需弄清它。穿越已成事实，第一步该往哪里走？`
   ];
-  const blocks = encounter ? [
+  const blocks = mainBlocks || (encounter ? [
     {type:'narr',text:arrivals[seedHash(world.seed,'opening:arrival')%arrivals.length]},
     {type:'narr',text:'旧日生活的碎片与陌生的记忆挤在一起，却没有哪一段能替我解释眼前。衣料的触感、掌心的纹路、呼吸间微凉的空气，都真切得不像一场梦。身上的名字和来处尚能想起，接下来的命运却没有现成的答案——而这个世界，已经有人先一步找到了我。'},
     {type:'narr',text:encounter.scene},
@@ -83,7 +86,7 @@ export function createAstraOpening(source) {
     { type: 'narr', text: arrivals[seedHash(world.seed,'opening:arrival') % arrivals.length] },
     { type: 'narr', text: cue },
     { type: 'sys', text: `宿主，你现在身处${location.name}。刚听到的消息尚是传闻，还得亲自核实。` }
-  ];
+  ]);
   if (handoff?.targetId) {
     const npc = world.characters[handoff.targetId];
     // First contact concerns this encounter, not abstract life-goal advice.
@@ -93,8 +96,8 @@ export function createAstraOpening(source) {
         `你脸色不太好。要不要先歇一会儿？`,
         `怎么一个人在这儿发愣？是迷路了，还是在等人？`,
         `刚才叫你都没反应。现在好些了吗？`];
-    const text = encounter?.line || questions[seedHash(world.seed, 'opening:contact') % questions.length];
-    blocks.push({ type: 'dlg', name: npc.name, text });
+    const text = mainBlocks?.at(-1).text || encounter?.line || questions[seedHash(world.seed, 'opening:contact') % questions.length];
+    if(!mainBlocks)blocks.push({ type: 'dlg', name: npc.name, text });
     const id = 'opening:contact';
     const summary = `${npc.name}向我开口：“${text}”`;
     world.history.push({ id, type: 'opening_contact', minute: world.minute, locationId: location.id,

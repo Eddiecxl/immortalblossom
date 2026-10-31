@@ -815,6 +815,26 @@ test('a learned oversized input becomes a sanitized terminal error without anoth
   assert.equal(calls, 1);
 });
 
+test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});
+ const player=app.visitor();await player.request('/api/ai/cloud/test',{provider:'groq'});await app.fire();
+ const story=await(await player.request('/api/ai/cloud/generate',{...payload('probe-then-law'),messages:[{role:'user',content:'真实世界'.repeat(850)}]})).json();
+ await app.fire();let response=await player.request(jobPath(story));
+ assert.notEqual(response.status,413,'an estimate is not provider evidence that this prompt is oversized');
+ if(response.status===202){app.advance(61000);await app.fire();response=await player.request(jobPath(story));}
+ assert.equal(response.status,200);assert.equal(calls,2);
+});
+
+test('legacy high-density estimates may pace but cannot permanently block a different lawful input',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return completion('真实回复');}}),player=app.visitor();
+ await player.request('/api/ai/cloud/generate',payload('establish-queue'));await app.fire();
+ const {fingerprint}=await import('../../cloud/groq-queue.mjs'),model='qwen/qwen3.8-27b',hash=await fingerprint(model);
+ await app.queue().ctx.storage.put('usage:'+hash,{model,density:12,promptTokens:80});
+ await app.queue().ctx.storage.put('quota:'+hash+':input-tokens',{model,kind:'input-tokens',limit:7000,remaining:7000,observedAt:app.now(),refillRate:7000/60000,resetAt:app.now()+60000});
+ const job=await(await player.request('/api/ai/cloud/generate',{...payload('legacy-density-law'),messages:[{role:'user',content:'实际指令'.repeat(900)}]})).json();await app.fire();
+ assert.equal((await player.request(jobPath(job))).status,200);assert.equal(calls,2);
+});
+
 test('real workerd alarm completes the Groq queue and paces learned quota with supported redirect mode',
   {skip: !process.env.LX_MINIFLARE_MODULE}, async () => {
     const {Miniflare, convertV4MiniflareOptions} = await import(pathToFileURL(process.env.LX_MINIFLARE_MODULE).href);

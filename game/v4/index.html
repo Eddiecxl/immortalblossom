@@ -52,7 +52,7 @@
     <div class="title-actions">
       <button class="journey-button primary" id="newJourneyButton">
         <span class="button-flower">✿</span>
-        <div><span>启程</span><small>NEW JOURNEY</small></div><i>›</i>
+        <div><span>启程 · 柴门之外</span><small>MAIN STORY</small></div><i>›</i>
       </button>
       <button class="journey-button ghost" id="continueJourneyButton" hidden>
         <span class="button-flower">◇</span>
@@ -125,10 +125,6 @@
             <span><small>天气</small><b id="weatherValue">细雨</b></span>
             <span><small>回合</small><b id="turnValue">0</b></span>
           </div>
-          <div class="danger-wrap compact-danger">
-            <div><small>当前威胁</small><b id="dangerText">尚未逼近</b></div>
-            <span class="danger-track"><i id="dangerBar"></i></span>
-          </div>
           <div class="system-feed" id="systemFeed" aria-live="polite"><p class="sys-msg">系统在线。你继续说，我会盯着时间、人物和局势。</p></div>
           <div class="system-dock-compose">
             <textarea id="systemDockInput" rows="2" maxlength="1200" placeholder="随时问系统…"></textarea>
@@ -158,8 +154,8 @@
           <div class="scene-tags"><span id="sceneWeather">细雨</span><span id="sceneThreat">风平浪静</span></div>
         </header>
 
-        <div class="chronicle-toolbar"><span>此世行记 <small>CHRONICLE</small></span><div class="reading-toolbar"><i class="reading-dot"></i><span id="readingStatus">静候你落笔</span><button id="skipText" type="button" hidden>展开全文</button></div></div>
-        <div class="story-scroll" id="storyScroll" role="log" aria-label="按发生顺序排列的剧情与对白" aria-live="off">
+        <div class="chronicle-toolbar"><span>此世行记 <small>CHRONICLE</small></span><div class="reading-toolbar"><i class="reading-dot"></i><span id="readingStatus">静候你落笔</span><button id="latestText" type="button" hidden>继续阅读 ↓</button><button id="pauseText" type="button" hidden>暂停</button><button id="skipText" type="button" hidden>展开全文</button></div></div>
+        <div class="story-scroll" id="storyScroll" role="log" aria-label="按发生顺序排列的剧情与对白" aria-live="off" tabindex="0">
           <div class="story-opening">
             <span class="opening-rune">始</span>
             <div>
@@ -264,7 +260,7 @@
       </header>
       <div class="law-input-frame">
         <span class="law-input-rune left">敕</span>
-        <textarea id="lawInput" maxlength="320" rows="3" placeholder="例如：我现在直接筑基。"></textarea>
+        <textarea id="lawInput" maxlength="1795" rows="5" placeholder="写清要改变的对象、范围和结果，例如：让我直接踏入筑基境。"></textarea>
         <span class="law-input-rune right">成</span>
       </div>
       <div class="law-scale-row">

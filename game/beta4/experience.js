@@ -3,11 +3,12 @@ import {GAME_SOUNDTRACK,GAME_PLAYLISTS} from './game-soundtrack.js';
 import {logoFilmMarkup,LOGO_FILM_DURATION} from './logo-film.js';
 import {bindMenuVideo} from './menu-video.js';
 import {projectTurnBlocks,detectEvents} from './presentation.js';
+import {createChroniclePlayer,upgradeReadingPreferences} from './chronicle-player.js';
 const KEY='luoxian_beta3_settings';
-const defaults={master:75,music:0,sfx:65,muteBackground:true,quality:'high',motion:true,scale:100,brightness:100,textSpeed:38,requestInterval:8,mode:'windowed',resolution:'1600x900',intro:true};
+const defaults={master:75,music:0,sfx:65,muteBackground:true,quality:'high',motion:true,scale:100,brightness:100,textSpeed:52,requestInterval:8,mode:'windowed',resolution:'1600x900',intro:true};
 export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImport,onReady=async()=>{}}){
- let settings={...defaults};try{settings={...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')};}catch{}
- const audio=createScore(()=>settings,{tracks:GAME_SOUNDTRACK,playlists:GAME_PLAYLISTS,initialScene:'intro',smoothManual:true});let writing=false,transitioning=false,skip=false,lastFocus=null,events=[],eventShowing=false;
+ let settings={...defaults};try{settings={...defaults,...upgradeReadingPreferences(JSON.parse(localStorage.getItem(KEY)||'{}'))};localStorage.setItem(KEY,JSON.stringify(settings));}catch{}
+ const audio=createScore(()=>settings,{tracks:GAME_SOUNDTRACK,playlists:GAME_PLAYLISTS,initialScene:'intro',smoothManual:true});let transitioning=false,lastFocus=null,events=[],eventShowing=false;
  const el=(id)=>document.getElementById(id);
  const root=document.createElement('div');root.id='beta3Experience';root.innerHTML=`
  <section id="cinematic" class="cinematic" aria-label="落仙开场">
@@ -30,7 +31,7 @@ export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImpor
    ${select('quality','特效质量',[['high','精致 · 云雾 / 光晕 / 粒子'],['medium','均衡 · 减少粒子'],['low','轻量 · 静态背景']])}${slider('brightness','画面亮度',75,125)}
    <button id="applyDisplay">应用显示设置</button><p id="displayFeedback" role="status"></p>
   </section>
-  <section data-settings-page="play" hidden><h3>一字一山河</h3><p>对白与剧情按发生顺序连续呈现，阅读中可随时展开全文。</p>
+  <section data-settings-page="play" hidden><h3>一字一山河</h3><p>对白与剧情逐字呈现，句间稍作停顿。可暂停、展开全文；向上回看时暂停新文字，点击“继续阅读”接上。</p>
    ${slider('textSpeed','字幕间隔 · 毫秒 / 字',0,100)}${slider('requestInterval','AI 请求最小间隔 · 秒',3,30)}
    <p class="field-note">减慢字幕不等于避免限流。请求统一控制间隔，不会将重复点击排队，遇到限流遵守服务端冷却时间，不自动切换模型。</p><button id="replayIntro">重看开场</button><button id="exportJourney">导出命簿</button><button id="importJourney">导入命簿</button><input type="file" id="journeyFile" accept=".json" hidden><p id="journeyFeedback" role="status"></p>
   </section>
@@ -86,20 +87,15 @@ export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImpor
  el('skipIntro').onclick=finishIntro;el('introSound').onclick=async()=>{await enableMusic();el('introSound').textContent='声音已开启';};el('replayIntro').onclick=intro;
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!el('cinematic').hidden){finishIntro();return;}const layer=[...root.querySelectorAll('.b3-layer')].reverse().find(l=>!l.hidden);if(layer){if(layer.id==='eventLayer')nextEvent();else close(layer.id);}else if(!document.querySelector('.ai-config-layer:not([hidden]),.law-layer:not([hidden]),.world-drawer:not([hidden])'))openSettings();}if(e.key==='Tab'){const layer=[...root.querySelectorAll('.b3-layer')].reverse().find(l=>!l.hidden);if(!layer)return;const focusable=[...layer.querySelectorAll('button,input,select')].filter(x=>!x.disabled&&x.getClientRects().length);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
  let lastHover=0;document.addEventListener('pointerover',e=>{if(e.target.closest('button')&&Date.now()-lastHover>100){audio.sfx('hover');lastHover=Date.now();}});document.addEventListener('click',e=>{if(e.target.closest('button'))audio.sfx('click');});
- async function reveal(node,text,target){if(!settings.textSpeed||reduced()||skip){node.textContent=text;if(target)target.scrollTop=target.scrollHeight;return;}const chars=Array.from(text);let start=performance.now();await new Promise(resolve=>{function frame(now){const n=skip?chars.length:Math.floor((now-start)/settings.textSpeed)+1;node.textContent=chars.slice(0,n).join('');if(target)target.scrollTop=target.scrollHeight;if(n>=chars.length)resolve();else requestAnimationFrame(frame);}requestAnimationFrame(frame);});}
- const readStatus=el('readingStatus');el('skipText').onclick=()=>{skip=true;};
- async function renderBlocks(blocks,speech,{animate=true}={}){const rows=projectTurnBlocks(blocks,speech);writing=animate;skip=false;el('skipText').hidden=!animate;readStatus.textContent=animate?'墨迹渐显 · 正在展开此回合':'命簿已载入';
-  for(const b of rows){const dialogue=b.type==='dlg';const target=el('storyScroll');const article=document.createElement('article');article.className=dialogue?`dialogue-line ${b.player?'is-player':''}`:`story-block ${b.type||'narr'}`;
-   if (!animate) article.style.animation='none';
-   if(dialogue){const name=document.createElement('b');name.textContent=b.name||'未识之人';const badge=document.createElement('small');badge.textContent=b.player?'此言由你':'山河回响';name.append(badge);article.append(name);}
-   const p=document.createElement('p');article.append(p);target.append(article);if(animate){target.scrollTop=target.scrollHeight;await reveal(p,b.text,target);}else p.textContent=b.text;target.scrollTop=target.scrollHeight;
-  }writing=false;el('skipText').hidden=true;readStatus.textContent='此回合已展开 · 静候你落笔';
- }
+ const readStatus=el('readingStatus');
+ const chronicle=createChroniclePlayer({target:el('storyScroll'),status:readStatus,skipButton:el('skipText'),pauseButton:el('pauseText'),latestButton:el('latestText'),
+  getSpeed:()=>settings.textSpeed,getReduced:reduced,getPlayerName:()=>el('playerName')?.textContent||'顾长生',onCancel:()=>window.dispatchEvent(new Event('lx:cancel-ai-wait'))});
+ async function renderBlocks(blocks,speech,options){await chronicle.render(projectTurnBlocks(blocks,speech),options);}
  function nextEvent(){close('eventLayer');eventShowing=false;const evt=events.shift();if(!evt)return;eventShowing=true;const layer=el('eventLayer');layer.dataset.kind=evt.kind;el('eventTitle').textContent=evt.title;el('eventText').textContent=evt.text;el('eventRune').textContent=({realm:'境',quest:'成',newquest:'契',failedquest:'断',item:'藏',revival:'生',danger:'劫',death:'寂',travel:'山',relationship:'缘',ending:'终'})[evt.kind];el('eventContinue').textContent=['death','ending'].includes(evt.kind)?'返回封面':'继续此世';el('eventContinue').onclick=()=>{if(['death','ending'].includes(evt.kind))onTitle();nextEvent();};audio.sfx(evt.kind);open('eventLayer');}
  function showEvents(before,after){events.push(...detectEvents(before,after));if(!eventShowing)nextEvent();}
  function confirmNew(){open('newConfirm');return new Promise(resolve=>{newResolution=resolve;el('confirmNew').onclick=()=>{newResolution=null;close('newConfirm');resolve(true);};});}
- let cooldownUntil=0;window.addEventListener('lx:cooldown',e=>{cooldownUntil=Date.now()+e.detail.ms;});setInterval(()=>{if(cooldownUntil>Date.now())readStatus.textContent=`灵机调息 · ${Math.ceil((cooldownUntil-Date.now())/1000)} 秒后可继续请求`;else if(cooldownUntil){cooldownUntil=0;readStatus.textContent='灵机已就绪';}},500);
+ let cooldownUntil=0;window.addEventListener('lx:cooldown',e=>{cooldownUntil=Date.now()+e.detail.ms;});setInterval(()=>{if(chronicle.isWriting())return;if(cooldownUntil>Date.now())readStatus.textContent=`灵机调息 · ${Math.ceil((cooldownUntil-Date.now())/1000)} 秒后可继续请求`;else if(cooldownUntil){cooldownUntil=0;readStatus.textContent='灵机已就绪';}},500);
  settings.scale=Math.max(100,Math.min(140,Number(settings.scale)||100));sync();apply();syncAudio();boot();if(window.lxNative)applyDisplay();
- function pendingSpeech(text){el('pendingSpeech')?.remove();if(!text)return;const row=document.createElement('article');row.id='pendingSpeech';row.className='dialogue-line is-player pending-speech';const name=document.createElement('b');name.textContent='顾长生 · 待世界回应';const p=document.createElement('p');p.textContent=text;row.append(name,p);const cancel=document.createElement('button');cancel.type='button';cancel.textContent='停止等待，保留输入';cancel.onclick=()=>window.dispatchEvent(new Event('lx:cancel-ai-wait'));row.append(cancel);el('storyScroll').append(row);el('storyScroll').scrollTop=el('storyScroll').scrollHeight;}
- return {audio,enter,menu,isTransitioning:()=>transitioning,openSettings,requireKey,renderBlocks,showEvents,confirmNew,pendingSpeech,isWriting:()=>writing,clear:()=>{el('pendingSpeech')?.remove();},skip:()=>{skip=true;}};
+ return {audio,enter,menu,isTransitioning:()=>transitioning,openSettings,requireKey,renderBlocks,showEvents,confirmNew,pendingSpeech:chronicle.pendingSpeech,isWriting:chronicle.isWriting,
+  clear:()=>{chronicle.clearPending();chronicle.followLatest();},followLatest:chronicle.followLatest,skip:chronicle.skip};
 }

@@ -8,6 +8,7 @@ import {explicitRealityStatement} from './astra-reality-intent.js';
 import { checkTerminalWorld } from './astra-terminal.js';
 import { reconcileQuestArcs, respondQuestArc } from './astra-quests.js';
 import { transferOwnedItem, offerCommitment, respondCommitment } from './astra-commitments.js';
+import {resolveCombatExchange} from './astra-combat.js';
 export { evaluateCondition } from './astra-expression.js';
 
 const domains = { character: 'characters', faction: 'factions', location: 'locations', item: 'items' };
@@ -278,6 +279,17 @@ export function applyWorldPlan(source, plan, context) {
       case 'quest.create': createQuest(world, op, context); break;
       case 'quest.respond': respondQuestArc(world, op, context); break;
       case 'social.observe': social(world, op, context); break;
+      case 'combat.exchange': {
+        const action=inputAction(context);
+        if(context.mode!=='ordinary'||context.settledAction==='attack'||consumed.has('combat'))fail('战斗已结算或不属于普通动作，不能重复执行。');
+        if(!action||isSpeculativeInput(action)||!op.evidence||!action.includes(op.evidence))fail('战斗须依据本轮真实动作，发言、假设或转述不能发起攻击。');
+        if(!['physical','spell','self_destruct'].includes(op.mode))fail('战斗方式无效。');
+        if(Object.keys(op).some(key=>!['type','targetId','mode','nonlethal','techniqueName','evidence'].includes(key)))fail('AI只能解释攻击方式，不能指定伤害、命中或胜负。');
+        const target=world.characters[op.targetId];
+        if(!target||!present(world,target.id))fail('战斗对象必须真实在场。');
+        if(!action.includes(target.name)&&context.conversationTargetId!==target.id)fail('攻击对象不明确，不能替玩家挑选目标。');
+        consumed.add('combat');resolveCombatExchange(world,{actorId:target.id,mode:op.mode,nonlethal:op.nonlethal===true,techniqueName:op.techniqueName},context.turnId);break;
+      }
       case 'effect.apply': {
         if (consumed.has(op.itemId) || context.settledAction === 'use_generated_item'
           && (!context.settledItemId || context.settledItemId === op.itemId)) fail('这件物品的本轮使用已经结算，不能重复消费。');

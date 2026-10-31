@@ -63,7 +63,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
   const world = state?.astraWorld ?? state?.world ?? state ?? {};
   const minute = Number.isFinite(Number(world.minute)) ? Number(world.minute) : 0;
   const player = world.player ?? {};
-  const query = text(input, 500);
+  const query = text(input, 3200);
   const refScore=(entry,extra=[])=>[entry?.id,entry?.name,entry?.title,...extra]
     .filter(label=>typeof label==='string'&&label.length>=2&&query.includes(label)).reduce((sum,label)=>sum+label.length,0);
   const recalling = /之前|刚才|记得|说过|答应|承诺|约定|上次|当时|过去/u.test(query);

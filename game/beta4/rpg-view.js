@@ -1,4 +1,6 @@
 import {ITEMS,QUESTS,REALMS,TECHNIQUES} from '../game-data.js';
+import {itemUsageOptions} from '../astra-inventory.js';
+import {realmLabel} from '../astra-rules.js';
 export function nearbyCharacterRows(state){
  const world=state.astraWorld;
  if(!world)return (state.codex?.characters||[]).slice(-5).map(name=>({id:name,name}));
@@ -7,6 +9,12 @@ export function nearbyCharacterRows(state){
   .map(n=>({id:n.id,name:n.name}));
 }
 export function inventoryRows(state){
+ const world=state.astraWorld;
+ if(world)return (world.player.inventory||[]).map(id=>world.items[id])
+  .filter(item=>item&&!item.destroyed&&item.quantity>0&&item.ownerId===world.player.id)
+  .map(item=>{const options=itemUsageOptions(world,item);return {itemId:item.id,name:item.name||item.templateId,amount:item.quantity,
+   description:item.description||'世界中的实际物品；查看用途或选择下方可执行的操作。',type:item.category||'随身物品',
+   actions:options.map(o=>({...o,id:o.action})),usable:options.some(o=>o.action==='use'),equippable:options.some(o=>o.action==='equip')};});
  const assets=Object.values(state.rpg?.assets||{}).filter(a=>a.kind==='item');
  const names=new Set([...Object.keys(state.inventory?.items||{}),...Object.keys(state.inventory?.materials||{}),...assets.map(a=>a.name)]);
  return [...names].filter(Boolean).map(name=>{
@@ -33,6 +41,9 @@ export function questRows(state){
  return rows;
 }
 export function characterRows(state){
+ if(state.astraWorld){const w=state.astraWorld,p=w.player;return {realm:realmLabel(w,p.cultivation.realm),
+  equipment:Object.entries(p.equipment||{}).filter(([,id])=>w.items[id]&&!w.items[id].destroyed&&w.items[id].ownerId===p.id).map(([slot,id])=>[slot,w.items[id].name]),
+  techniques:(p.techniques||[]).map(s=>({name:s.name||s.id||s,description:s.description||'已掌握',equipped:true}))};}
  return {realm:REALMS[state.player?.realm]?.name||'未知',equipment:Object.entries(state.equipment?.slots||{}).filter(([,v])=>v),techniques:(state.techniques?.known||[]).map(name=>({name,description:TECHNIQUES[name]?.description||state.journeyWorld?.skills?.[name]?.description||'已掌握',equipped:state.techniques?.equipped?.includes(name)}))};
 }
 export function newLedgerEvents(before,after){const old=new Set((before.rpg?.ledger||[]).map(x=>x.id));return (after.rpg?.ledger||[]).filter(x=>!old.has(x.id));}

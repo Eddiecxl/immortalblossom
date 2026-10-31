@@ -155,6 +155,19 @@ export function validateAstraNarration(world, blocks, packet = {}) {
     // every real item, including seed and player-created instances, never to a
     // named opening scene. Questions/offers are not completed acquisition.
     if (block.type === 'dlg' || block.type === 'narr') {
+      // Existing possessions cannot move to a different hand as decoration.
+      // Require an explicit subject (or the sole named subject of a sentence),
+      // so mere mentions, questions and offers don't invent a transfer either.
+      if(block.type==='narr')for(const sentence of prose.split(/[。！？!?]/u)){
+        if(/没有|并未|还没|未曾|假如|如果|试图/u.test(sentence))continue;
+        const holding=sentence.match(/拿着|捏着|握着|抱着|攥着|手持/u);if(!holding)continue;
+        const subjects=characters.filter(n=>n.name&&sentence.slice(0,holding.index).includes(n.name));
+        if(subjects.length!==1)continue;
+        const actor=subjects[0],suffix=sentence.slice(holding.index);
+        const aliases=[...new Set(items.map(i=>String(i.name||'').split('·')[0]).filter(n=>n.length>=2&&suffix.includes(n)))];
+        for(const alias of aliases)if(!items.some(i=>String(i.name||'').split('·')[0]===alias&&!i.destroyed&&i.ownerId===actor.id))
+          reject('unsupported-item',`${actor.name}并未持有${alias}，不能把其他人的物品写在此人手里。`);
+      }
       for (const clause of prose.match(/[^。！？!?；]+[。！？!?；]?/gu)||[]) {
         if (/[?？]|吗|未|没有|还没|并未|如果|假如|是否|愿意|曾经|从前|过去/u.test(clause)) continue;
         const received=clause.match(/(?:你|我|玩家|主角)(?:(?:(?:刚刚|刚才|已经|早已|才|刚|已|又|终于|确实|先前)){1,5}(?:收下|拿到|得到|获得|接过|领到)|(?:收下|拿到|得到|获得|接过|领到)(?:了|我赠予的|我给的|我的|这|那))/u);

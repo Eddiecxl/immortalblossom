@@ -61,25 +61,27 @@ export function resolveAstraConversation(world, rawSpeech, recentTurns = []) {
 }
 
 export function validateAstraConversation(blocks, plan, recentTurns = []) {
-  if (!plan?.targetId) return { ok: true, errors: [] };
-  const reply = (Array.isArray(blocks) ? blocks : []).find(block => block?.type === 'dlg' && block.name === plan.targetName);
+  const replies=(Array.isArray(blocks)?blocks:[]).filter(block=>block?.type==='dlg'&&!block.engineOwnedPlayerSpeech&&!block.player);
   const errors = [];
-  if (!reply) errors.push('本轮没有被问人物的回应');
-  else {
+  const targetReplies=replies.filter(b=>b.name===plan?.targetName);
+  if(plan?.targetId&&!targetReplies.length)errors.push('本轮没有被问人物的回应');
+  if(plan?.targetId&&targetReplies.length&&targetReplies.every(reply=>normalized(reply.text).length<2||/^(?:你问的我已听见|我已听见|我听见了|帮你|你说什么|不知道|嗯嗯|哦哦)$/u.test(normalized(reply.text))))errors.push('回应只是复读或空泛应声');
+  const seen=[];
+  for(const reply of replies){
     const line = normalized(reply.text);
-    if (line.length < 2 || /^(?:你问的我已听见|我已听见|我听见了|帮你|你说什么|不知道|嗯嗯|哦哦)$/u.test(line))
-      errors.push('回应只是复读或空泛应声');
-    const earlier = (recentTurns || []).slice(-4).flatMap(turn => turn.blocks || [])
-      .filter(block => block.type === 'dlg' && block.name === plan.targetName)
+    const history=[...(recentTurns || []).slice(-4).flatMap(turn => turn.blocks || []),...seen];
+    const earlier = history
+      .filter(block => block.type === 'dlg' && block.name === reply.name)
       .map(block => normalized(block.text));
     if (line.length >= 6 && earlier.includes(line)) errors.push('人物重复了上一轮原话');
-    const oldSentences = (recentTurns || []).slice(-4).flatMap(turn => turn.blocks || [])
-      .filter(block => block.type === 'dlg' && block.name === plan.targetName)
+    const oldSentences = history
+      .filter(block => block.type === 'dlg' && block.name === reply.name)
       .flatMap(block => String(block.text || '').split(/[。！？!?]/u).map(normalized)).filter(part => part.length >= 14);
     const reused = String(reply.text || '').split(/[。！？!?]/u).map(normalized)
       .filter(part => part.length >= 14 && oldSentences.includes(part));
     if (reused.reduce((sum,part)=>sum+part.length,0) >= Math.max(14,line.length*0.3))
       errors.push('人物更换了开头，却重复使用上一轮的大段回应');
+    seen.push(reply);
   }
   return { ok: errors.length === 0, errors };
 }

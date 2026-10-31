@@ -9,7 +9,7 @@ import {campaignGuidance} from '../campaign.js';
 import {createSaveUI} from '../beta4/save-ui.js';
 import { ensureV31Canon, v31Snapshot } from '../v4-engine.js';
 import { QUESTS, NPCS, LOCATIONS, getAvailableActions } from '../game-engine.js';
-import { createGameState } from '../game-state.js';
+import { createMainStoryState } from '../astra-main-story.js';
 import { createStorage } from '../storage.js';
 import { createTranscriptStore } from '../transcript-store.js';
 import { createAiTurnRunner } from '../ai-turn.js';
@@ -23,7 +23,7 @@ const $ = (id) => document.getElementById(id);
 const dom = Object.fromEntries([
   'titleScreen','gameShell','newJourneyButton','continueJourneyButton','sceneTitle','playerName','realmValue','hpValue','hpBar',
   'spiritValue','spiritBar','qiValue','goldValue','timeValue','lawCount','systemLine','locationValue','weatherValue','turnValue',
-  'dangerText','dangerBar','storyLocation','scenePeriod','sceneWeather','sceneThreat','storyScroll','suggestionStrip','composer',
+  'storyLocation','scenePeriod','sceneWeather','sceneThreat','storyScroll','suggestionStrip','composer',
   'speechInput','actionInput','sendButton','questHeadline','questDetail','characterChips','memoryPreview','echoList','saveButton','titleButton',
   'exitGameButton','systemChatButton','systemChatLayer','systemInput','systemChatResponse','sendSystemButton','closeSystemChat','systemFeed','systemDockInput','systemDockSend','audioButton',
   'lawInvokeButton','lawLayer','lawInput','lawCostHint','lawSubmitButton','lawCloseButton','lawCancelButton',
@@ -191,6 +191,7 @@ function renderSuggestions(suggestions = []) {
     suggestions = [
       { label: '观察周围', command: '观察周围的人和道路' },
       { label: '打听消息', command: '向在场的人打听最近的消息' },
+      { label: '打坐修炼', command: '打坐修炼一小时' },
       ...roads,
       { label: '等待片刻', command: '在此等待一小时' }
     ];
@@ -211,7 +212,8 @@ function renderSuggestions(suggestions = []) {
 
 function activeQuest() {
   if (state.astraWorld && !state.astraWorld.flags?.legacyMigration) {
-    const quest = Object.values(state.astraWorld.quests || {}).find(entry => ['active','accepted'].includes(entry.state));
+    const active=Object.values(state.astraWorld.quests||{}).filter(q=>['active','mutated','accepted'].includes(q.state));
+    const quest = active.find(q=>q.mainStory)||active[0];
     if (quest) return { quest: { title: quest.title || quest.name || '眼前之事', description: quest.summary || quest.objective || '此事会随世界时间变化。' } };
     return { quest: { title: '此世由你起笔', description: '世间人物各有去处，机缘与危机按时发生。先观察、交谈，或自行上路。' } };
   }
@@ -247,12 +249,9 @@ function renderHud() {
   const danger = state.astraWorld ? Math.ceil(Number(state.astraWorld.locations?.[state.astraWorld.player.locationId]?.risk || 0) / 25)
     : Number(state.director?.dangerClocks?.zhaoPursuit || 0);
   const arrived = !state.astraWorld && Boolean(state.story.flags?.zhaoPursuitArrived);
-  dom.dangerBar.style.width = `${Math.min(100, danger / 4 * 100)}%`;
-  dom.dangerText.textContent = state.astraWorld ? `当地风险 ${state.astraWorld.locations?.[state.astraWorld.player.locationId]?.risk || 0}/100`
-    : arrived ? '已经抵达' : danger >= 3 ? '近在咫尺' : danger >= 2 ? '正在逼近' : danger ? '已有动静' : '尚未逼近';
   dom.sceneThreat.textContent = dead ? '命途已断' : state.astraWorld ? '世界自行运转中'
     : arrived ? '追兵已至' : danger >= 2 ? '危机逼近' : '局势流动中';
-  const locked = turnFlow.state() !== 'idle';
+  const locked = turnBusy || experience.isWriting() || turnFlow.state() !== 'idle';
   dom.sendButton.disabled = dead || locked;
   dom.speechInput.disabled = dead || (locked && turnFlow.state() !== 'cooldown');
   dom.actionInput.disabled = dead || (locked && turnFlow.state() !== 'cooldown');
@@ -325,7 +324,8 @@ function renderDrawer(tab = activeDrawer) {
       const details=[['数量',item.amount],['作用',item.description]];
       if(item.asset){details.push(['护命余次',item.asset.charges??0]);const source=item.asset.provenance?.source||item.asset.provenance?.sourceId||item.asset.sourceId; if(source)details.push(['来历',source]);}
       const card=ledgerSection(item.name,details);
-      if(item.usable||item.equippable){const controls=node('div','item-controls');const button=node('button','',item.equippable?'装备':'使用');button.type='button';button.dataset.inventoryAction=item.equippable?'equip':'use';button.dataset.itemName=item.name;button.disabled=turnBusy||experience.isWriting()||Boolean(state.story.flags?.playerDead)||state.campaign?.status==='complete';button.addEventListener('click',()=>applyInventoryAction(item.name,button.dataset.inventoryAction));controls.append(button);card.append(controls);}
+      const actions=item.actions||(item.equippable?[{id:'equip',label:'装备'}]:item.usable?[{id:'use',label:'使用'}]:[]);
+      if(actions.length){const controls=node('div','item-controls');for(const action of actions){const button=node('button','',action.label);button.type='button';button.dataset.inventoryAction=action.id;button.dataset.itemName=item.name;if(item.itemId)button.dataset.itemId=item.itemId;button.disabled=Boolean(action.disabled)||turnBusy||experience.isWriting()||Boolean(state.story.flags?.playerDead)||state.campaign?.status==='complete';if(action.reason)button.title=action.reason;button.addEventListener('click',()=>applyInventoryAction(item.name,action.id,item.itemId));controls.append(button);}card.append(controls);}
       dom.drawerContent.append(card);
     }
     for(const asset of Object.values(state.rpg?.assets||{}).filter(a=>a.kind==='skill'||a.kind==='system'))dom.drawerContent.append(ledgerSection(asset.name,[['类别',asset.kind==='skill'?'保命技能':'系统护佑'],['余次',asset.charges],['规则',asset.description||'致命时自动判定']]));
@@ -403,20 +403,23 @@ function closeDrawer() {
   dom.worldDrawer.hidden = true;
 }
 
-async function applyInventoryAction(name,action){
+async function applyInventoryAction(name,action,itemId){
   if(!state||turnBusy||saveUI?.isBusy()||experience.isWriting()||state.story.flags?.playerDead)return;
-  const before=structuredClone(state);turnBusy=true;renderDrawer('inventory');
+  const before=structuredClone(state);turnBusy=true;renderHud();renderDrawer('inventory');
   try{
-    const result=await commitInventoryAction(state,{name,action},{stateStore,transcriptStore});
+    const result=await commitInventoryAction(state,{name,action,itemId},{stateStore,transcriptStore});
     if(!result.ok){state=result.state;renderAll();showToast(result.error||'当前无法使用此物品');return;}
     state=result.state;
+    if(!result.historyPending){
+      try{await saveSession.committed(state);}catch(error){showToast('物品已结算；续玩检查点待恢复：'+error.message);}
+    }
     transcript.push({blocks:result.blocks,summary:result.turn.summary,input:result.turn.userText,at:formatClock(state)});
     await experience.renderBlocks(result.blocks,'',{animate:false});
     renderAll({suggestions:getAvailableActions(state)});
     experience.showEvents(before,state);audioEngine.sfx('quest');
     showToast(result.historyPending?'物品已结算，记录待恢复；下次操作会先重试保存。':result.blocks.map(b=>b.text).join(' '));
   }catch(error){showToast('物品未结算：'+error.message);}
-  finally{turnBusy=false;renderDrawer('inventory');}
+  finally{turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}
 }
 
 function renderSystemDock() {
@@ -499,7 +502,7 @@ async function submitTurn(input) {
   dom.systemLine.textContent = '正在结算这一回合：说话逐字保留，动作由世界规则判定。';
   // Do not echo raw Speech/Action form fields into the story. Exact Speech is
   // inserted once by the engine; Action is represented only by its resolved result.
-  dom.storyScroll.scrollTop = dom.storyScroll.scrollHeight;
+  experience.followLatest();
 
   try {
     activeTurnController=new AbortController();
@@ -530,7 +533,6 @@ async function submitTurn(input) {
       let checkpointSaved = true;
       try { await saveSession.committed(state); }
       catch (error) { checkpointSaved = false; showToast('续玩检查点未更新；自动命簿仍已保存：' + error.message); }
-      experience.pendingSpeech('');
       await experience.renderBlocks(result.blocks, playerTurn.speech);
       experience.showEvents(beforeState,state);
       transcript.push({
@@ -582,7 +584,6 @@ async function submitTurn(input) {
       if (details) details.open = false;
     }
     if (!dead) dom.speechInput.focus();
-    dom.storyScroll.scrollTop = dom.storyScroll.scrollHeight;
   }
 }
 
@@ -599,7 +600,7 @@ setInterval(() => {
   }
 }, 200);
 
-async function enterGame(nextState, { resetLog = false } = {}) {
+async function enterGame(nextState, { resetLog = false, revealOpening = false } = {}) {
   if (!(await experience.requireKey()) || turnBusy) return;
   audioEngine.unlock();
   state = ensureV31Canon(nextState, 'ai');
@@ -607,7 +608,12 @@ async function enterGame(nextState, { resetLog = false } = {}) {
   if (resetLog) {transcript = [];systemTranscript=[];}
   else await loadTranscript(state.journeyId);
   persist();
-  await experience.enter(()=>{dom.titleScreen.hidden=true;dom.gameShell.hidden=false;rebuildStory();renderAll({suggestions:getAvailableActions(state)});});
+  const showOpening=revealOpening&&transcript.length===1;
+  if(showOpening)turnBusy=true;
+  try{
+    await experience.enter(()=>{dom.titleScreen.hidden=true;dom.gameShell.hidden=false;if(showOpening){experience.clear();dom.storyScroll.replaceChildren();}else rebuildStory();renderAll({suggestions:getAvailableActions(state)});});
+    if(showOpening)await experience.renderBlocks(transcript[0].blocks||[],transcript[0].speech);
+  }finally{if(showOpening){turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}}
   refreshAiBadge();
   const pending=pendingTurns.read(state);
   if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;
@@ -621,11 +627,11 @@ async function startNew() {
   try {
     if (!(await experience.requireKey())) return;
     if (safeLoad() && !(await experience.confirmNew())) return;
-    const opening = createAstraOpening(ensureV31Canon(createGameState('顾长生', 'ai'), 'ai'));
+    const opening = createAstraOpening(ensureV31Canon(createMainStoryState('顾长生'), 'ai'));
     const fresh=opening.state;
     await transcriptStore.appendTurn(fresh.journeyId,opening.turn);
     await saveSession.begin(fresh);
-    await enterGame(fresh);
+    await enterGame(fresh,{revealOpening:true});
     if (state?.journeyId === fresh.journeyId) showToast('新的一世，已落入命簿。');
   } finally { menuBusy = false; }
 }

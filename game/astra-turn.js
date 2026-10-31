@@ -4,7 +4,7 @@ import { normalizePlayerTurnInput, serializePlayerTurn, injectExactPlayerSpeech,
 import { advanceAstraWorld } from './astra-scheduler.js';
 import { compileAstraContext } from './astra-context.js';
 import { validateAstraNarration } from './astra-validator.js';
-import { applyRealityMutation, planRealityMutation, killNpc } from './astra-reality.js';
+import { applyRealityMutation, planRealityMutation } from './astra-reality.js';
 import { checkTerminalWorld } from './astra-terminal.js';
 import { reconcileQuestArcs, acceptQuestArc } from './astra-quests.js';
 import { ITEM_TEMPLATES } from './astra-content.js';
@@ -24,6 +24,10 @@ import {selectAstraHandoff} from './astra-handoff.js';
 import {beginPlayerSceneTurn,rememberPlayerScene,reconcilePlayerScene,ensureSceneResident} from './astra-player-scene.js';
 import {describeSceneImpact,conciseEngineAftermath} from './astra-scene-impact.js';
 import {narrateSettledScene} from './astra-settled-scene.js';
+import {parseCombatAction,resolveCombatExchange} from './astra-combat.js';
+import {parseTrainingAction,settleTraining} from './astra-training.js';
+import {useAstraInventory} from './astra-inventory.js';
+import {reconcileMainStory} from './astra-main-story.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -64,6 +68,14 @@ function mechanicalAction(world, input) {
     return { type: 'speech', minutes: 5 };
   // Referring to, quoting or declining the power does not execute its embedded verbs.
   if (action.includes('言出法随')) return { type: 'speech', minutes: 5 };
+  const combat=parseCombatAction(world,action);
+  if(combat)return {type:'attack',...combat,minutes:1};
+  const training=parseTrainingAction(world,action);if(training)return training;
+  if(/服下|服用|吃下|吞下|使用|装备|拿起|阅读|读信|查看/u.test(action)){
+    const items=Object.values(world.items||{}).filter(i=>!i.destroyed&&i.ownerId===world.player.id&&world.player.inventory.includes(i.id)&&i.name&&action.includes(i.name));
+    if(items.length>1)throw Error('涉及多件物品，请从背包逐件操作，或明确指定这一轮要用的物品。');
+    if(items.length===1)return {type:'use_inventory',itemId:items[0].id,operation:/装备|拿起/u.test(action)?'equip':/阅读|读信/u.test(action)?'read':/查看/u.test(action)?'inspect':'use',minutes:2};
+  }
   if (/(?:服下|服用|吃下|吞下|使用)/u.test(action)) {
     const item = Object.values(world.items || {}).find(entry => entry.generated && !entry.destroyed
       && entry.ownerId === world.player.id && action.includes(entry.name));
@@ -94,15 +106,10 @@ function mechanicalAction(world, input) {
     && entry.targetLocationId === world.player.locationId
     && questVerbs[entry.templateId?.split(':')[1]]?.test(action));
   if (quest) {if(world.player.travel)throw new Error('当前仍在旅途中，尚不能在任务地点开展行动。');return { type: 'quest_work', questId: quest.id, minutes: 90 };}
-  if (/(?:杀死|击杀|刺杀)/u.test(action)) {
-    if(world.player.travel)throw new Error('当前仍在旅途中，不能攻击留在出发地或目的地的人物。');
-    const npc = Object.values(world.characters || {}).find(entry => entry.alive && entry.locationId === world.player.locationId && action.includes(entry.name));
-    if (npc) return { type: 'attack', actorId: npc.id, minutes: 15 };
-  }
   return { type: 'speech', minutes: input.speech ? 5 : 10 };
 }
 
-function settleOrdinaryAction(world, action) {
+function settleOrdinaryAction(world, action, turnId) {
   if (action.type === 'accept_quest') acceptQuestArc(world, action.questId);
   if (action.type === 'quest_work') {
     const quest = world.quests[action.questId];
@@ -122,23 +129,7 @@ function settleOrdinaryAction(world, action) {
     }
     reconcileQuestArcs(world, { type: 'complete', questId: quest.id });
   }
-  if (action.type === 'attack') {
-    const npc = world.characters[action.actorId];
-    const hasWeapon = world.player.inventory.some(id => {
-      const item = world.items[id]; return item && /knife|sword|saber|bow|blade|spear/u.test(item.templateId);
-    });
-    const outmatched = npc.cultivation?.realm !== 'none' && world.player.cultivation?.realm === 'none';
-    if (!hasWeapon || outmatched) {
-      world.player.health = Math.max(0, world.player.health - (outmatched ? 35 : 10));
-      world.history.push({ id: `battle:${world.minute}:${npc.id}`, minute: world.minute, type: 'battle',
-        actors: ['player', npc.id], locationId: world.player.locationId,
-        summary: outmatched ? '凡人袭击修行者失败，对方反击。' : '玩家徒手袭击，对方反击。', playerWitnessed: true });
-    } else {
-      killNpc(world, npc, `battle:${world.minute}:${npc.id}`);
-      world.history.push({ id: `death:${world.minute}:${npc.id}`, minute: world.minute, type: 'death',
-        actors: ['player', npc.id], locationId: world.player.locationId, summary: `${npc.name}在袭击中身亡。`, playerWitnessed: true });
-    }
-  }
+  if (action.type === 'attack') resolveCombatExchange(world,action,turnId);
   checkTerminalWorld(world);
 }
 
@@ -181,6 +172,8 @@ export function projectAstraWorld(source, world) {
   state.player.hp = Math.max(0, Math.floor(world.player.health));
   state.player.maxHp = Math.max(1, Math.floor(world.player.maxHealth));
   state.player.gold = Math.max(0, Math.floor(world.player.wealth));
+  state.player.mp = Number.isFinite(world.player.spirit)?world.player.spirit:state.player.mp;
+  state.player.maxMp = world.player.maxSpirit||state.player.maxMp;
   const majorRealmLevels = { none: 0, qi_refining: 1, foundation: 10, golden_core: 14,
     nascent_soul: 17, spirit_transformation: 19, void_refining: 20, integration: 21, tribulation: 22 };
   state.player.realm = majorRealmLevels[world.player.cultivation?.realm] ?? state.player.realm;
@@ -234,7 +227,9 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     let world, events, narration;
     let engineConversation = false, settledAuthored = false;
-    const engineAction=!turnInput.speech&&['wait','travel'].includes(action.type);
+    const mechanicalRpg=['attack','train','use_inventory'].includes(action.type);
+    const engineAction=mechanicalRpg||!turnInput.speech&&['wait','travel'].includes(action.type);
+    let mechanicResult=null;
     let degradation = null;
     if (knownRealityPlan) {
       const plan = knownRealityPlan;
@@ -245,6 +240,17 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => !previousCausalIds.has(event.id)));
       const outcome = world.history.find(entry => entry.id === plan.id);
       narration = { blocks: [{ type: 'narr', text: realityOutcomeText(plan,outcome,world) }] };
+    } else if(mechanicalRpg){
+      let draft=structuredClone(state.astraWorld);
+      beginPlayerSceneTurn(draft,turnInput,{turnId:txId});recordHeardSpeech(draft,turnInput.speech);
+      if(action.type==='use_inventory'){
+        const used=useAstraInventory(draft,{itemId:action.itemId,action:action.operation},{turnId:txId});draft=used.world;mechanicResult=used;
+      }else if(action.type==='attack')mechanicResult=resolveCombatExchange(draft,action,txId);
+      // Training follows elapsed world time; combat and item ownership are checked at action start.
+      const settled=advanceAstraWorld(draft,action.minutes,{type:'speech'});world=settled.world;events=settled.events;
+      if(action.type==='train')mechanicResult=settleTraining(world,action,txId);
+      captureWorldChanges(state.astraWorld,world,{turnId:txId,action:action.type});
+      narration={blocks:[{type:'narr',text:mechanicResult.summary}]};
     } else if(engineAction) {
       const settled=advanceAstraWorld(state.astraWorld,action.minutes,action.type==='travel'
         ? {type:'travel',destinationId:action.destinationId}:{type:'wait'});
@@ -287,7 +293,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         const used = consumeGeneratedItem(world, action.itemId);
         world = used.world;
         events.push(used.event);
-      } else settleOrdinaryAction(world, action);
+      } else settleOrdinaryAction(world, action,txId);
       captureWorldChanges(beforeAction, world, { turnId: txId + ':mechanical', action: action.type });
       propagateCausality(world);
       settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => !previousCausalIds.has(event.id)));
@@ -295,7 +301,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       if (directed.event) events.push(directed.event);
       const projected = projectAstraWorld(state, world);
       const participant={...conversation,presentAtStart:Boolean(conversation?.targetId)};
-      const packet = compileAstraContext(projected, turnInput.action || turnInput.speech, recent,{conversation:participant});
+      const packet = compileAstraContext(projected, rawInput, recent,{conversation:participant});
       packet.turnStart = {minute:state.astraWorld.minute,locationId:state.astraWorld.player.locationId,
         locationName:state.astraWorld.locations[state.astraWorld.player.locationId]?.name||'',
         travel:structuredClone(state.astraWorld.player.travel||null)};
@@ -445,19 +451,22 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     propagateCausality(world);
     settleWorldRules(world, []);
+    reconcileMainStory(world);
     reconcilePlayerScene(world);
     const arrived=!world.player.travel&&(state.astraWorld.player.locationId!==world.player.locationId||state.astraWorld.player.travel);
     if(state.story.flags.seededOpening&&arrived)ensureSceneResident(world,{arrival:true,turnId:txId});
-    const impact=describeSceneImpact(state.astraWorld,world,{actionType:action.type,statement:action.statement});
+    let impact=describeSceneImpact(state.astraWorld,world,{actionType:action.type,statement:action.statement});
+    if(action.type==='attack')impact={...(impact||{}),kinds:[...new Set([...(impact?.kinds||[]),'combat'])],combat:{actorId:action.actorId,...mechanicResult}};
     if(impact)world.flags.lastSceneImpact={...impact,atMinute:world.minute};
     const majorImpact=impact&&impact.kinds.some(kind=>kind!=='health-change');
     if(majorImpact)world.flags.recentSceneImpacts=[...(state.astraWorld.flags.recentSceneImpacts||[]),{...impact,atMinute:world.minute}].slice(-3);
-    if((knownRealityPlan||engineAction)&&majorImpact&&settings.renderSettledScenes!==false&&aiClient?.narrate){
+    const authorAftermath=knownRealityPlan||engineAction&&!['use_inventory','train'].includes(action.type);
+    if(authorAftermath&&majorImpact&&settings.renderSettledScenes!==false&&aiClient?.narrate){
       onProgress('generating');
       const authored=await narrateSettledScene({sourceWorld:state.astraWorld,world,state,input:turnInput,settings,
         transactionId:txId,aiClient,recent,signal,impact,handoff:selectAstraHandoff(world,{events}),actionType:action.type});
       world=authored.world;narration={blocks:authored.blocks};settledAuthored=true;
-    }else if((knownRealityPlan||engineAction)&&majorImpact){
+    }else if(authorAftermath&&majorImpact){
       const prose=conciseEngineAftermath(state.astraWorld,world,{actionType:action.type});
       if(prose.length)narration={blocks:prose};
     }

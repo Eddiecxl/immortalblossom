@@ -1,6 +1,6 @@
-落仙 Game Beta v4.2.3 · 此身入局
+落仙 Game Beta v4.2.4 · 此行有据
 
-桌面：完整解压后运行 LuoXian.exe。启动器读取当前安装版本，应显示 v4.2.3。
+桌面：完整解压后运行 LuoXian.exe。启动器读取当前安装版本，应显示 v4.2.4。
 网页：https://immortalblossombeta.eddiechanxule.workers.dev
 网页启动器不检查补丁；GitHub main 通过 Cloudflare 部署更新。
 

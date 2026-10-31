@@ -39,6 +39,8 @@ export function runNpcPlans(world, minute = world.minute) {
     const year = Math.floor(minute / (360 * DAY));
     if (npc.lastAgeYear === undefined) npc.lastAgeYear = year;
     if (year > npc.lastAgeYear) { npc.age = Number(npc.age || 20) + year - npc.lastAgeYear; npc.lastAgeYear = year; }
+    // Honor a short recorded appointment; explicit social reactions above can still end it.
+    if(plan?.type==='attend_scene' && minute < Number(plan.until))continue;
     const choice = seedHash(world.seed, `npc:${npc.id}:${bucket}`) % 16;
     if (choice === 0) {
       npc.wealth = clampNumeric(world, 'character', 'wealth', Number(npc.wealth || 0) + 1, npc);

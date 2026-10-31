@@ -25,7 +25,7 @@ export async function narrateSettledScene({ sourceWorld, world, state, input, se
   cancelled(signal);
   const turnInput = normalizePlayerTurnInput(input), base = structuredClone(world);
   const before = sourceWorld || state.astraWorld;
-  const packet = compileAstraContext(projectAstraWorld(state, base), turnInput.action || turnInput.speech, recent);
+  const packet = compileAstraContext(projectAstraWorld(state, base), [turnInput.speech,turnInput.action].filter(Boolean).join('\n'), recent);
   const targetId = present(base, handoff?.targetId) ? handoff.targetId : packet.presentNpcs[0]?.id;
   const target = base.characters[targetId];
   const conversation = target ? { targetId, targetName: target.name,
