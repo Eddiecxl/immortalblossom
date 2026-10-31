@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { compactNarrativePacket } from '../../game/astra-narrative-budget.js';
 import { buildAstraLocalMessages } from '../../game/astra-local-prompt.js';
 import { createGameState } from '../../game/game-state.js';
@@ -8,6 +9,27 @@ const base={playerTurn:{text:'刚才是开玩笑的。你自己的想法是什�
  conversation:{targetId:'npc:a',targetName:'当局人物'},clock:{period:'清晨',time:'06:00'},player:{id:'player'},
  presentNpcs:[{id:'npc:a',name:'当局人物',goals:['保住船只'],memories:[]}],items:[],activeQuests:[],
  simulationFacts:{commitments:[]},recentTurns:[{id:'old',userText:'香蕉',blocks:[{type:'dlg',name:'当局人物',text:'OLD_RESPONSE_DO_NOT_COPY'}]}]};
+test('scene aliases do not block the ordinary combat following a long real-world law turn',()=>{
+ const packet=JSON.parse(fs.readFileSync(new URL('./fixtures/combat-author-budget.json',import.meta.url),'utf8'));
+ const before=structuredClone(packet),result=compactNarrativePacket(packet);
+ assert.ok(JSON.stringify(result).length<=7000);
+ assert.equal(result.turnHandoff.focus,packet.turnHandoff.focus);
+ assert.equal(result.turnHandoff.text,undefined);
+ assert.deepEqual(result.playerTurn,packet.playerTurn);
+ assert.deepEqual(result.simulationFacts,packet.simulationFacts);
+ assert.deepEqual(result.settledImpact,packet.settledImpact);
+ assert.deepEqual(result.presentNpcs.map(n=>n.id),packet.presentNpcs.map(n=>n.id));
+ assert.deepEqual(packet,before);
+});
+test('only identical handoff aliases and goal lists are coalesced across any world',()=>{
+ const packet=structuredClone(base);packet.turnHandoff={focus:'路人等我回答',text:'路人等我回答'};
+ packet.presentNpcs[0].currentGoals=[...packet.presentNpcs[0].goals];
+ const result=compactNarrativePacket(packet);
+ assert.equal(result.turnHandoff.text,undefined);assert.deepEqual(result.presentNpcs[0].currentGoals,['保住船只']);assert.equal(result.presentNpcs[0].goals,undefined);
+ packet.turnHandoff.text='另一个必要事实';packet.presentNpcs[0].currentGoals=['先问清来意'];
+ const distinct=compactNarrativePacket(packet);
+ assert.equal(distinct.turnHandoff.text,'另一个必要事实');assert.deepEqual(distinct.presentNpcs[0].goals,['保住船只']);
+});
 test('ordinary interaction retains a bounded last exchange without replaying old full scenes',()=>{
  const packet=structuredClone(base);
  packet.recentTurns.unshift({id:'older',userText:'更早的问话',blocks:[{type:'dlg',name:'当局人物',text:'OLD_SCENE_NOT_NEEDED'}]});

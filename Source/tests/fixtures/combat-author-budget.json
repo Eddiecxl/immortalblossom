@@ -1,0 +1,376 @@
+{
+  "systemRules": [
+    "Engine state is authoritative. Narrate only facts supported by this packet.",
+    "Only present, living NPCs may speak; each NPC may use only its listed knowledge.",
+    "Do not create items, skills, travel, time changes, quest changes, or resurrection from prose.",
+    "Due events resolve at their Engine time. Terminal world state is absorbing."
+  ],
+  "minute": 373,
+  "clock": {
+    "day": 1,
+    "hour": 6,
+    "minute": 13,
+    "period": "清晨"
+  },
+  "cultivationRule": {
+    "globalMaximum": "tribulation",
+    "globalMaximumName": "渡劫",
+    "playerMaximum": "tribulation",
+    "playerMaximumName": "渡劫",
+    "playerRealmName": "渡劫"
+  },
+  "location": {
+    "id": "loc:gumanor",
+    "name": "赵府柴房",
+    "destroyed": false,
+    "closed": false,
+    "population": 35,
+    "risk": 8
+  },
+  "nearbyLocations": [],
+  "nearbyEdges": [],
+  "player": {
+    "id": "player",
+    "name": "顾长生",
+    "locationId": "loc:gumanor",
+    "cultivation": {
+      "realm": "tribulation",
+      "level": 0,
+      "spiritualRootKnown": false,
+      "maxRealmId": "tribulation"
+    },
+    "health": 86,
+    "maxHealth": 100,
+    "wealth": 18,
+    "safety": 71,
+    "spirit": 30,
+    "inventory": [
+      "item:main-herb",
+      "item:main-staff",
+      "item:main-letter"
+    ]
+  },
+  "items": [],
+  "simulationFacts": {
+    "relations": [],
+    "beliefs": [
+      {
+        "holderId": "npc:lin-xiaoman",
+        "eventId": "0b28aa5f-0ed6-4e12-bd96-0cfff50b4e36",
+        "mode": "interpretation",
+        "confidence": 0.8,
+        "appraisal": 1,
+        "meaning": "隐瞒来历",
+        "summary": "对方只报了单字名，且主动转移话题询问我的处境，暗示他不愿或不能多谈自己的过去。"
+      },
+      {
+        "holderId": "npc:lin-xiaoman",
+        "eventId": "0b28aa5f-0ed6-4e12-bd96-0cfff50b4e36:social:npc:lin-xiaoman",
+        "mode": "witness",
+        "confidence": 1,
+        "appraisal": 0,
+        "summary": "林小满对“我叫长生。我先把药用了。小满，你为什么想离开这里？”的判断：对方只报了单字名，且主动转移话题询问我的处境，暗示他不愿或不能多谈自己的过去。"
+      },
+      {
+        "holderId": "npc:lin-xiaoman",
+        "eventId": "14f38ff9-14bc-4541-950f-079216ba0fbd",
+        "mode": "interpretation",
+        "confidence": 0.8,
+        "appraisal": 3,
+        "meaning": "玩笑试探",
+        "summary": "对方用荒诞的玩笑缓解紧张，表明其并非完全陷入绝望，且试图探口风，态度轻松但仍有防备。"
+      },
+      {
+        "holderId": "npc:lin-xiaoman",
+        "eventId": "14f38ff9-14bc-4541-950f-079216ba0fbd:social:npc:lin-xiaoman",
+        "mode": "witness",
+        "confidence": 1,
+        "appraisal": 0,
+        "summary": "林小满对“我其实是一条会说话的咸鱼，哈哈。刚才开玩笑的”的判断：对方用荒诞的玩笑缓解紧张，表明其并非完全陷入绝望，且试图探口风，态度轻松但仍有防备。"
+      }
+    ],
+    "commitments": [],
+    "rules": []
+  },
+  "affordances": {
+    "locationName": "赵府柴房",
+    "npcId": "npc:lin-xiaoman",
+    "npcName": "林小满",
+    "role": "府中杂役",
+    "goal": "先离开赵府，找回自己的生活",
+    "quests": [
+      {
+        "id": "main:escape",
+        "title": "柴门之外",
+        "state": "active"
+      }
+    ],
+    "roads": [
+      {
+        "locationId": "loc:linxi",
+        "name": "临溪镇",
+        "risk": 4
+      },
+      {
+        "locationId": "loc:linhome",
+        "name": "林家小院",
+        "risk": 4
+      }
+    ],
+    "nextStep": "查看「柴门之外」的当前状态与完成条件，寻找仍有效的线索"
+  },
+  "numericFacts": [
+    {
+      "id": "npc:cast-0",
+      "name": "赵天霸",
+      "alive": true,
+      "wealth": 61
+    }
+  ],
+  "presentNpcs": [
+    {
+      "id": "npc:cast-0",
+      "name": "赵天霸",
+      "personality": "proud",
+      "role": "guard",
+      "occupation": "府中管事",
+      "cultivation": {
+        "realm": "qi_refining",
+        "level": 2
+      },
+      "wealth": 61,
+      "inventory": [],
+      "physicalCondition": "critically_injured",
+      "factionId": null,
+      "homeId": "loc:gumanor",
+      "alive": true,
+      "locationId": "loc:gumanor",
+      "goals": [
+        "看管赵府，查清柴房里的动静"
+      ],
+      "currentGoals": [
+        "让顾长生说明先前发生的冲突"
+      ],
+      "currentPlan": {
+        "type": "attend_scene",
+        "until": 480
+      },
+      "relationships": {
+        "player": -25
+      },
+      "memories": [
+        {
+          "id": "memory:heard:361:16:npc:cast-0",
+          "summary": "玩家说过：“我叫长生。我先把药用了。小满，你为什么想离开这里？”",
+          "source": "player-speech"
+        },
+        {
+          "id": "memory:heard:366:17:npc:cast-0",
+          "summary": "玩家说过：“我其实是一条会说话的咸鱼，哈哈。刚才开玩笑的，我想听听你的真实想法。”",
+          "source": "player-speech"
+        }
+      ],
+      "allowedSecrets": []
+    },
+    {
+      "id": "npc:lin-xiaoman",
+      "name": "林小满",
+      "personality": "mischievous",
+      "role": "servant",
+      "occupation": "府中杂役",
+      "cultivation": {
+        "realm": "none",
+        "level": 0
+      },
+      "wealth": 74,
+      "inventory": [],
+      "physicalCondition": "healthy",
+      "factionId": null,
+      "homeId": "loc:linhome",
+      "alive": true,
+      "locationId": "loc:gumanor",
+      "goals": [
+        "先离开赵府，找回自己的生活"
+      ],
+      "currentGoals": [
+        "先离开赵府，找回自己的生活"
+      ],
+      "currentPlan": {
+        "id": "plan:14f38ff9-14bc-4541-950f-079216ba0fbd:social:npc:lin-xiaoman",
+        "type": "support",
+        "state": "pending",
+        "targetId": "player",
+        "causeEventId": "14f38ff9-14bc-4541-950f-079216ba0fbd:social:npc:lin-xiaoman",
+        "confidence": 0.8,
+        "createdAt": 371
+      },
+      "relationships": {
+        "player": 4
+      },
+      "memories": [
+        {
+          "id": "scene-response:39bcd91f-da49-4a95-94f0-4c4cbc07197f:npc:lin-xiaoman",
+          "eventId": "39bcd91f-da49-4a95-94f0-4c4cbc07197f",
+          "summary": "林小满对我说：“赵天霸那个炼气期修士，在你面前……连蝼蚁都算不上吧？现在，还能走那条去临溪镇的小路吗？”",
+          "source": "scene-response"
+        },
+        {
+          "id": "scene-response:0b28aa5f-0ed6-4e12-bd96-0cfff50b4e36:npc:lin-xiaoman",
+          "eventId": "0b28aa5f-0ed6-4e12-bd96-0cfff50b4e36",
+          "summary": "林小满对我说：“你既然醒了，药也用了，那就别浪费时间了。那赵天霸是个炼气期的修士，寻常人碰不得。你若想走，得趁他还没找到这里，或者……你有别的法子？”",
+          "source": "scene-response",
+          "confidence": 0.8
+        }
+      ],
+      "allowedSecrets": []
+    }
+  ],
+  "departingNpcs": [],
+  "activeQuests": [],
+  "dueEvents": [],
+  "history": [],
+  "memories": [],
+  "rumors": [],
+  "terminal": {
+    "ended": false,
+    "ending": null,
+    "minute": null
+  },
+  "recentTurns": [
+    {
+      "id": "39bcd91f-da49-4a95-94f0-4c4cbc07197f",
+      "userText": "言出法随：把我的修为提升到当前世界的最高境界。本次变化仅作用于我当前的修行境界，请依据实际变化描写气息与在场者的即时反应，其他人物与持有物沿用已有记录。本次变化仅作用于我当前的修行境界，请依据实际变化描写气息与在场者的即时反应，其他人物与持有物沿用已有记录。本次变化仅作用于我当前的修行境界，请依据实际变化描写气息与在场者的即时反应，其他人物与持有物沿用已有记录。本次变化仅作用于我当前的修行境界，请依据实际变化描写气息与在场者的即时反应，",
+      "narrativeOpening": "她死死盯着我，眼中原本的焦急与试探瞬间被一种近乎本能的敬畏与恐惧取代。她下意识地后退半步，背脊紧紧贴上了身后的柴堆，手指因用力而指节泛白，似乎随时准备逃跑，却又",
+      "dialogue": [
+        {
+          "name": "林小满",
+          "text": "你……你到底是什么人？方才还说自己是咸鱼，现在这……这哪里是凡人能有的气度？"
+        },
+        {
+          "name": "林小满",
+          "text": "赵天霸那个炼气期修士，在你面前……连蝼蚁都算不上吧？现在，还能走那条去临溪镇的小路吗？"
+        }
+      ]
+    }
+  ],
+  "playerTurn": {
+    "turnId": "budget-reproduction",
+    "speech": "",
+    "action": "制服赵天霸，但不杀他",
+    "targetId": "npc:lin-xiaoman"
+  },
+  "conversation": {
+    "targetId": "npc:lin-xiaoman",
+    "targetName": "林小满",
+    "firstContact": false,
+    "presentAtStart": true
+  },
+  "turnStart": {
+    "minute": 372,
+    "locationId": "loc:gumanor",
+    "locationName": "赵府柴房",
+    "travel": null,
+    "cultivation": {
+      "realm": "tribulation",
+      "level": 0,
+      "spiritualRootKnown": false,
+      "maxRealmId": "tribulation"
+    },
+    "health": 86,
+    "invincible": false
+  },
+  "turnHandoff": {
+    "kind": "encounter",
+    "subjectId": "opening:contact",
+    "targetId": "npc:lin-xiaoman",
+    "targetName": "林小满",
+    "locationId": "loc:gumanor",
+    "phase": "responding",
+    "pressure": "接住玩家的新回应与刚发生的最后一拍；原先的提议不是必须完成的流程",
+    "focus": "林小满：你……你到底是什么人？方才还说自己是咸鱼，现在这……这哪里是凡人能有的气度？\n林小满：赵天霸那个炼气期修士，在你面前……连蝼蚁都算不上吧？现在，还能走那条去临溪镇的小路吗？",
+    "nextAction": "回应眼前刚发生的话或动作，也可以拒绝、改换话题或离开",
+    "exchange": 4,
+    "options": [],
+    "text": "林小满：你……你到底是什么人？方才还说自己是咸鱼，现在这……这哪里是凡人能有的气度？\n林小满：赵天霸那个炼气期修士，在你面前……连蝼蚁都算不上吧？现在，还能走那条去临溪镇的小路吗？",
+    "encounterFacts": {
+      "startedAt": 361,
+      "now": 373,
+      "observed": "主角在赵府柴房醒来，身上带伤，旧信与药草还在自己衣襟里；林小满进门，管事赵天霸在门外催促。",
+      "priorEvents": "开场仅确定这些亲眼事实；未发生交付、接受委托或出门。"
+    }
+  },
+  "settledAction": "attack",
+  "planMode": "ordinary",
+  "realityApplied": false,
+  "settledImpact": {
+    "kinds": [
+      "combat"
+    ],
+    "combat": {
+      "actorId": "npc:cast-0",
+      "winnerId": "player",
+      "damageToNpc": 99,
+      "damageToPlayer": 0,
+      "summary": "赵天霸已失去反抗能力，仍然活着。"
+    }
+  },
+  "recentImpacts": [
+    {
+      "kind": "realm-change",
+      "kinds": [
+        "realm-change"
+      ],
+      "source": {
+        "id": "loc:gumanor",
+        "name": "赵府柴房"
+      },
+      "destination": {
+        "id": "loc:gumanor",
+        "name": "赵府柴房"
+      },
+      "beforeRealm": {
+        "id": "none",
+        "name": "凡人",
+        "level": 0
+      },
+      "afterRealm": {
+        "id": "tribulation",
+        "name": "渡劫",
+        "level": 0
+      },
+      "invincible": false,
+      "healthDelta": -14,
+      "playerLife": {
+        "before": true,
+        "after": true
+      },
+      "witnesses": [
+        {
+          "id": "npc:cast-0",
+          "name": "赵天霸"
+        },
+        {
+          "id": "npc:lin-xiaoman",
+          "name": "林小满"
+        }
+      ],
+      "killed": [],
+      "killedCount": 0,
+      "revived": [],
+      "revivedCount": 0,
+      "identity": {},
+      "sensorySuggestions": [
+        "可写气息与力量运转方式的变化；不额外创造雷劫、山崩、伤人或他人的敬畏。"
+      ],
+      "atMinute": 372
+    }
+  ],
+  "narrativeContinuity": {
+    "sameScene": true,
+    "recentOpenings": [
+      "林小满抱着胳膊，倚在柴堆旁，目光在我脸上停了一瞬，似乎在权衡我报出的名字是否可信。门外传来赵天霸沉重的脚步声，他似乎正绕着柴房走动，寻找入口。",
+      "林小满被这没头没尾的一句逗得愣了半秒，随即没忍住，“噗嗤”一声笑出了气。她抬手在我肩膀上不轻不重地拍了一把，指尖沾了点柴灰，在我青衫上蹭出两道白印。她收敛起那抹",
+      "话音未落，周遭空气骤然凝滞。柴房内的尘埃仿佛被一只无形巨手按住了，静止在半空。一股难以言喻的浩瀚气息从我体内无声涌出，压得周围连呼吸都变得困难。林小满瞳孔猛地收"
+    ]
+  }
+}

@@ -3,7 +3,9 @@ import {createScore} from '../game/beta4/audio.js';
 // RuntimeHost also loads this page in a hidden WebView without the native bridge.
 // Only the visible native launcher (or an explicit browser preview) may play.
 const native=window.lxNative===true,preview=!native&&(window.lxCloud||new URLSearchParams(location.search).get('audioPreview')==='1');
-const audio=createScore(()=>{try{return {master:75,music:35,sfx:65,muteBackground:true,...JSON.parse(localStorage.getItem('luoxian_beta3_settings')||'{}')};}catch{return {master:75,music:35,sfx:65,muteBackground:true};}},{blocked:true});
+// Game music starts muted. Keep the launcher's original score level separate;
+// shared master mute still applies, and game ownership always blocks playback.
+const audio=createScore(()=>{try{return {master:75,sfx:65,muteBackground:true,...JSON.parse(localStorage.getItem('luoxian_beta3_settings')||'{}'),music:35};}catch{return {master:75,music:35,sfx:65,muteBackground:true};}},{blocked:true});
 window.lxLauncherAudio=audio;
 audio.setScene('title');
 const play=document.getElementById('launcherMusicToggle'),next=document.getElementById('launcherMusicNext'),title=document.getElementById('launcherTrack');

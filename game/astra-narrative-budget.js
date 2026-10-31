@@ -12,12 +12,18 @@ export function compactNarrativePacket(source,{maxChars=7000}={}) {
     if(canonical.length&&aliases.has(packet.input))delete packet.input;
     if(canonical.length&&aliases.has(packet.turnHandoff?.previousInput))delete packet.turnHandoff.previousInput;
   }
+  // The scene director exposes display and author aliases of the same last
+  // exchange. Carry it once before evicting any actual world facts.
+  if(typeof packet.turnHandoff?.focus==='string'&&packet.turnHandoff.focus===packet.turnHandoff.text)
+    delete packet.turnHandoff.text;
   // Opaque lookup indexes are for the full validator, not prose generation.
   // The actual known evidence remains in memories/allowedSecrets/knownFacts.
   for(const npc of [...(packet.presentNpcs||[]),...(packet.departingNpcs||[])]){
     delete npc.knowledge;
     // A feared future is not evidence that a relative is ill or an attack occurred.
     delete npc.fears;
+    if(Array.isArray(npc.goals)&&Array.isArray(npc.currentGoals)
+      &&JSON.stringify(npc.goals)===JSON.stringify(npc.currentGoals))delete npc.goals;
   }
   // A witnessed appraisal is projected both as an NPC memory and as a
   // simulation belief. Carry one text with its evidence, within the same
