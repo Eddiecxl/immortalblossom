@@ -38,6 +38,8 @@ GitHub Actions run 40827261300 测试、构建、Cloudflare 部署成功。线�
 
 399/399 Node 回归通过，0 skipped，包含真实 workerd SQLite；新增额度误判、主世界线、普通/语义战斗、物品实例、修炼、对白查重和字幕节奏。真实 Chromium 的 chronicle-browser 验证输入节点保持、逐字阅读、回看暂停和减少动态。真实 Groq 9轮主线以及1203字言灵分别保留原始请求/回复，后者一次请求6132输入tokens成功。浏览器发现的背包锁定/检查点问题已修正；最终发布/安装/补丁验证读 Maintenance/Verification/v424-release-state.json。
 
+2026-11-01 收尾：新增实际战斗事实包和启动器音量回归后，404/404、0 skipped。正式网站7步实玩、5次请求、0覆盖模块、刷新保持世界、默认游戏静音、0浏览器错误通过；真实Windows音乐交接/DPI/窗口生命周期和最终原生补丁通过。部署任务41211220529成功。具体边界与最终包闸门见docs/PLAYABLE_RPG_V424.md。
+
 # 4.2.3 验证（2026-10-30）
 
 362/362，0 skipped（含真实 workerd SQLite）。256 个 seed 的初遇/位置/身世、开局重入与旧档、不重复相遇、NPC 死亡/旅行/终局、稳定居民、重大言灵一次结算及作者失败原子回滚、复合瞬移修复、回合结尾完整事实声明均已覆盖。新开局变体最后复跑记录为 Maintenance/Verification/v423-tests-reviewed.txt。
