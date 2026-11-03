@@ -1,5 +1,7 @@
 # 落仙 v4 维护约定
 
+v4.2.5 接续先读 docs/RESPONSIVE_RPG_V425.md：已知机械动作默认直接结算，不等云端作者；开放新指令仍真实校验。保留字幕期间草稿、有效赠予/掉落物的所有权与事务边界。发布完整性以 Maintenance/Verification/v425-release-state.json 为准。
+
 v4.2.4 接续先读 docs/PLAYABLE_RPG_V424.md：新开局暂只用主世界 seed，旧档不换；保留真实战斗/物品/修炼结算、输入气泡原位提交和预测额度不作硬上限。发布是否全部完成以 Maintenance/Verification/v424-release-state.json 为准。
 
 v4.2.3 场景续作先读 docs/PLAYABLE_SCENES_V423.md。保留真实开局相遇、玩家回应后的压力替换、在场居民稳定 ID、重大变化先结算后写余波及完整事务回滚；不要恢复三回合强塞道路警示、旧场景问话或私下目标旁白。

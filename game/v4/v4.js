@@ -2,6 +2,7 @@ import '../cloud-bridge.js';
 import {createPendingTurns} from '../pending-turn.js';
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
+import {canResolveAstraTurnLocally} from '../astra-turn.js';
 import {realmLabel} from '../astra-rules.js';
 import {recentEchoSummary} from '../turn-summary.js';
 import {createTurnFlow} from '../turn-flow.js';
@@ -15,7 +16,7 @@ import { createTranscriptStore } from '../transcript-store.js';
 import { createAiTurnRunner } from '../ai-turn.js';
 import { createV31HybridClient, V31_PROVIDER_DEFAULTS } from '../v4-hybrid-client.js';
 import { normalizePlayerTurnInput, playerTurnIsEmpty, serializePlayerTurn, playerTurnDisplay } from '../player-turn.js';
-import { inventoryRows, questRows, characterRows, commitmentRows, nearbyCharacterRows } from '../beta4/rpg-view.js';
+import { inventoryRows, availableItemRows, realityInvocationCount, questRows, characterRows, commitmentRows, nearbyCharacterRows } from '../beta4/rpg-view.js';
 import { commitInventoryAction } from '../beta4/inventory-command.js';
 import { createExperience } from '../beta4/experience.js';
 const $ = (id) => document.getElementById(id);
@@ -50,13 +51,15 @@ const deviceRam = Number(navigator.deviceMemory || 0);
 const lowSpecUI = cpuCores <= 8 || (deviceRam > 0 && deviceRam <= 8);
 if (lowSpecUI) document.documentElement.classList.add('low-spec-ui');
 let turnBusy = false;
+let committedReveal=null;
+async function finishCommittedReveal(){if(committedReveal){const reveal=committedReveal;experience.skip();await reveal;}}
 let activeTurnController=null;
 window.addEventListener('lx:cancel-ai-wait',()=>activeTurnController?.abort());
 window.addEventListener('lx:request-state',e=>{
   if(turnBusy&&['queued','quota-wait','cooldown'].includes(e.detail?.phase))
     dom.systemLine.textContent=`云端正在排队 · ${Math.ceil((e.detail.ms||0)/1000)} 秒后继续；原话和命簿保留，可停止等待。`;
 });
-const turnFlow = createTurnFlow({ cooldownMs: 1500 });
+const turnFlow = createTurnFlow({ cooldownMs: 0 });
 let menuBusy = false;
 let experience;let saveUI;
 const saveSession=createSaveSession({stateStore,transcriptStore});
@@ -107,6 +110,7 @@ function runnerSettings() {
     : mode === 'hybrid-assist' ? 'local' : mode;
   return {
     ...settings,
+    renderSettledScenes:false,
     provider: profileProvider,
     model: settings.models?.[profileProvider] || V31_PROVIDER_DEFAULTS[profileProvider]?.model || '',
     journeyId: state?.journeyId || ''
@@ -244,7 +248,7 @@ function renderHud() {
   dom.weatherValue.textContent = state.worldState.weather || '未知';
   dom.sceneWeather.textContent = state.worldState.weather || '未知';
   dom.turnValue.textContent = String(state.memory.turnCount || 0);
-  dom.lawCount.textContent = `已兑现 ${state.journeyWorld?.laws?.length || 0} 条`;
+  dom.lawCount.textContent = `已兑现 ${realityInvocationCount(state)} 条`;
 
   const danger = state.astraWorld ? Math.ceil(Number(state.astraWorld.locations?.[state.astraWorld.player.locationId]?.risk || 0) / 25)
     : Number(state.director?.dangerClocks?.zhaoPursuit || 0);
@@ -252,9 +256,9 @@ function renderHud() {
   dom.sceneThreat.textContent = dead ? '命途已断' : state.astraWorld ? '世界自行运转中'
     : arrived ? '追兵已至' : danger >= 2 ? '危机逼近' : '局势流动中';
   const locked = turnBusy || experience.isWriting() || turnFlow.state() !== 'idle';
-  dom.sendButton.disabled = dead || locked;
-  dom.speechInput.disabled = dead || (locked && turnFlow.state() !== 'cooldown');
-  dom.actionInput.disabled = dead || (locked && turnFlow.state() !== 'cooldown');
+  dom.sendButton.disabled = dead || (locked&&!committedReveal);
+  dom.speechInput.disabled = dead || (locked&&!committedReveal && turnFlow.state() !== 'cooldown');
+  dom.actionInput.disabled = dead || (locked&&!committedReveal && turnFlow.state() !== 'cooldown');
 
   const guidance = state.astraWorld && !state.astraWorld.flags?.legacyMigration
     ? { title: activeQuest().quest.title, objective: activeQuest().quest.description, why: '' }
@@ -317,15 +321,15 @@ function renderDrawer(tab = activeDrawer) {
     );
   } else if (tab === 'inventory') {
     dom.drawerTitle.textContent='乾坤行囊';
-    dom.drawerContent.append(node('p','local-ledger-note','持有物品与护命规则保存在命簿。翻阅不请求 AI；使用或装备会立即结算。'));
-    const rows=inventoryRows(state);
+    dom.drawerContent.append(node('p','local-ledger-note','随身物品、附近掉落物与待收下的赠予。使用、装备、拾取会实际改变行囊。'));
+    const rows=[...inventoryRows(state),...availableItemRows(state)];
     if(!rows.length)dom.drawerContent.append(ledgerSection('行囊空空',[['此刻','尚无持有物品']]));
     for(const item of rows){
       const details=[['数量',item.amount],['作用',item.description]];
       if(item.asset){details.push(['护命余次',item.asset.charges??0]);const source=item.asset.provenance?.source||item.asset.provenance?.sourceId||item.asset.sourceId; if(source)details.push(['来历',source]);}
       const card=ledgerSection(item.name,details);
       const actions=item.actions||(item.equippable?[{id:'equip',label:'装备'}]:item.usable?[{id:'use',label:'使用'}]:[]);
-      if(actions.length){const controls=node('div','item-controls');for(const action of actions){const button=node('button','',action.label);button.type='button';button.dataset.inventoryAction=action.id;button.dataset.itemName=item.name;if(item.itemId)button.dataset.itemId=item.itemId;button.disabled=Boolean(action.disabled)||turnBusy||experience.isWriting()||Boolean(state.story.flags?.playerDead)||state.campaign?.status==='complete';if(action.reason)button.title=action.reason;button.addEventListener('click',()=>applyInventoryAction(item.name,action.id,item.itemId));controls.append(button);}card.append(controls);}
+      if(actions.length){const controls=node('div','item-controls');for(const action of actions){const button=node('button','',action.label);button.type='button';button.dataset.inventoryAction=action.id;button.dataset.itemName=item.name;if(item.itemId)button.dataset.itemId=item.itemId;button.disabled=Boolean(action.disabled)||((turnBusy||experience.isWriting())&&!committedReveal)||Boolean(state.story.flags?.playerDead)||state.campaign?.status==='complete';if(action.reason)button.title=action.reason;button.addEventListener('click',()=>applyInventoryAction(item.name,action.id,item.itemId));controls.append(button);}card.append(controls);}
       dom.drawerContent.append(card);
     }
     for(const asset of Object.values(state.rpg?.assets||{}).filter(a=>a.kind==='skill'||a.kind==='system'))dom.drawerContent.append(ledgerSection(asset.name,[['类别',asset.kind==='skill'?'保命技能':'系统护佑'],['余次',asset.charges],['规则',asset.description||'致命时自动判定']]));
@@ -404,6 +408,7 @@ function closeDrawer() {
 }
 
 async function applyInventoryAction(name,action,itemId){
+  await finishCommittedReveal();
   if(!state||turnBusy||saveUI?.isBusy()||experience.isWriting()||state.story.flags?.playerDead)return;
   const before=structuredClone(state);turnBusy=true;renderHud();renderDrawer('inventory');
   try{
@@ -474,6 +479,7 @@ function renderAll({ suggestions } = {}) {
 }
 
 async function submitTurn(input) {
+  await finishCommittedReveal();
   if (!state) return;
   if (turnBusy || saveUI?.isBusy() || experience.isWriting()) return;
   const availability = turnFlow.state();
@@ -488,7 +494,7 @@ async function submitTurn(input) {
     showToast('至少填写“说话”或“动作”其中一项');
     return;
   }
-  if (!(await experience.requireKey()) || turnBusy) return;
+  if ((!canResolveAstraTurnLocally(state,playerTurn)&&!(await experience.requireKey())) || turnBusy) return;
   if (!turnFlow.begin().ok) return;
   turnBusy = true;
   const serialized = serializePlayerTurn(playerTurn);
@@ -533,7 +539,12 @@ async function submitTurn(input) {
       let checkpointSaved = true;
       try { await saveSession.committed(state); }
       catch (error) { checkpointSaved = false; showToast('续玩检查点未更新；自动命簿仍已保存：' + error.message); }
-      await experience.renderBlocks(result.blocks, playerTurn.speech);
+      if(dom.speechInput.value===playerTurn.speech)dom.speechInput.value='';
+      if(dom.actionInput.value===playerTurn.action)dom.actionInput.value='';
+      const actionDetails=document.getElementById('actionDetails');if(actionDetails&&!dom.actionInput.value)actionDetails.open=false;
+      committedReveal=experience.renderBlocks(result.blocks, playerTurn.speech);
+      renderHud();if(!dom.worldDrawer.hidden)renderDrawer(activeDrawer);
+      await committedReveal;committedReveal=null;
       experience.showEvents(beforeState,state);
       transcript.push({
         input: serialized, speech: playerTurn.speech, action: playerTurn.action,
@@ -555,7 +566,7 @@ async function submitTurn(input) {
         : sticky?.provider
         ? `命簿已续 · ${V31_PROVIDER_DEFAULTS[sticky.provider]?.label || sticky.provider}`
         : 'AI 与游戏规则已同步。';
-      return;
+      return true;
     }
 
     // A fixed cloud route never substitutes another writing engine. If Groq
@@ -570,6 +581,7 @@ async function submitTurn(input) {
     showToast(message);
     audioEngine.sfx('danger');
   } finally {
+    committedReveal=null;
     turnBusy = false;
     activeTurnController=null;
     experience.pendingSpeech('');
@@ -577,12 +589,6 @@ async function submitTurn(input) {
     dom.sendButton.disabled = dead || turnFlow.state() !== 'idle';
     dom.speechInput.disabled = dead;
     dom.actionInput.disabled = dead;
-    if (committedTurn) {
-      dom.speechInput.value = '';
-      dom.actionInput.value = '';
-      const details = document.getElementById('actionDetails');
-      if (details) details.open = false;
-    }
     if (!dead) dom.speechInput.focus();
   }
 }
@@ -747,6 +753,7 @@ function estimateLawScale(text) {
 
 async function submitLaw() {
   if (!state) return;
+  if(turnBusy&&!committedReveal){dom.lawCostHint.textContent='上一回合尚在等待；这道敕令已保留，待完成或停止等待后可发动。';return;}
   const wish = String(dom.lawInput.value || '').trim();
   if (!wish) {
     dom.lawCostHint.textContent = '先写下你要此世实现的结果。';
@@ -757,9 +764,11 @@ async function submitLaw() {
   audioEngine.sfx('law');
   dom.lawSubmitButton.disabled = true;
   dom.lawCostHint.textContent = estimateLawScale(wish) + ' · 正在敕令世界…';
-  setLawLayer(false);
+  dom.lawLayer.hidden=true;
   try {
-    await submitTurn({ speech: '', action: `言出法随：${wish}` });
+    const committed=await submitTurn({ speech: '', action: `言出法随：${wish}` });
+    if(committed)dom.lawInput.value='';
+    else{dom.lawInput.value=wish;dom.lawLayer.hidden=false;dom.lawCostHint.textContent='本次尚未完成，敕令原文已保留，可再次发动。';}
   } finally {
     dom.lawSubmitButton.disabled = false;
   }

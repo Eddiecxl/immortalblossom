@@ -1,5 +1,5 @@
 import {ITEMS,QUESTS,REALMS,TECHNIQUES} from '../game-data.js';
-import {itemUsageOptions} from '../astra-inventory.js';
+import {itemUsageOptions,reachableItemOptions} from '../astra-inventory.js';
 import {realmLabel} from '../astra-rules.js';
 export function nearbyCharacterRows(state){
  const world=state.astraWorld;
@@ -27,6 +27,17 @@ export function inventoryRows(state){
   return {name,amount:Number(state.inventory?.items?.[name]||state.inventory?.materials?.[name]||0),description:protection||item.description||'旅途中取得的物品，具体用途以已确认的规则为准。',type:item.type||item.category||asset?.kind||'未知',asset,
    usable:Boolean(generated?.effects?.length)||(item.type==='consumable'&&Boolean(item.heal||item.qi)&&!asset),equippable:['weapon','armor','accessory'].includes(item.type)};
  }).filter(r=>r.amount>0||Number(r.asset?.charges)>0);
+}
+export function availableItemRows(state){
+ const w=state.astraWorld;if(!w)return [];
+ return Object.values(w.items||{}).flatMap(item=>{const options=reachableItemOptions(w,item);return options.length?[{
+  itemId:item.id,name:item.name,amount:item.quantity,description:item.ownerId
+   ?`${w.characters[item.ownerId]?.name||'对方'}提出的赠予，收下才会进入行囊。`:'就在附近的无主物品，可以拾取。',
+  actions:options.map(o=>({...o,id:o.action}))}]:[];});
+}
+export function realityInvocationCount(state){
+ const w=state.astraWorld;if(!w)return state.journeyWorld?.laws?.length||0;
+ return Number(w.flags?.realityInvocations)||Number(w.historyArchive?.counts?.reality_mutation||0)+(w.history||[]).filter(e=>e.type==='reality_mutation').length;
 }
 export function questRows(state){
  if(state.astraWorld?.quests)return Object.values(state.astraWorld.quests).map(q=>({

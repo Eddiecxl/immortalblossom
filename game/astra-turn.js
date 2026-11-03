@@ -26,7 +26,7 @@ import {describeSceneImpact,conciseEngineAftermath} from './astra-scene-impact.j
 import {narrateSettledScene} from './astra-settled-scene.js';
 import {parseCombatAction,resolveCombatExchange} from './astra-combat.js';
 import {parseTrainingAction,settleTraining} from './astra-training.js';
-import {useAstraInventory} from './astra-inventory.js';
+import {useAstraInventory,parseInventoryCommand} from './astra-inventory.js';
 import {reconcileMainStory} from './astra-main-story.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
@@ -71,11 +71,8 @@ function mechanicalAction(world, input) {
   const combat=parseCombatAction(world,action);
   if(combat)return {type:'attack',...combat,minutes:1};
   const training=parseTrainingAction(world,action);if(training)return training;
-  if(/服下|服用|吃下|吞下|使用|装备|拿起|阅读|读信|查看/u.test(action)){
-    const items=Object.values(world.items||{}).filter(i=>!i.destroyed&&i.ownerId===world.player.id&&world.player.inventory.includes(i.id)&&i.name&&action.includes(i.name));
-    if(items.length>1)throw Error('涉及多件物品，请从背包逐件操作，或明确指定这一轮要用的物品。');
-    if(items.length===1)return {type:'use_inventory',itemId:items[0].id,operation:/装备|拿起/u.test(action)?'equip':/阅读|读信/u.test(action)?'read':/查看/u.test(action)?'inspect':'use',minutes:2};
-  }
+  const inventory=parseInventoryCommand(world,action);
+  if(inventory)return {type:'use_inventory',itemId:inventory.itemId,operation:inventory.action,minutes:2};
   if (/(?:服下|服用|吃下|吞下|使用)/u.test(action)) {
     const item = Object.values(world.items || {}).find(entry => entry.generated && !entry.destroyed
       && entry.ownerId === world.player.id && action.includes(entry.name));
@@ -109,6 +106,19 @@ function mechanicalAction(world, input) {
   return { type: 'speech', minutes: input.speech ? 5 : 10 };
 }
 
+export function canResolveAstraTurnLocally(state,input){
+ if(!state?.astraWorld)return false;
+ try{const action=mechanicalAction(state.astraWorld,normalizePlayerTurnInput(input));
+  if(action.type==='reality')return Boolean(planRealityMutation(state.astraWorld,action.statement));
+  return ['attack','train','use_inventory','wait','travel'].includes(action.type)&&(!input.speech||['attack','train','use_inventory'].includes(action.type));
+ }catch{return false;}
+}
+function settledRealityBlocks(before,after){
+ const blocks=conciseEngineAftermath(before,after,{actionType:'reality'});
+ const created=Object.values(after.items).filter(item=>!before.items[item.id]&&item.ownerId===after.player.id&&!item.destroyed);
+ if(created.length)blocks.push({type:'narr',text:`${created.map(item=>item.name).join('、')}已经出现在我的行囊里，可以打开行囊查看和使用。`});
+ return blocks.length?blocks:[{type:'narr',text:'敕令落定，所指的变化已成为此世的事实。眼前的人与事，将从这份改变继续。'}];
+}
 function settleOrdinaryAction(world, action, turnId) {
   if (action.type === 'accept_quest') acceptQuestArc(world, action.questId);
   if (action.type === 'quest_work') {
@@ -388,7 +398,9 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         try { parsed = parseNarration(raw, 'world'); }
         catch (error) { errors = [clean(error?.message || '叙事格式无效', 100)]; continue; }
         parsed.blocks = stripExactPlayerSpeechEcho(parsed.blocks, turnInput.speech);
-        if (hasInventedPlayerDialogue(parsed.blocks, turnInput.speech)) { errors = ['擅自代玩家说话']; continue; }
+        const inventedPlayerDialogue=hasInventedPlayerDialogue(parsed.blocks, turnInput.speech);
+        const immediateReality=action.type==='reality'&&settings.renderSettledScenes===false;
+        if (inventedPlayerDialogue&&!immediateReality) { errors = ['擅自代玩家说话']; continue; }
         if (Object.keys(parsed.effects || {}).length) { errors = ['模型试图提出 Engine 效果']; continue; }
         let candidateWorld = structuredClone(baseDraft);
         try {
@@ -423,7 +435,10 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           && parsed.worldPlan?.operations?.some(operation => operation.type !== 'concept.defer');
         const checked = validateAstraNarration(candidateWorld, parsed.blocks, candidatePacket);
         const answered = validateAstraConversation(checked.blocks, conversation, recent);
-        if (checked.ok && answered.ok) { world = candidateWorld; narration = { blocks: checked.blocks }; break; }
+        if (checked.ok && answered.ok && !inventedPlayerDialogue) { world = candidateWorld; narration = { blocks: checked.blocks }; break; }
+        // Executable reality changes have already passed scope and effect checks.
+        // Bad optional prose must not veto the spell or trigger another AI call.
+        if(immediateReality){world=candidateWorld;narration={blocks:settledRealityBlocks(state.astraWorld,world)};break;}
         errors = [...checked.errors.map(error => error.message), ...answered.errors];
         if(arrivalResident)errors.unshift(`候选抵达事实：${candidateWorld.locations[candidateWorld.player.locationId].name}近旁真实在场的是${arrivalResident.name}（${arrivalResident.id}，${arrivalResident.occupation||'当地居民'}）。此人属于候选抵达现场；保留原完整worldPlan并修正现场正文，不能重复执行动作。`);
       }
@@ -479,6 +494,8 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     }
     const injury=injuryNotice(state.astraWorld,world);
     if(injury&&action.type!=='reality'&&!narration.blocks.some(b=>/受伤|伤得|疼痛|伤口/u.test(b.text)))narration.blocks.push(injury);
+    if(action.type==='reality')world.flags.realityInvocations=(Number(state.astraWorld.flags.realityInvocations)
+      ||Number(state.astraWorld.historyArchive?.counts?.reality_mutation||0)+state.astraWorld.history.filter(e=>e.type==='reality_mutation').length)+1;
     rememberPlayerScene(world,narration.blocks,{turnId:txId,input:turnInput});
     if (signal?.aborted) throw new Error('本回合已取消。');
     narration = injectExactPlayerSpeech(narration, turnInput.speech);

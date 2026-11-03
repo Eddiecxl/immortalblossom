@@ -5,9 +5,9 @@ import {bindMenuVideo} from './menu-video.js';
 import {projectTurnBlocks,detectEvents} from './presentation.js';
 import {createChroniclePlayer,upgradeReadingPreferences} from './chronicle-player.js';
 const KEY='luoxian_beta3_settings';
-const defaults={master:75,music:0,sfx:65,muteBackground:true,quality:'high',motion:true,scale:100,brightness:100,textSpeed:52,requestInterval:8,mode:'windowed',resolution:'1600x900',intro:true};
+const defaults={master:75,music:0,sfx:65,muteBackground:true,quality:'high',motion:true,scale:100,brightness:100,textSpeed:52,requestInterval:0,mode:'windowed',resolution:'1600x900',intro:true};
 export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImport,onReady=async()=>{}}){
- let settings={...defaults};try{settings={...defaults,...upgradeReadingPreferences(JSON.parse(localStorage.getItem(KEY)||'{}'))};localStorage.setItem(KEY,JSON.stringify(settings));}catch{}
+ let settings={...defaults};try{settings={...defaults,...upgradeReadingPreferences(JSON.parse(localStorage.getItem(KEY)||'{}'))};if(!settings.requestPaceVersion&&settings.requestInterval===8)settings.requestInterval=0;settings.requestPaceVersion=1;localStorage.setItem(KEY,JSON.stringify(settings));}catch{}
  const audio=createScore(()=>settings,{tracks:GAME_SOUNDTRACK,playlists:GAME_PLAYLISTS,initialScene:'intro',smoothManual:true});let transitioning=false,lastFocus=null,events=[],eventShowing=false;
  const el=(id)=>document.getElementById(id);
  const root=document.createElement('div');root.id='beta3Experience';root.innerHTML=`
@@ -32,7 +32,7 @@ export function createExperience({aiClient,onAiSettings,onTitle,onExport,onImpor
    <button id="applyDisplay">应用显示设置</button><p id="displayFeedback" role="status"></p>
   </section>
   <section data-settings-page="play" hidden><h3>一字一山河</h3><p>对白与剧情逐字呈现，句间稍作停顿。可暂停、展开全文；向上回看时暂停新文字，点击“继续阅读”接上。</p>
-   ${slider('textSpeed','字幕间隔 · 毫秒 / 字',0,100)}${slider('requestInterval','AI 请求最小间隔 · 秒',3,30)}
+   ${slider('textSpeed','字幕间隔 · 毫秒 / 字',0,100)}${slider('requestInterval','额外请求间隔 · 秒',0,30)}
    <p class="field-note">减慢字幕不等于避免限流。请求统一控制间隔，不会将重复点击排队，遇到限流遵守服务端冷却时间，不自动切换模型。</p><button id="replayIntro">重看开场</button><button id="exportJourney">导出命簿</button><button id="importJourney">导入命簿</button><input type="file" id="journeyFile" accept=".json" hidden><p id="journeyFeedback" role="status"></p>
   </section>
   <section data-settings-page="ai" hidden><h3>接续此世</h3><p>可使用本机 Qwen 进行叙事；云端 AI 为可选辅助。世界状态始终由命簿保存。</p><div class="connection-card"><i></i><div><b id="b3Provider">正在读取连接…</b><p id="b3KeyState"></p></div></div><button id="configureAi" class="gold-button">配置本地或云端 AI ↗</button><p class="field-note">云端 Key 由本机 Windows 用户加密保存，不写入游戏存档或发行包。</p></section>

@@ -19,7 +19,7 @@ export const WORLD_PLAN_PROMPT = [
 // Keep the novelist's ordinary task legible. The complete reality vocabulary
 // is only needed when the player actually invokes that separate capability.
 export function worldPlanPrompt(mode='ordinary') {
-  if(mode==='reality')return WORLD_PLAN_PROMPT;
+  if(mode==='reality')return REALITY_PLAN_PROMPT;
   return [
     '普通physical或法术攻击若尚未结算，可用combat.exchange {targetId:"真实在场对象",mode:"physical|spell|self_destruct",nonlethal:是否留命,evidence:"本轮action原文",techniqueName:可选已掌握功法ID}。你只理解意图，Engine按双方修为、伤势、装备和灵力计算伤害与反击；不能自定胜负、越境秒杀或凭形容词创造绝技。发言、假设、观察不是出手，settledAction为attack时禁止重放。',
     '先写blocks中的这次互动，再写worldPlan.operations中随之产生的真实变化。输出键顺序为blocks、worldPlan；没有实质变化用operations:[]。Engine会先执行操作再核对对白，任一部分无效均不提交。',
@@ -31,3 +31,11 @@ export function worldPlanPrompt(mode='ordinary') {
     '当前items.ownerId、commitments.state与任务状态优先于玩家声称和过去对白；口头许诺不是已交付。离开者只可最后应答，不再接收物品/任务。本人身份、关系与记忆取实际记录，不发明旧相识；无需在正文解释这些引擎规则。'
   ].join('\n');
 }
+
+const REALITY_PLAN_PROMPT=[
+  "明确言出法随在任何境界100%生效，按指令范围提出完整可执行operations；普通发言、假设、引用不发动。Engine校验、结算和收费，不能只写文字成功，也不能因普通上限拒绝改写或用concept.defer拖延。每个操作必须有type和真实ID；复合指令逐项执行，稳定ID不变。",
+  "entity.update {targetId,changes:{name,gender,occupation,description,physicalCondition,goals,currentGoals,health,maxHealth,wealth,safety,power,stability,population,risk,alive,locationId,cultivation:{realm,level,maxRealmId},invincible}}：仅明确指定字段。alive:true复活，locationId直接传送；境界用事实中的ID或以境结尾的新名称；明确数值精确执行。",
+  "entity.create {kind:\"character|item|faction|location\",entity:{id,name,...}}：人物用gender/occupation/goals/locationId；物品用ownerId/quantity/category/effects/description，category用weapon/armor/accessory/pill/document/material；新物品必须写出可执行effects，不能只写描述。势力用homeId。",
+  "relation.upsert/remove {fromId,toId,kind:\"member|attachment|trust\",weight:-1至1}。rule.upsert {rule:{id,trigger,condition,effects}}只在明确改世界规则时。物品/规则effects支持 {type:\"heal\",target:\"player\",magnitude:\"full\"或正整数}、{type:\"cultivation.advance_major_realm\",target:\"player\",magnitude:1至3}、{type:\"stat.delta\",target:\"player\",field:\"health|wealth|safety\",magnitude:整数}。普通物品仍受境界上限；言灵指定结果用entity.update，不借普通效果削弱命令。",
+  "condition是 {op:\"eq|ne|lt|lte|gt|gte|exists\",left:{entityId,field},right:常量或引用}，组合 {op:\"all|any\",conditions:[]} 或 {op:\"not\",condition:{}}。不写代码。没有明确要求的关系/物品/任务不要擅改。blocks描述结算后事实，必要时claims:[{type:\"state\",entityId,field,value}]，不否认已实现的效果。"
+].join("\n");

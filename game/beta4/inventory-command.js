@@ -16,7 +16,7 @@ export async function commitInventoryAction(state,command,{stateStore,transcript
  }else result=performInventoryAction(state,command);
  if(!result.ok)return result;
  result.state.updatedAt=new Date().toISOString();
- const verb={equip:'装备',use:'使用',read:'阅读',inspect:'查看'}[command.action]||'查看';
+ const verb={equip:'装备',use:'使用',read:'阅读',inspect:'查看',take:'拾取',accept:'收下',decline:'谢绝'}[command.action]||'查看';
  const turn={id:turnId,kind:'world',blocks:result.blocks,summary:result.summary||`${verb}${command.name}`,userText:`${verb}${command.name}`,createdAt:new Date().toISOString(),provider:'engine',model:'确定性物品结算'};
  let committed=await stateStore.saveAutoIfJourney('ai',{...result.state,transactionJournal:{type:'ai-world-turn',turn}},state.journeyId,state.revision);
  let historyPending=false;

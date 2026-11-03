@@ -78,7 +78,7 @@ test('explicit reality death bypasses an opposing higher realm and changes only 
   }
 });
 
-test('reality proposals repair a realm-gated denial and commit only the valid scoped candidate', async () => {
+test('immediate reality commits the valid scoped operation and discards realm-gated denial prose', async () => {
   for (const seed of seeds) {
     const state=createGameState('试行者','ai',()=>seed);
     const npc=Object.values(state.astraWorld.characters).find(row=>row.alive);
@@ -92,7 +92,7 @@ test('reality proposals repair a realm-gated denial and commit only the valid sc
     assert.equal(result.ok,true,result.error);
     assert.equal(result.state.astraWorld.characters[npc.id].gender,'女');
     assert.equal(result.state.astraWorld.player.cultivation.realm,'none');
-    assert.equal(h.calls.length,2,'realm denial must be rejected before commit');
+    assert.equal(h.calls.length,1,'valid reality operations must not wait for a prose repair');
     assert.equal(result.blocks.some(block=>/凡人.*无法/u.test(block.text)),false);
   }
 });

@@ -101,7 +101,8 @@ export function createV31HybridClient({
 
   let statusCache = { at: 0, value: null };
   const gate = createRequestGate({clock, interval:()=>{
-    try{return JSON.parse(storage?.getItem('luoxian_beta3_settings')||'{}').requestInterval * 1000 || 8000;}catch{return 8000;}
+    if(globalThis.lxCloud)return 0; // The durable provider queue already enforces quotas.
+    try{return Math.max(0,Number(JSON.parse(storage?.getItem('luoxian_beta3_settings')||'{}').requestInterval)||0)*1000;}catch{return 0;}
   },report:ms=>globalThis.dispatchEvent?.(new CustomEvent('lx:cooldown',{detail:{ms}}))});
 
   async function status(force = false) {

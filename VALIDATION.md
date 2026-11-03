@@ -47,3 +47,6 @@ GitHub Actions run 40827261300 测试、构建、Cloudflare 部署成功。线�
 真实 Groq：v423-playable-final 五轮、五次成功请求；突破与瞬移目击延续至下一轮。另一 seed v423-holdout 三轮完成，一次服务商 400 失败后同输入恢复；仍存在过度职业化及装饰性虚构，不能将 tests pass 宣传为所有对白完美。详见 docs/PLAYABLE_SCENES_V423.md。
 
 本地、补丁、完整包、部署与网页刷新最终结果以 Maintenance/Verification/v423-release-state.json 为准；该文件 complete=true 才表示整个交付阶段完成。游戏清单为 122 个文件，保留现有美术、音乐默认关闭、所有旧文件及玩家数据。
+# v4.2.5 验证（2026-11-03）
+
+411/411 回归通过、零跳过，含真实 workerd SQLite。隔离实际浏览器验证已知言灵无需云端、字幕中装备与草稿保留、掉落拾取/赠予接受/消耗及重载；一次真实Groq对话通过。正式部署、补丁及完整ZIP的最终状态参见 Maintenance/Verification/v425-release-state.json；未标 complete 前不视为发布完成。此次保留全部旧包、模型和用户数据。
