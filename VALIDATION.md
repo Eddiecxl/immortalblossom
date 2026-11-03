@@ -50,3 +50,5 @@ GitHub Actions run 40827261300 测试、构建、Cloudflare 部署成功。线�
 # v4.2.5 验证（2026-11-03）
 
 411/411 回归通过、零跳过，含真实 workerd SQLite。隔离实际浏览器验证已知言灵无需云端、字幕中装备与草稿保留、掉落拾取/赠予接受/消耗及重载；一次真实Groq对话通过。正式部署、补丁及完整ZIP的最终状态参见 Maintenance/Verification/v425-release-state.json；未标 complete 前不视为发布完成。此次保留全部旧包、模型和用户数据。
+
+最终CI：v4.2.5 / commit 15b37a42509b31808705537c08e65389e906b270，413/413、0跳过，真实workerd。部署工作流41653485662成功；完整包等后续以v425-release-state.json为准。
