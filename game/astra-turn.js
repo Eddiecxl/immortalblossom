@@ -29,7 +29,7 @@ import {parseTrainingAction,settleTraining} from './astra-training.js';
 import {useAstraInventory,parseInventoryCommand} from './astra-inventory.js';
 import {reconcileMainStory} from './astra-main-story.js';
 import {dialogueFrame,DIALOGUE_PROMPT,DIALOGUE_OPERATIONS} from './astra-dialogue.js';
-import {reconcileStories} from './astra-story.js';
+import {reconcileStories,settleExplicitStoryReply} from './astra-story.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -290,6 +290,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       const draft = structuredClone(state.astraWorld);
       beginPlayerSceneTurn(draft,turnInput,{turnId:txId});
       ensureSimulation(draft);
+      const settledStoryReplies=action.type==='reality'?[]:settleExplicitStoryReply(draft,turnInput,{turnId:txId});
       const intentTarget = Object.values(draft.characters).find(npc => !draft.player.travel && npc.alive && !npc.travel
         && npc.locationId === draft.player.locationId && rawInput.includes(npc.name))?.id || conversation?.targetId;
       const intent = action.type==='reality'
@@ -321,6 +322,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       const projected = projectAstraWorld(state, world);
       const participant={...conversation,presentAtStart:Boolean(conversation?.targetId)};
       const packet = compileAstraContext(projected, rawInput, recent,{conversation:participant});
+      if(settledStoryReplies.length)packet.settledStoryReplies=settledStoryReplies;
       if(action.attempt)packet.actionAttempt=action.attempt;
       packet.turnStart = {minute:state.astraWorld.minute,locationId:state.astraWorld.player.locationId,
         locationName:state.astraWorld.locations[state.astraWorld.player.locationId]?.name||'',

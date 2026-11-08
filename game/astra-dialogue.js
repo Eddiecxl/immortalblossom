@@ -13,6 +13,7 @@ export function dialogueFrame(packet){
   departingNpcs:packet.departingNpcs||[],items:(packet.items||[]).map(i=>pick(i,['id','name','quantity','ownerId','effects','description','lastTransfer'])),activeQuests:(packet.activeQuests||[]).map(q=>pick(q,['id','title','giverId','targetLocationId','state','summary','condition','deadline','requiredCommitmentIds'])),simulationFacts:packet.simulationFacts||{},
   recentTurns:(packet.recentTurns||[]).slice(-1).map(t=>({userText:t.userText,dialogue:t.dialogue||[]})),
   recalledSummaries:(packet.recalledSummaries||[]).slice(0,1).map(r=>typeof r==='string'?r:pick(r,['summary','text'])),storyThreads:(packet.storyThreads||[]).filter(t=>t.ownerId===focus||t.locationId===packet.location?.id||[t.id,t.title].some(label=>label&&input.speech.includes(label))).map(t=>pick(t,['id','title','summary','state','ownerId','locationId','startsAt','dueAt','condition'])),
+  settledStoryReplies:packet.settledStoryReplies||[],
   pacing:{mode:'conversation',listenerId:focus||null,rule:'短对白先回答当下问题。允许闲聊、停顿、休息；不重复旧威胁，不强推任务。实际到期事件仍发生。'},
   dueEvents:packet.dueEvents||[],turnStart:packet.turnStart};
  if((packet.recentImpacts||[]).some(row=>packet.minute-Number(row.atMinute||0)<=5))return null;

@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createMainStoryState} from '../../game/astra-main-story.js';import {createAstraOpening} from '../../game/astra-opening.js';import {compileAstraContext} from '../../game/astra-context.js';
-import {dialogueFrame} from '../../game/astra-dialogue.js';import {proposeStory,respondStory,reconcileStories,storyView} from '../../game/astra-story.js';
+import {dialogueFrame} from '../../game/astra-dialogue.js';import {proposeStory,respondStory,reconcileStories,storyView,settleExplicitStoryReply} from '../../game/astra-story.js';
 import {applyWorldPlan} from '../../game/astra-operations.js';import {migrateGameState} from '../../game/game-state.js';import {createAiTurnRunner} from '../../game/ai-turn.js';
 import {advanceAstraWorld} from '../../game/astra-scheduler.js';
 const setup=()=>createAstraOpening(createMainStoryState('顾长生',()=> 'fast-story')).state;
@@ -33,6 +33,12 @@ test('long waits process the appointment start before its later deadline instead
 });
 test('a composite reality operation destroying the real venue cancels linked invitations in the same transaction',()=>{
  const w=setup().astraWorld,t={...invitation(w),locationId:'loc:linhome'};proposeStory(w,t,{turnId:'invite'});const r=applyWorldPlan(w,{operations:[{type:'entity.update',targetId:t.locationId,changes:{destroyed:true}}]},{turnId:'destroy-real-venue',mode:'reality',input:{action:'言出法随：摧毁林家小院'}});assert.equal(r.world.locations[t.locationId].destroyed,true);assert.equal(r.world.simulation.storyThreads[t.id].state,'cancelled');assert.equal(w.locations[t.locationId].destroyed,false);
+});
+test('explicit named refusal is a real state change even if the author omits story operations',async()=>{
+ const s=setup(),t={...invitation(s.astraWorld),title:'小院茶话',locationId:'loc:linhome'};proposeStory(s.astraWorld,t,{turnId:'offer'});const runner=createAiTurnRunner({transcriptStore:{recentTurns:async()=>[],appendTurn:async()=>{}},aiClient:{narrate:async()=>JSON.stringify({blocks:[{type:'dlg',name:'林小满',text:'不去就不去吧，咱们以后再说。'}]})}});const r=await runner.runWorld({state:s,input:{speech:'小院茶话这个邀约，我不参加。'},settings:{fastDialogue:true,narrativePolicy:'playable'}});assert.equal(r.ok,true,r.error);assert.equal(r.state.astraWorld.simulation.storyThreads[t.id].state,'declined');assert.equal(s.astraWorld.simulation.storyThreads[t.id].state,'pending');
+});
+test('questions, quoted refusals and double negatives cannot silently decline an invitation',()=>{
+ for(const speech of ['小院茶话我不是不参加，我只是想晚点到','如果我不参加小院茶话呢？','林小满说她不参加小院茶话']){const w=setup().astraWorld,t={...invitation(w),title:'小院茶话'};proposeStory(w,t,{turnId:'offered'});assert.deepEqual(settleExplicitStoryReply(w,{speech},{turnId:'quoted'}),[]);assert.equal(w.simulation.storyThreads[t.id].state,'pending');}
 });
 test('future plans end when the host dies, venue is destroyed or time expires',()=>{
  for(const kind of ['death','venue','time']){const w=setup().astraWorld;proposeStory(w,invitation(w),{turnId:'offered'});if(kind==='death')w.characters['npc:lin-xiaoman'].alive=false;if(kind==='venue')w.locations[w.player.locationId].destroyed=true;if(kind==='time')w.minute+=31;reconcileStories(w);assert.equal(w.simulation.storyThreads['story:dinner'].state,kind==='time'?'missed':'cancelled');assert.ok(w.history.some(e=>e.type==='story_state'));}

@@ -2,13 +2,13 @@ import {worldEntity,validateConditionReferences,evaluateCondition,assertSafeData
 import {recordCausalEvent} from './astra-causality.js';
 const terminal=new Set(['resolved','declined','withdrawn','missed','cancelled']);
 const fail=m=>{throw Error(m);};
-function record(world,thread,state,sourceId,reason){
+function record(world,thread,state,sourceId,reason,notifyOwner=true){
  thread.state=state;thread.updatedAt=world.minute;thread.stateHistory.push({state,minute:world.minute,sourceId,reason});
  const summary=`「${thread.title}」${({pending:'尚待回应',planned:'仍在计划中',accepted:'已答应，但尚未实际完成',resolved:'已经达成',declined:'已明确拒绝',withdrawn:'已撤回',missed:'已错过约定时辰',cancelled:'因相关人或地点变化而终止'})[state]}。`;
  const id=`story:${sourceId}:${thread.id}:${state}`;
  world.history.push({id,type:'story_state',minute:world.minute,locationId:thread.locationId,actors:thread.participants,summary,playerWitnessed:thread.visibility!=='private',storyId:thread.id,sourceId});
- if(thread.visibility!=='private')recordCausalEvent(world,{id,actorId:thread.ownerId,action:'story_state',targetIds:[thread.id],locationId:thread.locationId,summary,sourceId,impacts:[]});
- const npc=world.characters[thread.ownerId];if(npc){npc.memories||=[];npc.memories.push({id,eventId:id,summary,source:'story-plan',storyId:thread.id,minute:world.minute});}
+ if(thread.visibility!=='private')recordCausalEvent(world,{id,actorId:['accepted','declined','withdrawn'].includes(state)?'player':thread.ownerId,action:'story_state',targetIds:[thread.id],locationId:thread.locationId,summary,sourceId,impacts:[]});
+ const npc=world.characters[thread.ownerId];if(npc?.alive&&notifyOwner){npc.memories||=[];npc.memories.push({id,eventId:id,summary,source:'story-plan',storyId:thread.id,minute:world.minute});}
 }
 export function proposeStory(world,spec,context={}){
  assertSafeData(spec);const sim=world.simulation||={};sim.storyThreads||={};
@@ -39,7 +39,7 @@ export function proposeStory(world,spec,context={}){
  return t;
 }
 export function respondStory(world,op,context={}){
- const t=world.simulation?.storyThreads?.[op.id];if(!t||terminal.has(t.state))fail('这条故事线索已经终止或不存在。');
+ const t=world.simulation?.storyThreads?.[op.id];if(!t)fail('这条故事线索已经终止或不存在。');
  if(t.visibility==='private'&&t.ownerId!=='player'||t.dueAt!=null&&world.minute>t.dueAt)fail('尚未知晓或已经过期的邀约不能被提前答应。');
  const input=[context.input?.speech,context.input?.action].filter(Boolean).join(' '),e=op.evidence;
  if(typeof e!=='string'||!e.trim()||!input.includes(e)||/[?？]|如果|假如/u.test(e))fail('回应须有玩家本轮明确原话，不能替玩家选择。');
@@ -49,8 +49,17 @@ export function respondStory(world,op,context={}){
   const at=input.lastIndexOf(e),scope=input.slice(Math.max(0,at-8),at+e.length);
   if(/(?:还没|尚未|未曾|没有|没)(?:有)?(?:答应|同意|决定)|不去|不参加|不接受|拒绝|谢绝/u.test(scope))fail('尚未同意不能被记成答应。');
  }
- if(op.response==='accept'&&t.state==='accepted')return t;
- record(world,t,({accept:'accepted',decline:'declined',withdraw:'withdrawn'})[op.response],context.turnId||'response','玩家明确回应');return t;
+ const next=({accept:'accepted',decline:'declined',withdraw:'withdrawn'})[op.response];if(t.state===next)return t;if(terminal.has(t.state))fail('这条故事线索已经终止，不能无故重开。');
+ const owner=world.characters[t.ownerId],heard=owner?.alive&&!owner.travel&&!world.player.travel&&owner.locationId===world.player.locationId;
+ record(world,t,next,context.turnId||'response','玩家明确回应',heard);return t;
+}
+export function settleExplicitStoryReply(world,input,context={}){
+ const text=[input?.speech,input?.action].filter(Boolean).join(' ');if(!text||/[?？“「]|如果|假如|假设|开玩笑|我说过|他说|她说/u.test(text))return [];
+ if(/不是不|不去不行|不能不去|未必|还没决定|尚未决定|还没想好|再考虑|先考虑/u.test(text))return [];
+ let response=/我(?:决定|要|想)?撤回|取消承诺|我不再参加/u.test(text)?'withdraw':/我(?:这次|决定|选择|还是|就)?(?:不去|不(?:会)?参加|不接受|谢绝|拒绝)|(?:^|[，,。；;])\s*(?:不去|不参加|不接受|谢绝|拒绝)/u.test(text)?'decline':/我(?:已经|现在|就|决定|选择|愿意)?(?:答应|同意|接受|会参加|会去)/u.test(text)?'accept':null;
+ if(!response)return [];const visible=Object.values(world.simulation?.storyThreads||{}).filter(t=>t.kind==='invitation'&&t.visibility!=='private'&&!terminal.has(t.state));
+ const named=visible.filter(t=>[t.id,t.title].some(label=>label&&text.includes(label)));const targets=named.length?named:visible.length===1&&/邀约|邀请|赴约/u.test(text)?visible:[];
+ for(const t of targets)respondStory(world,{id:t.id,response,evidence:text},{...context,input});return targets.map(t=>({id:t.id,state:t.state}));
 }
 export function reconcileStories(world){
  for(const t of Object.values(world.simulation?.storyThreads||{})){
