@@ -104,6 +104,9 @@ test('personal Gemini keys and clearing them cannot alter Groq credentials',asyn
 test('Gemini RetryInfo waits exactly the reported retry before reusing the same job',async()=>{
  let calls=0;const app=harness({upstream:async()=>++calls===1?Response.json({error:{details:[{'@type':'type.googleapis.com/google.rpc.RetryInfo',retryDelay:'2s'}]}},{status:429}):completion('重试成功')});app.env.GEMINI_API_KEY='AQ.google_retry';const player=app.visitor();const job=await(await player.request('/api/ai/cloud/generate',{...payload('gemini-retry'),provider:'gemini',model:'gemini-3.8-flash'})).json();await app.fire();app.advance(1999);await app.fire();assert.equal(calls,1);app.advance(501);await app.fire();assert.equal(calls,2);assert.equal((await(await player.request(jobPath(job))).json()).text,'重试成功');
 });
+test('temporary upstream overload retries the same durable job with bounded backoff',async()=>{
+ let calls=0;const app=harness({upstream:async()=>++calls===1?Response.json({error:{message:'high demand'}},{status:503}):completion('恢复正常')});const player=app.visitor();const job=await(await player.request('/api/ai/cloud/generate',payload('overload'))).json();await app.fire();assert.equal((await player.request(jobPath(job))).status,202);app.advance(3000);await app.fire();assert.equal((await(await player.request(jobPath(job))).json()).text,'恢复正常');assert.equal(calls,2);
+});
 
 test('structured game turns request JSON object mode while plain connection probes keep text mode', async () => {
  const sent=[];const app=harness({upstream:async(_url,options)=>{sent.push(JSON.parse(options.body));return completion('{"blocks":[{"type":"sys","text":"我在。"}]}');}});

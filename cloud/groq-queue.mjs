@@ -445,6 +445,10 @@ export class GroqQueue {
       }
       if (!response.ok) {
         const status = response.status;
+        if([502,503,504].includes(status)&&job.attempts<3){
+          job.state='queued';job.retryAt=this.clock()+Math.max(delay,2000*2**(job.attempts-1));job.updatedAt=this.clock();delete job.leaseUntil;
+          await this.storage.put(`job:${job.id}`,job);await response.body?.cancel();return;
+        }
         const rejected = status === 400 || status === 422 ? await response.clone().json().catch(() => null) : null;
         if (rejected?.error?.code === 'json_validate_failed') {
           await response.body?.cancel();
