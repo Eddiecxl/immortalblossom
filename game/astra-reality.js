@@ -142,7 +142,7 @@ export function killNpc(world, npc, mutationId) {
   reconcileQuestArcs(world, { type: 'death', actorId: npc.id });
 }
 
-function destroyLocation(world, location, mutationId) {
+export function destroyLocation(world, location, mutationId) {
   const refuge = world.edges.find(edge => edge.from === location.id && !edge.closed
     && !world.locations[edge.to]?.destroyed && edge.to !== location.id)?.to || null;
   for (const npc of Object.values(world.characters)) if (npc.alive && npc.locationId === location.id) {

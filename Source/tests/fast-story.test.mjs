@@ -27,6 +27,9 @@ test('an explicit unique existing place name resolves an invented alias without 
 test('long waits process the appointment start before its later deadline instead of skipping the whole meeting',()=>{
  const w=setup().astraWorld,t={...invitation(w),startsAt:w.minute+10};proposeStory(w,t,{turnId:'timed'});respondStory(w,{id:t.id,response:'accept',evidence:'我会参加'},{turnId:'yes',input:{speech:'我会参加'}});const r=advanceAstraWorld(w,40);assert.equal(r.world.simulation.storyThreads[t.id].state,'resolved');assert.equal(r.world.simulation.storyThreads[t.id].stateHistory.at(-1).minute,t.startsAt);
 });
+test('a composite reality operation destroying the real venue cancels linked invitations in the same transaction',()=>{
+ const w=setup().astraWorld,t={...invitation(w),locationId:'loc:linhome'};proposeStory(w,t,{turnId:'invite'});const r=applyWorldPlan(w,{operations:[{type:'entity.update',targetId:t.locationId,changes:{destroyed:true}}]},{turnId:'destroy-real-venue',mode:'reality',input:{action:'言出法随：摧毁林家小院'}});assert.equal(r.world.locations[t.locationId].destroyed,true);assert.equal(r.world.simulation.storyThreads[t.id].state,'cancelled');assert.equal(w.locations[t.locationId].destroyed,false);
+});
 test('future plans end when the host dies, venue is destroyed or time expires',()=>{
  for(const kind of ['death','venue','time']){const w=setup().astraWorld;proposeStory(w,invitation(w),{turnId:'offered'});if(kind==='death')w.characters['npc:lin-xiaoman'].alive=false;if(kind==='venue')w.locations[w.player.locationId].destroyed=true;if(kind==='time')w.minute+=31;reconcileStories(w);assert.equal(w.simulation.storyThreads['story:dinner'].state,kind==='time'?'missed':'cancelled');assert.ok(w.history.some(e=>e.type==='story_state'));}
 });

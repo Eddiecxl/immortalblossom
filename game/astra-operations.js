@@ -2,7 +2,7 @@ import { assertSafeData, worldEntity, validateCondition, validateConditionRefere
 import { ensureSimulation, recordCausalEvent, captureWorldChanges, companionNotification, isSpeculativeInput } from './astra-causality.js';
 import { applyNumericMutation } from './astra-variables.js';
 import { resolveStructuredEffect, consumeGeneratedItem } from './astra-effects.js';
-import { killNpc, relocateRealityActor, resurrectRealityNpc } from './astra-reality.js';
+import { killNpc, relocateRealityActor, resurrectRealityNpc,destroyLocation } from './astra-reality.js';
 import { rewriteCultivation } from './astra-rules.js';
 import {explicitRealityStatement} from './astra-reality-intent.js';
 import { checkTerminalWorld } from './astra-terminal.js';
@@ -148,6 +148,11 @@ function updateEntity(world, op, context) {
       rewriteCultivation(world, target, value);
     } else if (field === 'invincible' && kind === 'player' && typeof value === 'boolean') {
       target.invincible = value;
+    } else if(field==='destroyed'&&kind==='location'&&typeof value==='boolean'){
+      if(value&&!target.destroyed)destroyLocation(world,target,context.turnId);
+      else if(!value){target.destroyed=false;target.closed=false;}
+    } else if(field==='closed'&&kind==='location'&&typeof value==='boolean'){
+      if(!value&&target.destroyed)fail('已毁地点不能仅靠开门恢复；须明确修复地点。');target.closed=value;
     } else if (field === 'alive' && kind === 'character' && typeof value === 'boolean') {
       if (!value) killNpc(world, target, context.turnId);
       else resurrectRealityNpc(world, target);
