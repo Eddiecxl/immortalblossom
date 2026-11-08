@@ -86,6 +86,25 @@ const completion = text => Response.json({choices: [{message: {role: 'assistant'
 const payload = transactionId => ({provider: 'groq', model: 'qwen/qwen3.8-27b', messages: [{role: 'user', content: '继续这段真实剧情'}], maxTokens: 256, temperature: 0.72, transactionId});
 const jobPath = job => `/api/ai/cloud/jobs/${job.jobId}`;
 
+test('Gemini uses its own credential and low-thinking endpoint without deprecated sampling fields',async()=>{
+ let sent;const app=harness({upstream:async(url,options)=>{sent={url,options,body:JSON.parse(options.body)};return completion('Google回复');}});
+ app.env.GEMINI_API_KEY='AQ.google_shared_test_key';const player=app.visitor();
+ assert.equal((await(await player.request('/api/ai/cloud/status')).json()).configured.gemini,true);
+ const response=await player.request('/api/ai/cloud/generate',{...payload('gemini-turn'),provider:'gemini',model:'gemini-3.8-flash'});assert.equal(response.status,202);
+ const job=await response.json();await app.fire();const done=await(await player.request(jobPath(job))).json();assert.equal(done.provider,'gemini');assert.equal(done.text,'Google回复');
+ assert.equal(sent.url,'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');assert.equal(sent.options.headers.Authorization,'Bearer AQ.google_shared_test_key');
+ assert.equal(sent.body.reasoning_effort,'low');assert.equal(sent.body.temperature,undefined);
+});
+test('personal Gemini keys and clearing them cannot alter Groq credentials',async()=>{
+ const app=harness(),player=app.visitor();app.env.GEMINI_API_KEY='AQ.shared_google';
+ const response=await player.request('/api/ai/cloud/credential',{provider:'gemini',key:'AQ.personal_google_key'});assert.equal(response.status,200);
+ let st=await(await player.request('/api/ai/cloud/status')).json();assert.equal(st.configured.groq,true);assert.equal(st.personalProviders.gemini,true);assert.equal(st.personal,false);
+ await player.request('/api/ai/cloud/clear',{provider:'gemini'});st=await(await player.request('/api/ai/cloud/status')).json();assert.equal(st.configured.groq,true);assert.equal(st.configured.gemini,true);assert.equal(st.personalProviders.gemini,false);
+});
+test('Gemini RetryInfo waits exactly the reported retry before reusing the same job',async()=>{
+ let calls=0;const app=harness({upstream:async()=>++calls===1?Response.json({error:{details:[{'@type':'type.googleapis.com/google.rpc.RetryInfo',retryDelay:'2s'}]}},{status:429}):completion('重试成功')});app.env.GEMINI_API_KEY='AQ.google_retry';const player=app.visitor();const job=await(await player.request('/api/ai/cloud/generate',{...payload('gemini-retry'),provider:'gemini',model:'gemini-3.8-flash'})).json();await app.fire();app.advance(1999);await app.fire();assert.equal(calls,1);app.advance(501);await app.fire();assert.equal(calls,2);assert.equal((await(await player.request(jobPath(job))).json()).text,'重试成功');
+});
+
 test('structured game turns request JSON object mode while plain connection probes keep text mode', async () => {
  const sent=[];const app=harness({upstream:async(_url,options)=>{sent.push(JSON.parse(options.body));return completion('{"blocks":[{"type":"sys","text":"我在。"}]}');}});
  const player=app.visitor();

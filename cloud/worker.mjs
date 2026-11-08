@@ -1,4 +1,4 @@
-import {DEFAULT_MODEL, SessionStore, GroqQueue, SESSION_RETENTION_MS, failure, fingerprint, internalRequest, json, objectStub} from './groq-queue.mjs';
+import {DEFAULT_MODEL, CLOUD_PROVIDERS, SessionStore, GroqQueue, SESSION_RETENTION_MS, failure, fingerprint, internalRequest, json, objectStub} from './groq-queue.mjs';
 export {SessionStore, GroqQueue};
 
 const COOKIE_NAME = '__Host-lx_cloud_session';
@@ -31,9 +31,9 @@ async function readBody(request, maxBytes = MAX_AI_BODY_BYTES) {
 }
 
 function normalizeGeneration(data, probe = false) {
-  if (data.provider !== undefined && data.provider !== 'groq') throw {code: 'AI_BAD_REQUEST', status: 400};
+  const provider=data.provider||'groq';if(!Object.hasOwn(CLOUD_PROVIDERS,provider))throw {code:'AI_BAD_REQUEST',status:400};
   if (data.baseUrl || data.endpoint || data.key || data.apiKey) throw {code: 'AI_BAD_REQUEST', status: 400};
-  const model = data.model ?? DEFAULT_MODEL;
+  const model = data.model ?? CLOUD_PROVIDERS[provider].model;
   if (typeof model !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,179}$/.test(model)) throw {code: 'AI_BAD_REQUEST', status: 400};
   const messages = probe ? [{role: 'user', content: '请只回复：连接正常'}] : data.messages;
   if (!Array.isArray(messages) || !messages.length || messages.length > 64) throw {code: 'AI_BAD_REQUEST', status: 400};
@@ -49,7 +49,7 @@ function normalizeGeneration(data, probe = false) {
   if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 4096
     || !Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw {code: 'AI_BAD_REQUEST', status: 400};
   if (data.transactionId !== undefined && (typeof data.transactionId !== 'string' || !data.transactionId.trim() || data.transactionId.length > 180)) throw {code: 'AI_BAD_REQUEST', status: 400};
-  return {provider: 'groq', model, messages: normalized, maxTokens, temperature};
+  return {provider, model, messages: normalized, maxTokens, temperature};
 }
 
 function sessionFor(request) {
@@ -100,11 +100,12 @@ export default {
           response = await store.fetch(internalRequest('/status'));
         } else if (url.pathname === '/api/ai/cloud/credential' && request.method === 'POST') {
           const data = await readBody(request);
-          if (data.provider !== 'groq' || typeof data.key !== 'string' || !/^gsk_[a-zA-Z0-9_-]{8,256}$/.test(data.key.trim())) response = failure('AI_BAD_REQUEST', 400);
-          else response = await store.fetch(internalRequest('/credential', {key: data.key.trim()}));
+          const valid=data.provider==='groq'?/^gsk_[a-zA-Z0-9_-]{8,256}$/:/^[a-zA-Z0-9_.-]{16,256}$/;
+          if (!Object.hasOwn(CLOUD_PROVIDERS,data.provider) || typeof data.key !== 'string' || !valid.test(data.key.trim())) response = failure('AI_BAD_REQUEST', 400);
+          else response = await store.fetch(internalRequest('/credential', {provider:data.provider,key: data.key.trim()}));
         } else if (url.pathname === '/api/ai/cloud/clear' && request.method === 'POST') {
           const data = await readBody(request);
-          response = data.provider === 'groq' ? await store.fetch(internalRequest('/clear', {})) : failure('AI_BAD_REQUEST', 400);
+          response = Object.hasOwn(CLOUD_PROVIDERS,data.provider) ? await store.fetch(internalRequest('/clear', {provider:data.provider})) : failure('AI_BAD_REQUEST', 400);
         } else if (['/api/ai/cloud/generate', '/api/ai/cloud/test'].includes(url.pathname) && request.method === 'POST') {
           const data = await readBody(request);
           const payload = normalizeGeneration(data, url.pathname.endsWith('/test'));

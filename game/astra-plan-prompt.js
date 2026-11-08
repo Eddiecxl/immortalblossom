@@ -20,17 +20,17 @@ export const WORLD_PLAN_PROMPT = [
 // is only needed when the player actually invokes that separate capability.
 export function worldPlanPrompt(mode='ordinary') {
   if(mode==='reality')return REALITY_PLAN_PROMPT;
-  return [
-    '普通physical或法术攻击若尚未结算，可用combat.exchange {targetId:"真实在场对象",mode:"physical|spell|self_destruct",nonlethal:是否留命,evidence:"本轮action原文",techniqueName:可选已掌握功法ID}。你只理解意图，Engine按双方修为、伤势、装备和灵力计算伤害与反击；不能自定胜负、越境秒杀或凭形容词创造绝技。发言、假设、观察不是出手，settledAction为attack时禁止重放。',
-    '先写blocks中的这次互动，再写worldPlan.operations中随之产生的真实变化。输出键顺序为blocks、worldPlan；没有实质变化用operations:[]。Engine会先执行操作再核对对白，任一部分无效均不提交。',
-    'operations每项带type，使用事实包的真实ID。普通话语是发言，不自动成为动作、既往事实或言出法随；奇怪玩笑照样可以有人情味的回应。中性认识不用硬加好恶，social.observe只是记录真实态度变化，不是每句话必填的评语。同一听者每回合最多一条，evidence只能摘本轮玩家原话，不能摘自己生成的对白或替另一次互动记账。',
-    '可用操作：social.observe {observerId,subjectId:"player",meaning:"短语义",evidence:"本轮原文片段",valence:-1至1,reason:"人物实际判断"}，须听者在场；resource.transfer {itemId,fromId:"player",toId}，须action明确交付该物给该人；effect.apply {itemId}，须action明确使用持有物品，勿重复settledAction。',
-    '承诺赠予真实持有物：commitment.offer {offer:{id,fromId:"在场NPC",toId:"player",itemId,condition:可选,durationMinutes:可选}}，提议仍由NPC持有。对既有约定：commitment.respond {commitmentId,actorId,response:"accept|decline|withdraw",evidence:"本轮精确原文"}；只能玩家明确收下才accept，不能替玩家接受新提议；失败/撤回的旧约不再兑现。',
-    '新委托：quest.create {quest:{id,title,summary,giverId,targetLocationId,condition,reward,durationMinutes,requiredCommitmentIds:可选}}，须在场人物提出，condition是真实待达成条件，普通奖励仅从给予者财富扣付stat.delta。旧委托：quest.respond {questId,actorId,response:"accept|decline|withdraw",evidence:"原文"}。拒绝不影响无关任务；给玩家选择，勿代为接受。',
-    'condition:{op:"eq|ne|lt|lte|gt|gte|exists",left:{entityId,field},right:常量或引用}；组合all/any带conditions、not带condition。新委托不要当前就满足的虚假条件。确认已交付/已失败等结果时block可附claims:[{type:"state",entityId,field,value}]。',
-    '当前items.ownerId、commitments.state与任务状态优先于玩家声称和过去对白；口头许诺不是已交付。离开者只可最后应答，不再接收物品/任务。本人身份、关系与记忆取实际记录，不发明旧相识；无需在正文解释这些引擎规则。'
-  ].join('\n');
+  return ORDINARY_PLAN_PROMPT;
 }
+const ORDINARY_PLAN_PROMPT=[
+ 'Write natural Chinese blocks first, then worldPlan:{operations:[]}. Empty operations is valid. Engine validates all changes atomically. Every operation needs type and real IDs from facts. Speech/jokes/hypotheses are not actions or proven history. Never replay settledAction.',
+ 'combat.exchange {targetId,mode:"physical|spell|self_destruct",nonlethal,evidence,techniqueName?:known technique ID}: action must explicitly attack a present target. Engine computes strength, injuries, spirit and equipment; do not choose damage/victory.',
+ 'social.observe {observerId,subjectId:"player",meaning,evidence,valence:-1..1,reason}: at most once per present listener, evidence is exact current player words. Neutral talk needs no score. resource.transfer {itemId,fromId:"player",toId} and effect.apply {itemId} require explicit current action and actual ownership; do not repeat settled items.',
+ 'commitment.offer {offer:{id,fromId:present NPC,toId:"player",itemId,condition?,durationMinutes?}} requires an existing NPC-owned item. It stays with NPC until explicit player acceptance. commitment.respond {commitmentId,actorId,response:"accept|decline|withdraw",evidence:exact input} handles existing offers only; no automatic consent or reviving terminal promises.',
+ 'quest.create {quest:{id,title,summary,giverId,targetLocationId,condition,reward,durationMinutes?,requiredCommitmentIds?}} requires a present giver, unmet real conditions and affordable rewards. quest.respond {questId,actorId,response:"accept|decline|withdraw",evidence} requires player consent. condition:{op:"eq|ne|lt|lte|gt|gte|exists",left:{entityId,field},right:constant or reference}; all/any use conditions:[], not uses condition. No code.',
+ 'Latest ownership, commitments and quest state override past dialogue/player claims. Departing NPCs may give a final reply, not new transfers/tasks. State claims may attach claims:[{type:"state",entityId,field,value}] to blocks. Never invent old relationships, known secrets or goods. Do not explain engine vocabulary in dialogue.'
+].join('\n');
+
 
 const REALITY_PLAN_PROMPT=[
   "明确言出法随在任何境界100%生效，按指令范围提出完整可执行operations；普通发言、假设、引用不发动。Engine校验、结算和收费，不能只写文字成功，也不能因普通上限拒绝改写或用concept.defer拖延。每个操作必须有type和真实ID；复合指令逐项执行，稳定ID不变。",

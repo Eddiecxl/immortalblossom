@@ -3,6 +3,7 @@ import {createPendingTurns} from '../pending-turn.js';
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
 import {canResolveAstraTurnLocally} from '../astra-turn.js';
+import {bindJourneyAi,journeyAiSettings,JOURNEY_PROVIDERS} from '../journey-ai.js';
 import {realmLabel} from '../astra-rules.js';
 import {recentEchoSummary} from '../turn-summary.js';
 import {createTurnFlow} from '../turn-flow.js';
@@ -103,7 +104,7 @@ function persist() {
 }
 
 function runnerSettings() {
-  const settings = aiClient.loadSettings();
+  const settings = journeyAiSettings(state,aiClient.loadSettings());
   const mode = settings.mode || 'local';
   const profileProvider = mode === 'auto-stable'
     ? (settings.preferred || 'groq')
@@ -607,6 +608,8 @@ setInterval(() => {
 }, 200);
 
 async function enterGame(nextState, { resetLog = false, revealOpening = false } = {}) {
+  if(!nextState.aiRoute){const old=aiClient.loadSticky(nextState.journeyId)?.provider||aiClient.loadSettings().mode||'groq';bindJourneyAi(nextState,old,aiClient.loadSettings().models?.[old]||'local');}
+  aiClient.saveSettings({mode:nextState.aiRoute.provider,preferred:nextState.aiRoute.provider,models:{[nextState.aiRoute.provider]:nextState.aiRoute.model}});
   if (!(await experience.requireKey()) || turnBusy) return;
   audioEngine.unlock();
   state = ensureV31Canon(nextState, 'ai');
@@ -627,14 +630,22 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
   if (!state.story.flags?.playerDead) dom.speechInput.focus();
 }
 
+function selectJourneyProvider(){
+ return new Promise(resolve=>{const layer=node('div','ai-layer');layer.style.cssText='position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:#020b12dd';const panel=node('section','ai-panel');panel.style.cssText='max-width:540px;padding:32px;border:1px solid #c9ad6a;background:#0b202b;color:#f6e8bf';panel.append(node('h2','','选择此世的叙事 AI'),node('p','','选择会随命簿保存。此旅程中无法切换，想换供应商需重新启程。'));
+ for(const [id,p]of Object.entries(JOURNEY_PROVIDERS)){const b=node('button','gold-button',p.label);b.dataset.journeyProvider=id;b.style.cssText='display:block;width:100%;margin:16px 0;padding:18px';b.onclick=()=>{layer.remove();resolve(id);};panel.append(b);}
+ const cancel=node('button','','返回');cancel.onclick=()=>{layer.remove();resolve(null);};panel.append(cancel);layer.append(panel);document.body.append(layer);});
+}
 async function startNew() {
   if (turnBusy || menuBusy || saveUI?.isBusy()) return;
   menuBusy = true;
   try {
+    const choice=await selectJourneyProvider();if(!choice)return;
+    aiClient.saveSettings({mode:choice,preferred:choice,models:{[choice]:JOURNEY_PROVIDERS[choice].model}});
     if (!(await experience.requireKey())) return;
     if (safeLoad() && !(await experience.confirmNew())) return;
     const opening = createAstraOpening(ensureV31Canon(createMainStoryState('顾长生'), 'ai'));
     const fresh=opening.state;
+    bindJourneyAi(fresh,choice);
     await transcriptStore.appendTurn(fresh.journeyId,opening.turn);
     await saveSession.begin(fresh);
     await enterGame(fresh,{revealOpening:true});
@@ -891,7 +902,7 @@ function installAiSettingsPanel() {
   const localState = q('v31AiLocal');
   const customUrl = layer.querySelector('.custom-url');
   if(window.lxCloud){
-    for(const select of [mode,preferred])for(const option of [...select.options])if(option.value!=='groq')option.remove();
+    for(const select of [mode,preferred])for(const option of [...select.options])if(!['groq','gemini'].includes(option.value))option.remove();
     localState.hidden=true;preferred.closest('label').hidden=true;
   }
 
@@ -921,10 +932,13 @@ function installAiSettingsPanel() {
   }
 
   async function open() {
+    if(state?.aiRoute)aiClient.saveSettings({mode:state.aiRoute.provider,preferred:state.aiRoute.provider,models:{[state.aiRoute.provider]:state.aiRoute.model}});
     const settings = aiClient.loadSettings();
     mode.value = settings.mode || 'groq';
     preferred.value = settings.preferred || 'groq';
     syncModel();
+    mode.disabled=Boolean(state?.aiRoute);preferred.disabled=Boolean(state?.aiRoute);model.readOnly=Boolean(state?.aiRoute);
+    const link=layer.querySelector('a[href*="console.groq"]');if(link){link.href=mode.value==='gemini'?'https://aistudio.google.com/apikey':'https://console.groq.com/keys';link.textContent=mode.value==='gemini'?'登录 Google AI Studio · 获取自己的 Key':'登录 Groq · 获取自己的 API Key';}
     key.value = '';
     layer.hidden = false;
     await refreshPanelStatus();
@@ -941,6 +955,7 @@ function installAiSettingsPanel() {
   q('v31AiApply').addEventListener('click', () => {
     const settings = aiClient.loadSettings();
     const provider = selectedProvider();
+    if(state?.aiRoute&&provider!==state.aiRoute.provider)return showToast('此旅程AI已固定，更换请重新启程。');
     const models = { ...settings.models, [provider]: model.value.trim() };
     aiClient.saveSettings({
       mode: mode.value,
@@ -1001,7 +1016,7 @@ function installAiSettingsPanel() {
 
 dom.newJourneyButton.addEventListener('click', startNew);
 dom.continueJourneyButton.addEventListener('click', async () => {
-  if(menuBusy||turnBusy)return;menuBusy=true;try{if(await experience.requireKey()){const saved=await saveSession.load(null);await enterGame(saved);}}catch(e){showToast(e.message);}finally{menuBusy=false;}
+  if(menuBusy||turnBusy)return;menuBusy=true;try{const saved=await saveSession.load(null);await enterGame(saved);}catch(e){showToast(e.message);}finally{menuBusy=false;}
 });
 dom.exitGameButton.addEventListener('click',()=>saveUI.exit('close'));
 dom.titleButton.addEventListener('click',()=>saveUI.exit('title'));

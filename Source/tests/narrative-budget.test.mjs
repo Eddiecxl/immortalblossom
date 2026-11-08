@@ -9,6 +9,12 @@ const base={playerTurn:{text:'刚才是开玩笑的。你自己的想法是什�
  conversation:{targetId:'npc:a',targetName:'当局人物'},clock:{period:'清晨',time:'06:00'},player:{id:'player'},
  presentNpcs:[{id:'npc:a',name:'当局人物',goals:['保住船只'],memories:[]}],items:[],activeQuests:[],
  simulationFacts:{commitments:[]},recentTurns:[{id:'old',userText:'香蕉',blocks:[{type:'dlg',name:'当局人物',text:'OLD_RESPONSE_DO_NOT_COPY'}]}]};
+test('the formerly blocked long save fits without losing witnessed memories or player input',()=>{
+ const packet=JSON.parse(fs.readFileSync(new URL('./fixtures/long-save-author.json',import.meta.url),'utf8'));
+ const compact=compactNarrativePacket(packet);assert.ok(JSON.stringify(compact).length<=7000);
+ assert.deepEqual(compact.playerTurn,packet.playerTurn);
+ for(const npc of compact.presentNpcs)assert.deepEqual(npc.memories.map(m=>m.summary),packet.presentNpcs.find(n=>n.id===npc.id).memories.map(m=>m.summary));
+});
 test('scene aliases do not block the ordinary combat following a long real-world law turn',()=>{
  const packet=JSON.parse(fs.readFileSync(new URL('./fixtures/combat-author-budget.json',import.meta.url),'utf8'));
  const before=structuredClone(packet),result=compactNarrativePacket(packet);

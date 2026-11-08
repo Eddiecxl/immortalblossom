@@ -1,4 +1,5 @@
 import { migrateGameState } from './game-state.js';
+import {journeyAiSettings} from './journey-ai.js';
 import {removeReplayedExposition,commitSceneEvidence,continuityContext} from './scene-continuity.js';
 import {campaignContext,advanceCampaign} from './campaign.js';
 import { parseNarration, PROVIDERS } from './ai-client.js';
@@ -741,10 +742,12 @@ export function createAiTurnRunner({ aiClient, transcriptStore, stateStore, now 
       }, 'opening');
     },
     async runWorld({ state, input, settings = {}, transactionId, signal, onProgress } = {}) {
+      settings=journeyAiSettings(state,settings);
       if (playerTurnIsEmpty(input)) return failure('至少填写“说话”或“行动”其中一项。', '', cleanText(transactionId || idFactory(), 100), undefined);
       return executeWorld({ state, input, settings, transactionId, signal, onProgress }, 'world');
     },
     async runSystem({ state, input, settings = {}, transactionId, signal } = {}) {
+      settings=journeyAiSettings(state,settings);
       const txId = cleanText(transactionId || idFactory(), 100);
       const cleanInput = cleanText(input, 2_000);
       try {

@@ -5,6 +5,7 @@ import { createJourneyWorld, normalizeJourneyWorld } from './journey-world.js';
 import { createRpgState, normalizeRpgState, normalizePlayerLife, reconcileCatalogProtection } from './rpg-rules.js';
 import { createAstraWorld, normalizeAstraWorld } from './astra-world.js';
 import { ITEM_TEMPLATES } from './astra-content.js';
+import {normalizeJourneyAi} from './journey-ai.js';
 
 export const GAME_SCHEMA_VERSION = 6;
 export const MAX_STATE_CHARS = 2_000_000;
@@ -328,6 +329,7 @@ function normalizeV3(input, expectedMode) {
   const quests = isRecord(input.quests) ? input.quests : {};
 
   base.journeyId = cleanId(input.journeyId, 80) || base.journeyId;
+  base.aiRoute=normalizeJourneyAi(input.aiRoute);
   base.revision = Math.floor(clamp(input.revision, 0, 999_999_999));
   const maxSpirit = Math.floor(clamp(player.maxSpirit ?? Math.max(30, finite(player.spirit, 30)), 1, 9999));
   base.player = {

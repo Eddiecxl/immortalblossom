@@ -6,7 +6,7 @@ if(typeof window!=='undefined'&&!window.lxNative&&location.port!=='24824') {
  window.lxCloud=true;
  const key='luoxian_v31_ai_settings_v2',migration='luoxian_cloud_beta_preset_v1';
  let saved={};try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch{}
- if(!localStorage.getItem(migration)||saved.mode!=='groq'){
+ if(!localStorage.getItem(migration)||!['groq','gemini'].includes(saved.mode)){
   localStorage.setItem(key,JSON.stringify({...saved,mode:'groq',preferred:'groq'}));
   localStorage.setItem(migration,'1');
  }

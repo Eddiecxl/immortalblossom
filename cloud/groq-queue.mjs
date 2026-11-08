@@ -1,6 +1,7 @@
 // SQLite-backed Durable Objects use the storage KV API for durable records.
 // No Cloudflare imports: the same classes run against storage in Node tests.
 export const DEFAULT_MODEL = 'qwen/qwen3.8-27b';
+export const CLOUD_PROVIDERS={groq:{model:DEFAULT_MODEL,key:'GROQ_API_KEY',endpoint:'https://api.groq.com/openai/v1/chat/completions'},gemini:{model:'gemini-3.8-flash',key:'GEMINI_API_KEY',endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'}};
 export const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 export const JOB_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export const SESSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -15,15 +16,15 @@ export function json(value, status = 200) {
 export function failure(code, status = 400, terminalJob = false) {
   const messages = {
     AI_BAD_REQUEST: '请求参数无效；输入和世界保持原样。',
-    AI_NOT_CONFIGURED: '网站尚未配置 Groq，请保存个人 Groq Key。',
-    AI_AUTH_FAILED: 'Groq Key 无效或没有权限；请检查设置。',
-    AI_MODEL_UNAVAILABLE: '当前 Groq 模型不可用，请检查模型名称或权限。',
-    AI_QUOTA_EXHAUSTED: 'Groq 账户预算或余额已用完，请检查账户。',
-    AI_UPSTREAM_FAILED: 'Groq 服务暂时不可用；输入和世界保持原样。',
-    AI_TIMEOUT: 'Groq 响应超时；输入和世界保持原样。',
-    AI_OUTPUT_TRUNCATED: 'Groq 回复达到输出上限，尚未完整；输入和世界保持原样。',
-    AI_INVALID_JSON: 'Groq 返回的 JSON 不完整或格式无效；输入和世界保持原样。',
-    AI_REQUEST_INTERRUPTED: '这次 Groq 请求中断，无法确认结果；输入和世界保持原样，请重新尝试。',
+    AI_NOT_CONFIGURED: '网站尚未配置 AI 服务，请保存个人 AI 服务 Key。',
+    AI_AUTH_FAILED: 'AI 服务 Key 无效或没有权限；请检查设置。',
+    AI_MODEL_UNAVAILABLE: '当前 AI 服务 模型不可用，请检查模型名称或权限。',
+    AI_QUOTA_EXHAUSTED: 'AI 服务 账户预算或余额已用完，请检查账户。',
+    AI_UPSTREAM_FAILED: 'AI 服务 服务暂时不可用；输入和世界保持原样。',
+    AI_TIMEOUT: 'AI 服务 响应超时；输入和世界保持原样。',
+    AI_OUTPUT_TRUNCATED: 'AI 服务 回复达到输出上限，尚未完整；输入和世界保持原样。',
+    AI_INVALID_JSON: 'AI 服务 返回的 JSON 不完整或格式无效；输入和世界保持原样。',
+    AI_REQUEST_INTERRUPTED: '这次 AI 服务 请求中断，无法确认结果；输入和世界保持原样，请重新尝试。',
     AI_TRANSACTION_CONFLICT: '该回合已经有不同的请求；请保留原输入并等待结果。',
     AI_SITE_LIMITED: '共享队列暂满，请稍后再试；输入和世界保持原样。',
     AI_JOB_NOT_FOUND: '未找到本次请求，请保留原输入重新尝试。',
@@ -62,7 +63,7 @@ function hasCredentialField(root) {
     const value = stack.pop();
     if (!value || typeof value !== 'object') continue;
     for (const [key, child] of Object.entries(value)) {
-      if (/^(?:api[_-]?key|groq(?:api)?key|groq_api_key|credentials?|cloudkeys)$/i.test(key)) return true;
+      if (/^(?:api[_-]?key|(?:groq|gemini)(?:api)?key|(?:groq|gemini)_api_key|credentials?|cloudkeys)$/i.test(key)) return true;
       if (child && typeof child === 'object') stack.push(child);
     }
   }
@@ -169,6 +170,8 @@ async function knownQuotaError(response) {
     try { data = JSON.parse(new TextDecoder().decode(bytes)); }
     catch { await reader.cancel(); return null; }
     const message = typeof data?.error?.message === 'string' ? data.error.message : '';
+    const googleRetry=data?.error?.details?.find(row=>row?.['@type']?.endsWith('/google.rpc.RetryInfo'));
+    if(googleRetry?.retryDelay)return {retryMs:durationMs(googleRetry.retryDelay)};
     const scope = message.match(/\b(ITPM|OTPM|TPM|TPD)\b/i)?.[1]?.toUpperCase();
     const numbers = message.match(/\bLimit:?\s*([\d,]+),?\s*Used:?\s*([\d,]+),?\s*Requested:?\s*([\d,]+)/i);
     const retry = message.match(/\btry again in\s+((?:\d+(?:\.\d+)?(?:ms|s|m|h|d))+)/i);
@@ -213,7 +216,7 @@ export class GroqQueue {
       if (!job || job.sessionId !== url.searchParams.get('sessionId')) return failure('AI_JOB_NOT_FOUND', 404,true);
       const meta = await this.storage.get('meta');
       if (url.searchParams.get('submission') === '1') return json(pendingResult(job, meta?.nextAt, this.clock()), 202);
-      if (job.state === 'completed') return json({jobId: job.id, text: job.text, provider: 'groq', model: job.payload.model});
+      if (job.state === 'completed') return json({jobId: job.id, text: job.text, provider: job.payload.provider||'groq', model: job.payload.model});
       if (job.state === 'failed') return failure(job.error.code, job.error.status,true);
       return json(pendingResult(job, meta?.nextAt, this.clock()), 202);
     }
@@ -272,7 +275,7 @@ export class GroqQueue {
     if (error) job.error = error;
     else job.text = text;
     // Drop player prompts from retained terminal records; polling only needs the model.
-    job.payload = {model: job.payload.model};
+    job.payload = {provider:job.payload.provider||'groq',model: job.payload.model};
     delete job.credential;
     await this.storage.put(`job:${job.id}`, job);
     await this.storage.delete(job.pendingKey);
@@ -280,8 +283,8 @@ export class GroqQueue {
 
   async credentialFor(job) {
     if (job.credential.shared) {
-      const key = this.env.GROQ_API_KEY || '';
-      return key && await fingerprint(`groq:${key}`) === job.credential.fingerprint ? key : '';
+      const provider=job.payload.provider||'groq',key=this.env[CLOUD_PROVIDERS[provider].key]||'';
+      return key && await fingerprint(`${provider}:${key}`) === job.credential.fingerprint ? key : '';
     }
     const stub = objectStub(this.env.SESSION_STORE, job.credential.sessionId);
     const response = await stub.fetch(internalRequest(`/key/${job.credential.fingerprint}`));
@@ -406,11 +409,12 @@ export class GroqQueue {
       await this.storage.put(`job:${job.id}`, job);
       let response;
       try {
-        response = await this.fetchImpl(GROQ_ENDPOINT, {
+        const provider=job.payload.provider||'groq';
+        response = await this.fetchImpl(CLOUD_PROVIDERS[provider].endpoint, {
           method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
           headers: {'Content-Type': 'application/json', Authorization: `Bearer ${key}`},
           body: JSON.stringify({model: job.payload.model, messages: job.payload.messages,
-            max_tokens: job.payload.maxTokens, temperature: job.payload.temperature, stream: false,
+            max_tokens: job.payload.maxTokens, ...(provider==='gemini'?{reasoning_effort:'low'}:{temperature:job.payload.temperature}), stream: false,
             ...(job.payload.messages.some(m=>m.role==='system'&&/\bJSON\b/i.test(m.content)&&/\bblocks\b/.test(m.content))
               ?{response_format:{type:'json_object'}}:{})})
         });
@@ -521,21 +525,22 @@ export class SessionStore {
     if (url.pathname === '/status') {
       const active = await this.storage.get('active');
       const personal = active ? await this.storage.get(`credential:${active}`) : null;
-      return json({configured: {groq: Boolean(personal?.expiresAt > this.clock() || this.env.GROQ_API_KEY)},
+      const googleActive=await this.storage.get('active:gemini'),google=googleActive?await this.storage.get(`credential:${googleActive}`):null;
+      return json({configured: {groq: Boolean(personal?.expiresAt > this.clock() || this.env.GROQ_API_KEY),gemini:Boolean(google?.expiresAt>this.clock()||this.env.GEMINI_API_KEY)},personalProviders:{groq:Boolean(personal?.expiresAt>this.clock()),gemini:Boolean(google?.expiresAt>this.clock())},
         personal: Boolean(personal?.expiresAt > this.clock()), cloud: true,
-        providers: [{id: 'groq', label: 'Groq', model: DEFAULT_MODEL}]});
+        providers: [{id: 'groq', label: 'Groq', model: DEFAULT_MODEL},{id:'gemini',label:'Google Gemini',model:CLOUD_PROVIDERS.gemini.model}]});
     }
     if (url.pathname === '/credential' && request.method === 'POST') {
-      const {key} = await request.json();
-      const hash = await fingerprint(`groq:${key}`);
+      const {key,provider='groq'} = await request.json();
+      const hash = await fingerprint(`${provider}:${key}`);
       await this.storage.put(`credential:${hash}`, {key, expiresAt: this.clock() + SESSION_RETENTION_MS});
-      await this.storage.put('active', hash);
+      await this.storage.put(provider==='groq'?'active':'active:'+provider, hash);
       await this.storage.setAlarm(this.clock() + SESSION_RETENTION_MS);
-      return json({ok: true, provider: 'groq', personal: true});
+      return json({ok: true, provider, personal: true});
     }
     if (url.pathname === '/clear' && request.method === 'POST') {
-      await this.storage.delete('active');
-      return json({ok: true, provider: 'groq', personal: false, configured: Boolean(this.env.GROQ_API_KEY)});
+      const {provider='groq'}=await request.json();await this.storage.delete(provider==='groq'?'active':'active:'+provider);
+      return json({ok: true, provider, personal: false, configured: Boolean(this.env[CLOUD_PROVIDERS[provider].key])});
     }
     if (url.pathname === '/submit' && request.method === 'POST') {
       const input = await request.json();
@@ -560,11 +565,12 @@ export class SessionStore {
       return objectStub(this.env.GROQ_QUEUE, previous.fingerprint).fetch(
         internalRequest(`/jobs/${previous.jobId}?sessionId=${encodeURIComponent(sessionId)}&submission=1`));
     }
-    let active = await this.storage.get('active');
+    const provider=payload.provider||'groq',sharedKey=this.env[CLOUD_PROVIDERS[provider].key];
+    let active = await this.storage.get(provider==='groq'?'active':'active:'+provider);
     const personal = active ? await this.storage.get(`credential:${active}`) : null;
     if (!personal || personal.expiresAt <= now) active = null;
-    if (!active && !this.env.GROQ_API_KEY) return failure('AI_NOT_CONFIGURED', 503);
-    const hash = active || await fingerprint(`groq:${this.env.GROQ_API_KEY}`);
+    if (!active && !sharedKey) return failure('AI_NOT_CONFIGURED', 503);
+    const hash = active || await fingerprint(`${provider}:${sharedKey}`);
     const credential = active ? {sessionId, fingerprint: hash} : {shared: true, fingerprint: hash};
     const queue = objectStub(this.env.GROQ_QUEUE, hash);
     const response = await queue.fetch(internalRequest('/enqueue', {sessionId, credential, payload, requestHash, transactionHash}));

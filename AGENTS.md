@@ -1,5 +1,7 @@
 # 落仙 v4 维护约定
 
+v4.2.6 接续先读 docs/CLOUD_CHOICE_V426.md：aiRoute随命簿锁定，世界/系统均用原供应商；原生云请求经固定Worker会话。保留长档作者视图去重、原始数据库和真实配额等待。正式发布状态见 Maintenance/Verification/v426-release-state.json。
+
 v4.2.5 接续先读 docs/RESPONSIVE_RPG_V425.md：已知机械动作默认直接结算，不等云端作者；开放新指令仍真实校验。保留字幕期间草稿、有效赠予/掉落物的所有权与事务边界。发布完整性以 Maintenance/Verification/v425-release-state.json 为准。
 
 v4.2.4 接续先读 docs/PLAYABLE_RPG_V424.md：新开局暂只用主世界 seed，旧档不换；保留真实战斗/物品/修炼结算、输入气泡原位提交和预测额度不作硬上限。发布是否全部完成以 Maintenance/Verification/v424-release-state.json 为准。

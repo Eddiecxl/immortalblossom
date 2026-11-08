@@ -209,6 +209,7 @@ sealed class Shell : Form {
    Uri uri; if(!Uri.TryCreate(e.Source,UriKind.Absolute,out uri)||uri.GetLeftPart(UriPartial.Authority)!=Program.Origin)return;
    var m=Patches.Json.Deserialize<Dictionary<string,object>>(e.WebMessageAsJson);id=Convert.ToString(m["id"]);var action=Convert.ToString(m["action"]);var p=m.ContainsKey("payload")?m["payload"] as Dictionary<string,object>:null;p=p??new Dictionary<string,object>();object result=new {ok=true};
    switch(action){
+    case "cloud-request":result=await CloudRelay.Request(p);break;
     case "launch-game":Program.LaunchGame(p.ContainsKey("settings")&&Convert.ToBoolean(p["settings"]));break;
     case "game-status":result=new {active=Program.Game!=null&&!Program.Game.IsDisposed};break;
     case "minimize":WindowState=FormWindowState.Minimized;break;

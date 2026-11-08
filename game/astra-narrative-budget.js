@@ -40,6 +40,13 @@ export function compactNarrativePacket(source,{maxChars=7000}={}) {
       (memory.beliefEvidence??=[]).push({...evidence,...(eventId!==memory.eventId?{eventId}:{})});return false;
     });
   const input=[packet.input,packet.playerTurn?.text,packet.playerTurn?.speech,packet.playerTurn?.action].filter(Boolean).join('\n');
+  // UUID provenance is retained by the ledger/validator. The author needs the
+  // witnessed facts and knowledge boundary, not every repeated storage key.
+  for(const npc of people)if(Array.isArray(npc.memories))npc.memories=npc.memories.map(row=>{
+    if(!row||typeof row!=='object')return row;
+    const {id,eventId,...fact}=row;
+    return {...fact,...(id&&input.includes(id)?{id}:{}),...(eventId&&(input.includes(eventId)||row.beliefEvidence)?{eventId}:{})};
+  });
   const recalling=/(?:我|你).*(?:说过|说了|说的|讲过|提过|答复)|记得|复述|此前|承诺|约定/u.test(input);
   const recent=(packet.recentTurns||[]).slice(-4);
   packet.recentTurns=recent.map((turn,index)=>({id:turn.id,userText:turn.userText,summary:turn.summary,

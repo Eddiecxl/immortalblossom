@@ -8,7 +8,7 @@ const STICKY_MS = 30 * 60 * 1000;
 export const V31_PROVIDER_DEFAULTS = {
   local: { label: '本地 AI · Qwen', model: 'local' },
   groq: { label: 'Groq', model: 'qwen/qwen3.8-27b' },
-  gemini: { label: 'Google Gemini', model: 'gemini-2.5-flash' },
+  gemini: { label: 'Google Gemini', model: 'gemini-3.8-flash' },
   tokenharbor: { label: 'Token Harbor', model: 'qwen3.8-max' },
   openai: { label: 'OpenAI', model: 'gpt-4.1-mini' },
   openrouter: { label: 'OpenRouter', model: '' },
@@ -72,7 +72,9 @@ async function jsonFetch(fetchImpl, path, options = {}) {
   if(signal.aborted)throw cancellationError(signal);
   let response;
   try {
-  response = await fetchImpl(path, {
+  if(globalThis.lxNative&&typeof globalThis.nativeAction==='function'&&path.startsWith('/api/ai/cloud/')){
+    const result=await globalThis.nativeAction('cloud-request',{path,body:options.body||null});response=new Response(result.body,{status:result.status,headers:{'Content-Type':'application/json'}});
+  }else response = await fetchImpl(path, {
     cache: 'no-store',
     ...options,
     signal,
