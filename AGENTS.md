@@ -1,5 +1,7 @@
 # 落仙 v4 维护约定
 
+v4.2.7 开放输入审计先读 docs/OPEN_INPUT_AUDIT_V427.md：保留playable模式的场内移动分流、引用/回忆主体判断与本地文风段落清理。禁止因离题/跳舞/偏离seed拒绝玩家；真实世界操作仍原子校验。复玩显示免费额度仍会等待，不得宣称全部CD已消失。
+
 v4.2.6 接续先读 docs/CLOUD_CHOICE_V426.md：aiRoute随命簿锁定，世界/系统均用原供应商；原生云请求经固定Worker会话。保留长档作者视图去重、原始数据库和真实配额等待。正式发布状态见 Maintenance/Verification/v426-release-state.json。
 
 v4.2.5 接续先读 docs/RESPONSIVE_RPG_V425.md：已知机械动作默认直接结算，不等云端作者；开放新指令仍真实校验。保留字幕期间草稿、有效赠予/掉落物的所有权与事务边界。发布完整性以 Maintenance/Verification/v425-release-state.json 为准。

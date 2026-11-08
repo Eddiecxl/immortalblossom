@@ -112,6 +112,7 @@ function runnerSettings() {
   return {
     ...settings,
     renderSettledScenes:false,
+    narrativePolicy:'playable',
     provider: profileProvider,
     model: settings.models?.[profileProvider] || V31_PROVIDER_DEFAULTS[profileProvider]?.model || '',
     journeyId: state?.journeyId || ''

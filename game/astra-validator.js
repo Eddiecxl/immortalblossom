@@ -12,6 +12,33 @@ const normalized = value => String(value ?? '').replace(/[\s\p{P}\p{S}]/gu, '').
 const names = value => [value?.name, value?.title, value?.id].filter(Boolean).map(String);
 const mentions = (text, value) => names(value).some(name => name.length > 1 && text.includes(name));
 const hasClaim = (block, type) => list(block?.claims).filter(claim => claim?.type === type);
+const outsideQuotes=text=>text.replace(/[“「『][^”」』]*[”」』]|"[^"\n]*"/gu,'');
+function currentActorAssertions(text,actor){
+ return text.split(/[。！？!?；;]|[，,](?=但|可是|然而|此刻|这时|现在)/u).filter(part=>mentions(part,actor)
+  &&(!/生前|曾经|当年|回忆|记得|想起|说过|梦见|梦中|假如|如果|要是/u.test(part)
+   ||/(?:此刻|这时|现在|眼下).{0,16}(?:说|开口|喊|复活|重生)/u.test(part)));
+}
+function attributesSpeechTo(text,actor,characters){
+ for(const label of names(actor)){
+  const at=text.indexOf(label);if(at<0)continue;
+  if(/看着|望着|提到|谈及|说起|关于|指着|对着/u.test(text.slice(Math.max(0,at-4),at)))continue;
+  const tail=text.slice(at+label.length),verb=tail.match(/说|问道|答道|开口|交谈|喊道|speaks?|says?/iu);
+  if(!verb||verb.index>24)continue;
+  const lead=tail.slice(0,verb.index);
+  if(characters.some(other=>other!==actor&&mentions(lead,other))||/[，,]\s*我/u.test(lead))continue;
+  return true;
+ }
+ return false;
+}
+export function preparePlayableNarration(world,blocks,packet={}){
+ const first=validateAstraNarration(world,blocks,packet);
+ const removable=new Set(['repeated-opening','repetition','unfinished-player-line','empty-handoff','internal-metric']);
+ const bad=new Set(first.errors.filter(e=>removable.has(e.code)).map(e=>e.index));
+ const kept=blocks.filter((_,index)=>!bad.has(index));
+ if(!kept.length)return {...first,warnings:[]};
+ const checked=validateAstraNarration(world,kept,packet);
+ return {...checked,blocks:kept,warnings:first.errors.filter(e=>removable.has(e.code)).map(e=>e.code)};
+}
 
 function speakerOf(block, characters) {
   const key = block?.actorId ?? block?.speakerId ?? block?.name ?? block?.speaker;
@@ -72,7 +99,7 @@ export function validateAstraNarration(world, blocks, packet = {}) {
       if (applied && /(?:言出法随|言灵).{0,16}(?:失败|失效|未生效|没有生效|未能生效|尚未生效|无法生效|无效)|(?:世界|现实).{0,12}(?:没有|并未|未)(?:发生)?(?:改变|变化|改写)/u.test(prose))
         reject('settled-reality-denied', '已由Engine落账的言出法随不能被叙事描述为失败或未改变现实。');
     }
-    if (block.type === 'narr' && /你/u.test(prose))
+    if (block.type === 'narr' && /你/u.test(outsideQuotes(prose)))
       reject('second-person-protagonist', 'Narration addresses the player in second person instead of first person.');
     const playerSpeech = normalized(packet?.playerTurn?.speech);
     if (block.type === 'narr' && playerSpeech.length >= 4 && normalized(prose).includes(playerSpeech))
@@ -103,14 +130,13 @@ export function validateAstraNarration(world, blocks, packet = {}) {
       }
     }
     for (const actor of characters) {
-      if (dead(actor) && mentions(prose, actor)
-        && /(?:说|说道|问道|答道|开口|交谈|喊道|speaks?|says?)/iu.test(prose)) {
+      const assertions=currentActorAssertions(prose,actor);
+      if (dead(actor) && assertions.some(part=>attributesSpeechTo(part,actor,characters))) {
         reject('dead-speaker', 'Prose gives ordinary speech to a dead character.');
         break;
       }
-      if (dead(actor) && mentions(prose, actor)
-        && /又活|仍活|还活|活着|复活|重生|死而复生|alive again|resurrect/iu.test(prose)
-        && !/假如|如果|传闻|梦里|梦中|尚未/u.test(prose)) {
+      if (dead(actor) && assertions.some(part=>/又活|仍活|还活|活着|复活|重生|死而复生|alive again|resurrect/iu.test(part))
+        && !/传闻|梦里|尚未|(?:希望|盼望|想要|打算|尝试|试着).{0,24}(?:复活|重生)/u.test(prose)) {
         reject('unrecorded-resurrection', 'A dead character cannot return through prose without an Engine resurrection.');
         break;
       }
