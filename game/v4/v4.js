@@ -3,6 +3,7 @@ import {createPendingTurns} from '../pending-turn.js';
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
 import {canResolveAstraTurnLocally} from '../astra-turn.js';
+import {storyView} from '../astra-story.js';
 import {bindJourneyAi,journeyAiSettings,JOURNEY_PROVIDERS} from '../journey-ai.js';
 import {realmLabel} from '../astra-rules.js';
 import {recentEchoSummary} from '../turn-summary.js';
@@ -113,6 +114,7 @@ function runnerSettings() {
     ...settings,
     renderSettledScenes:false,
     narrativePolicy:'playable',
+    fastDialogue:true,
     provider: profileProvider,
     model: settings.models?.[profileProvider] || V31_PROVIDER_DEFAULTS[profileProvider]?.model || '',
     journeyId: state?.journeyId || ''
@@ -365,7 +367,7 @@ function renderDrawer(tab = activeDrawer) {
     if (state.astraWorld) for (const quest of Object.values(state.astraWorld.quests || {})) {
       count++;
       dom.drawerContent.append(ledgerSection(`${quest.state} · ${quest.title}`, [
-        ['目标', quest.primaryGoals?.join('；') || '尚未确定'], ['期限', `第 ${Math.floor(quest.deadline / 1440) + 1} 日`],
+        ['目标', quest.primaryGoals?.join('；') || '尚未确定'], ['期限', Number.isFinite(quest.deadline)?`第 ${Math.floor(quest.deadline / 1440) + 1} 日`:'未约定'],
         ['报酬', quest.state === 'completed' ? quest.earnedRewards?.join('、') : quest.lostRewards?.length ? '已经失去' : quest.rewards?.join('、')]
       ]));
     }
@@ -373,6 +375,10 @@ function renderDrawer(tab = activeDrawer) {
     for (const thread of state.journeyWorld?.threads || []) {
       count++;
       dom.drawerContent.append(ledgerSection(`${thread.kind} · ${thread.title}`, [['状态', thread.status], ['依据', thread.evidence]]));
+    }
+    if(state.astraWorld)for(const thread of storyView(state.astraWorld,{limit:Infinity})){
+      count++;const labels={pending:'尚待回应',planned:'计划中',accepted:'已答应',resolved:'已达成',declined:'已谢绝',withdrawn:'已撤回',missed:'已错过',cancelled:'已终止'};
+      dom.drawerContent.append(ledgerSection((labels[thread.state]||thread.state)+' · '+thread.title,[['线索',thread.summary],['相关人物',state.astraWorld.characters[thread.ownerId]?.name||state.player.name],['地点',state.astraWorld.locations[thread.locationId]?.name||'未知'],['约定时辰',thread.dueAt==null?'未约定':`第 ${Math.floor(thread.dueAt/1440)+1} 日 ${String(Math.floor(thread.dueAt%1440/60)).padStart(2,'0')}:${String(thread.dueAt%60).padStart(2,'0')}`]]));
     }
     if (!count) dom.drawerContent.append(ledgerSection(state.astraWorld ? '此世未有已接任务' : '柴门之外', [['类型','当前'],['说明',state.astraWorld ? '人物与组织会自行行动；机缘随时间开启，也可能错过。' : '先活着走出赵府，再决定此世要怎么活。']]));
   } else if (tab === 'map') {

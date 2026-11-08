@@ -6,6 +6,7 @@ import { resolveDueAnchors } from './astra-anchors.js';
 import { createQuestArc, reconcileQuestArcs } from './astra-quests.js';
 import { clampNumeric } from './astra-variables.js';
 import { causalSnapshot, captureWorldChanges } from './astra-causality.js';
+import {reconcileStories} from './astra-story.js';
 
 const DAY = 1440;
 const queueCache = new WeakMap();
@@ -108,6 +109,7 @@ function resolve(world, event) {
       summary = `在场外，${plans.length}位人物按自己的目标行动。`;
       break;
     }
+    case 'story_checkpoint': {reconcileStories(world);summary='故事计划的约定时辰已被核对。';break;}
     case 'faction_tick': {
       const result = runFactionTick(world, payload.factionId, event.dueAt);
       if (result) {
@@ -279,5 +281,6 @@ export function advanceAstraWorld(source, elapsedMinutes, action = null) {
       actorId: 'world:npc-plans', action: 'npc_action' });
   }
   resolveDueAnchors(world);
+  reconcileStories(world);
   return { world, events };
 }

@@ -9,6 +9,7 @@ import { checkTerminalWorld } from './astra-terminal.js';
 import { reconcileQuestArcs, respondQuestArc } from './astra-quests.js';
 import { transferOwnedItem, offerCommitment, respondCommitment } from './astra-commitments.js';
 import {resolveCombatExchange} from './astra-combat.js';
+import {proposeStory,respondStory,reconcileStories} from './astra-story.js';
 export { evaluateCondition } from './astra-expression.js';
 
 const domains = { character: 'characters', faction: 'factions', location: 'locations', item: 'items' };
@@ -46,6 +47,7 @@ const realityInput = context => String(context.realityStatement
 function authorizeScope(world, op, context) {
   if (!context.enforceScope || context.mode !== 'reality' || op.type === 'concept.defer') return;
   const input = realityInput(context);
+  if(op.type.startsWith('story.')&&!/故事|剧情|计划|邀请|邀约|伏笔|线索|宴|赴约/u.test(input))fail('本轮言灵没有要求额外改写故事邀约或计划。');
   if (!explicitRealityStatement(input)) fail('假设或询问不授权执行言灵。');
   if (worldScope(input)) return;
   const creative = /创造|诞生|变出|制造|炼成|出现|召唤|生成|造出/u.test(input);
@@ -226,7 +228,7 @@ function social(world, op, context) {
   if (!npc || !present(world, npc.id) || op.subjectId !== 'player') fail('社会认知必须有真实听者和主体。');
   const input = String(context.input?.speech || '') + String(context.input?.action || '');
   if (!op.evidence || !input.includes(op.evidence)) fail('社会认知缺少本轮输入证据。');
-  if (typeof op.meaning !== 'string' || !/^[\p{L}][\p{L}\p{N}_ -]{1,39}$/u.test(op.meaning)
+  if (typeof op.meaning !== 'string' || !op.meaning.trim() || op.meaning.length>80 || /[\u0000-\u001f]/u.test(op.meaning)
     || !Number.isFinite(op.valence) || Math.abs(op.valence) > 1) fail('社会认知类型无效。');
   const sim = ensureSimulation(world);
   const id = context.turnId + ':social:' + npc.id;
@@ -270,6 +272,8 @@ export function applyWorldPlan(source, plan, context) {
       if (!evaluateCondition(world, op.condition)) fail('操作前置条件尚未满足。');
     }
     switch (op.type) {
+      case 'story.propose':proposeStory(world,op.thread,context);break;
+      case 'story.respond':respondStory(world,op,context);break;
       case 'entity.create': createEntity(world, op, context); break;
       case 'entity.update': updateEntity(world, op, context); break;
       case 'resource.transfer': transfer(world, op, context); break;
@@ -322,6 +326,7 @@ export function applyWorldPlan(source, plan, context) {
     }
     if (op.type !== 'entity.update' || beforeTarget !== JSON.stringify(worldEntity(world, op.targetId))) changedOperations.push(op);
   }
+  reconcileStories(world);
   captureWorldChanges(source, world, { ...context, action: context.mode === 'reality' ? 'rewrite' : 'change' });
   let settledCost=0;
   if (context.mode === 'reality') {

@@ -1,6 +1,7 @@
 // A bounded, read-only view of the authoritative world for one narration turn.
 import { realmRules, effectiveRealmCap, realmLabel } from './astra-rules.js';
 import { sceneAffordances } from './astra-affordances.js';
+import {storyView} from './astra-story.js';
 const list = value => Array.isArray(value) ? value : value && typeof value === 'object' ? Object.values(value) : [];
 const text = (value, max = 160) => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
 const idOf = value => typeof value === 'string' ? value : value?.id ?? value?.locationId ?? '';
@@ -92,7 +93,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
   const npcIds = [...npcs,...departing].map(idOf);
   const describeNpc = npc => ({
     ...compact(npc, ['id', 'name', 'gender', 'personality', 'fears', 'role', 'occupation', 'cultivation', 'wealth', 'inventory', 'physicalCondition', 'factionId', 'homeId', 'alive', 'status', 'locationId', 'goal', 'goals', 'currentGoals', 'currentPlan', 'knownFactIds', 'knowledge', 'relationships'], { goal: 120 }),
-    memories: recall(npc.memories, query, recalling ? 12 : 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
+    memories: recall((npc.memories||[]).filter(row=>!row?.storyId||world.simulation?.storyThreads?.[row.storyId]?.visibility!=='private'), query, recalling ? 12 : 4, x => typeof x === 'string' ? x : x?.summary ?? x?.text)
       .map(x => {
         if (typeof x === 'string') return text(x, 140);
         const belief = Object.values(world.simulation?.beliefs || {}).find(row => row.holderId === npc.id && row.eventId === x.eventId);
@@ -157,6 +158,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
           ...(row.condition?{condition:structuredClone(row.condition)}:{})})),
       rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
     },
+    storyThreads:storyView(world),
     affordances: sceneAffordances(world),
     numericFacts, presentNpcs, departingNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),

@@ -1,0 +1,25 @@
+// Small author view only. The complete world and validator packet remain intact.
+const pick=(v,keys)=>Object.fromEntries(keys.filter(k=>v?.[k]!==undefined).map(k=>[k,structuredClone(v[k])]));
+export function dialogueFrame(packet){
+ const input=packet.playerTurn;
+ if(!input?.speech||input.action||packet.planMode==='reality'||/回顾|梳理|复述|全部经过|所有的事|所有事情|从前|以前|曾经|记得|承诺|约定|历史|刚才|上次|来历|谁.{0,8}给|怎么得到/u.test(input.speech))return null;
+ if(packet.simulationFacts?.rules?.length)return null;
+ const focus=packet.conversation?.targetId;
+ const frame={playerTurn:pick(input,['speech','action','mode','targetId']),minute:packet.minute,clock:packet.clock,
+  location:pick(packet.location,['id','name','destroyed']),player:pick(packet.player,['id','name','health','maxHealth','cultivation','locationId','wealth','inventory','travel']),
+  knownLocations:(packet.nearbyLocations||[]).map(loc=>pick(loc,['id','name','destroyed'])),
+  conversation:packet.conversation,
+  presentNpcs:(packet.presentNpcs||[]).map(n=>({...pick(n,['id','name','gender','personality','occupation','alive','locationId','homeId','travel','cultivation','physicalCondition','wealth','inventory','currentGoals','relationships']),memories:(n.memories||[]).slice(0,2).map(m=>typeof m==='string'?m:pick(m,['summary','source','confidence','beliefEvidence','minute'])),allowedSecrets:n.allowedSecrets||[]})),
+  departingNpcs:packet.departingNpcs||[],items:(packet.items||[]).map(i=>pick(i,['id','name','quantity','ownerId','effects','description','lastTransfer'])),activeQuests:(packet.activeQuests||[]).map(q=>pick(q,['id','title','giverId','targetLocationId','state','summary','condition','deadline','requiredCommitmentIds'])),simulationFacts:packet.simulationFacts||{},
+  recentTurns:(packet.recentTurns||[]).slice(-1).map(t=>({userText:t.userText,dialogue:t.dialogue||[]})),
+  recalledSummaries:(packet.recalledSummaries||[]).slice(0,1).map(r=>typeof r==='string'?r:pick(r,['summary','text'])),storyThreads:(packet.storyThreads||[]).filter(t=>t.ownerId===focus||t.locationId===packet.location?.id||[t.id,t.title].some(label=>label&&input.speech.includes(label))).map(t=>pick(t,['id','title','summary','state','ownerId','locationId','startsAt','dueAt','condition'])),
+  pacing:{mode:'conversation',listenerId:focus||null,rule:'短对白先回答当下问题。允许闲聊、停顿、休息；不重复旧威胁，不强推任务。实际到期事件仍发生。'},
+  dueEvents:packet.dueEvents||[],turnStart:packet.turnStart};
+ if((packet.recentImpacts||[]).some(row=>packet.minute-Number(row.atMinute||0)<=5))return null;
+ // Scope dependencies involving places or other numeric entities require the
+ // original packet; never drop those bindings just to fit the quick lane.
+ if((packet.numericFacts||[]).length||(packet.simulationFacts?.commitments||[]).some(c=>c.condition)||(packet.activeQuests||[]).some(q=>q.condition))return null;
+ return JSON.stringify(frame).length<=3600?frame:null;
+}
+export const DIALOGUE_PROMPT='Roleplay 落仙 in natural Chinese. Answer this exact speech first; idle chat, jokes, rest and reflection are valid. Usually 1-2 short dlg blocks, at most one brief useful narr. No repeated scenery, forced danger or task pitch. The player controls their choices. Memories are evidence, plans are not facts. Preserve identity, location, life and ownership. Only present living NPCs speak. Narration uses 我. Return JSON {blocks:[{type:"dlg|narr|sys",name:"real speaker for dlg",text:"Chinese"}],worldPlan:{operations:[]}}. Speech does not automatically perform physical actions. No effects or unrecorded changes. A natural pause is valid; do not invent a crisis. Concrete future invitations/plans you propose MUST use story.propose with real venue/homeId and time:{dayOffset,hour,minute,durationMinutes} so Engine computes the date; never invent an unregistered venue or accept for the player. Story IDs are new stable ASCII identifiers, not character IDs.';
+export const DIALOGUE_OPERATIONS='Optional operations (each needs type and actual IDs): social.observe {observerId,subjectId:"player",meaning,evidence:exact current words,valence:-1..1,reason}; commitment.offer {offer:{id,fromId,toId:"player",itemId,condition?,durationMinutes?}} requires real NPC ownership; commitment.respond {commitmentId,actorId,response:"accept|decline|withdraw",evidence} requires actual player consent. quest.create {quest:{id,title,summary,giverId,targetLocationId,condition,reward}}; quest.respond {questId,actorId,response,evidence}. condition:{op:"eq|ne|lt|lte|gt|gte|exists",left:{entityId,field},right:constant}; all/any use conditions. story.propose {thread:{id,kind:"invitation|plan|clue|foreshadow",title,summary,ownerId,locationId,time?:{dayOffset,hour,minute,durationMinutes},startsAt?,dueAt?,condition?}} records a future intention only; story.respond {id,response:"accept|decline|withdraw",evidence} handles a known thread. No automatic player action, invented items or paid rewards.';

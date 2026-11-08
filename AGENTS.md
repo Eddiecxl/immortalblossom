@@ -1,5 +1,7 @@
 # 落仙 v4 维护约定
 
+v4.2.8 接续先读 docs/FAST_DIALOGUE_STORIES_V428.md：短对白小视图/短时间、回顾与大动作完整视图；storyThreads是真实邀约/计划/伏笔账本，条件/事件队列/人物记忆联动，不能替玩家同意或把计划当历史。完整过去重算与任意普通世界发现仍是缺口，不得伪称已完成。
+
 v4.2.7 开放输入审计先读 docs/OPEN_INPUT_AUDIT_V427.md：保留playable模式的场内移动分流、引用/回忆主体判断与本地文风段落清理。禁止因离题/跳舞/偏离seed拒绝玩家；真实世界操作仍原子校验。复玩显示免费额度仍会等待，不得宣称全部CD已消失。
 
 v4.2.6 接续先读 docs/CLOUD_CHOICE_V426.md：aiRoute随命簿锁定，世界/系统均用原供应商；原生云请求经固定Worker会话。保留长档作者视图去重、原始数据库和真实配额等待。正式发布状态见 Maintenance/Verification/v426-release-state.json。

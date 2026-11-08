@@ -20,7 +20,7 @@ export const WORLD_PLAN_PROMPT = [
 // is only needed when the player actually invokes that separate capability.
 export function worldPlanPrompt(mode='ordinary') {
   if(mode==='reality')return REALITY_PLAN_PROMPT;
-  return ORDINARY_PLAN_PROMPT;
+  return ORDINARY_PLAN_PROMPT+'\nstory.propose {thread:{id:"story:stable-id",kind:"invitation|plan|clue|foreshadow",title,summary,ownerId,locationId,time?:{dayOffset,hour,minute,durationMinutes},startsAt?,dueAt?,condition?,visibility?:"public|private",revealWhen?}} records intentions, never already-completed facts or player consent. Only actual present owners propose. story.respond {id,response:"accept|decline|withdraw",evidence:exact player words} updates a known invitation. Engine resolves deadlines, venue destruction and owner death. Quiet talk/recap/rest are valid; do not escalate threats or repeat quests without actual new events.';
 }
 const ORDINARY_PLAN_PROMPT=[
  'Write natural Chinese blocks first, then worldPlan:{operations:[]}. Empty operations is valid. Engine validates all changes atomically. Every operation needs type and real IDs from facts. Speech/jokes/hypotheses are not actions or proven history. Never replay settledAction.',

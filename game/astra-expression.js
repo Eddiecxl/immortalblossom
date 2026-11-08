@@ -14,6 +14,7 @@ export function worldEntity(world, id) {
   for (const field of ['characters', 'factions', 'locations', 'items', 'quests'])
     if (Object.hasOwn(world[field] || {}, id)) return world[field][id];
   if (Object.hasOwn(world.simulation?.commitments || {}, id)) return world.simulation.commitments[id];
+  if (Object.hasOwn(world.simulation?.storyThreads || {}, id)) return world.simulation.storyThreads[id];
   return null;
 }
 const OPS = new Set(['all', 'any', 'not', 'eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'exists']);
