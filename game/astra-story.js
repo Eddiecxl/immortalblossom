@@ -54,7 +54,11 @@ export function respondStory(world,op,context={}){
 }
 export function reconcileStories(world){
  for(const t of Object.values(world.simulation?.storyThreads||{})){
-  if(t.visibility==='private'&&t.revealWhen&&evaluateCondition(world,t.revealWhen))t.visibility='public';
+  if(t.visibility==='private'&&t.revealWhen&&evaluateCondition(world,t.revealWhen)){
+    t.visibility='public';const id='story-reveal:'+t.id,summary='线索浮现：'+t.summary;
+    world.history.push({id,type:'story_revealed',minute:world.minute,locationId:world.player.locationId,actors:['player'],summary,playerWitnessed:true,storyId:t.id});
+    recordCausalEvent(world,{id,actorId:'player',action:'story_revealed',targetIds:[t.id],locationId:world.player.locationId,summary,sourceId:t.id,impacts:[]});
+  }
   if(terminal.has(t.state))continue;const owner=worldEntity(world,t.ownerId),venue=world.locations[t.locationId];let state=null;
   if(['invitation','plan'].includes(t.kind)&&(!owner||owner.alive===false||!venue||venue.destroyed))state='cancelled';
   else if(t.kind==='invitation'&&t.state==='accepted'&&world.minute>=(t.startsAt??t.createdAt)&&!world.player.travel&&!owner.travel&&world.player.locationId===t.locationId&&owner.locationId===t.locationId&&(!t.condition||evaluateCondition(world,t.condition)))state='resolved';
