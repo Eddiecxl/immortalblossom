@@ -88,9 +88,9 @@ export function evaluateCondition(world, condition, bindings = {}) {
 // prerequisite impossible; a currently false wealth/health test cannot.
 export function conditionCanStillBecomeTrue(world, condition) {
   validateCondition(condition);
-  const sealedStates=new Set(['completed','failed','expired','abandoned','resolved-by-other','invalidated','declined','withdrawn','fulfilled']);
+  const sealedStates=new Set(['completed','failed','expired','abandoned','resolved-by-other','invalidated','declined','withdrawn','fulfilled','resolved','missed','cancelled']);
   const fixed=spec=>!spec||typeof spec!=='object'||spec.field==='state'
-    && (Object.hasOwn(world.quests||{},spec.entityId)||Object.hasOwn(world.simulation?.commitments||{},spec.entityId))
+    && (Object.hasOwn(world.quests||{},spec.entityId)||Object.hasOwn(world.simulation?.commitments||{},spec.entityId)||Object.hasOwn(world.simulation?.storyThreads||{},spec.entityId))
     && sealedStates.has(worldEntity(world,spec.entityId)?.state);
   const possibilities=node=>{
     if(node.op==='all'||node.op==='any'){

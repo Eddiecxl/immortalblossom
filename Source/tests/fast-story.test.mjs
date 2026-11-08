@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {cre
 import {dialogueFrame} from '../../game/astra-dialogue.js';import {proposeStory,respondStory,reconcileStories,storyView,settleExplicitStoryReply} from '../../game/astra-story.js';
 import {applyWorldPlan} from '../../game/astra-operations.js';import {migrateGameState} from '../../game/game-state.js';import {createAiTurnRunner} from '../../game/ai-turn.js';
 import {advanceAstraWorld} from '../../game/astra-scheduler.js';
+import {conditionCanStillBecomeTrue} from '../../game/astra-expression.js';
 const setup=()=>createAstraOpening(createMainStoryState('顾长生',()=> 'fast-story')).state;
 test('short dialogue projects a smaller factual view and preserves consent, ownership and current input',()=>{
  const s=setup(),p=compileAstraContext(s,'小满，你为什么帮我？',[]);p.playerTurn={speech:'小满，你为什么帮我？',action:''};p.conversation={targetId:'npc:lin-xiaoman'};
@@ -39,6 +40,11 @@ test('explicit named refusal is a real state change even if the author omits sto
 });
 test('questions, quoted refusals and double negatives cannot silently decline an invitation',()=>{
  for(const speech of ['小院茶话我不是不参加，我只是想晚点到','如果我不参加小院茶话呢？','林小满说她不参加小院茶话']){const w=setup().astraWorld,t={...invitation(w),title:'小院茶话'};proposeStory(w,t,{turnId:'offered'});assert.deepEqual(settleExplicitStoryReply(w,{speech},{turnId:'quoted'}),[]);assert.equal(w.simulation.storyThreads[t.id].state,'pending');}
+});
+test('refusing an invitation closes only quest branches that truly depend on attending it',()=>{
+ const w=setup().astraWorld,t=invitation(w);proposeStory(w,t,{turnId:'offer'});respondStory(w,{id:t.id,response:'decline',evidence:'我不去'},{turnId:'no',input:{speech:'我不去'}});
+ const condition={op:'eq',left:{entityId:t.id,field:'state'},right:'resolved'};assert.equal(conditionCanStillBecomeTrue(w,condition),false);
+ assert.equal(conditionCanStillBecomeTrue(w,{op:'any',conditions:[condition,{op:'gte',left:{entityId:'player',field:'wealth'},right:999}]}),true);
 });
 test('future plans end when the host dies, venue is destroyed or time expires',()=>{
  for(const kind of ['death','venue','time']){const w=setup().astraWorld;proposeStory(w,invitation(w),{turnId:'offered'});if(kind==='death')w.characters['npc:lin-xiaoman'].alive=false;if(kind==='venue')w.locations[w.player.locationId].destroyed=true;if(kind==='time')w.minute+=31;reconcileStories(w);assert.equal(w.simulation.storyThreads['story:dinner'].state,kind==='time'?'missed':'cancelled');assert.ok(w.history.some(e=>e.type==='story_state'));}
