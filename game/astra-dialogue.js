@@ -8,7 +8,7 @@ export function dialogueFrame(packet){
  const frame={playerTurn:pick(input,['speech','action','mode','targetId']),minute:packet.minute,clock:packet.clock,
   location:pick(packet.location,['id','name','destroyed']),player:pick(packet.player,['id','name','health','maxHealth','cultivation','locationId','wealth','inventory','travel']),
   knownLocations:(packet.nearbyLocations||[]).map(loc=>pick(loc,['id','name','destroyed'])),
-  conversation:packet.conversation,
+  conversation:{...pick(packet.conversation,['targetId','targetName','firstContact','absentName','presentAtStart']),knownFacts:(packet.conversation?.knownFacts||[]).slice(0,2).map(f=>pick(f,['kind','summary']))},
   presentNpcs:(packet.presentNpcs||[]).map(n=>({...pick(n,['id','name','gender','personality','occupation','alive','locationId','homeId','travel','cultivation','physicalCondition','wealth','inventory','currentGoals','relationships']),memories:(n.memories||[]).slice(0,2).map(m=>typeof m==='string'?m:pick(m,['summary','source','confidence','beliefEvidence','minute'])),allowedSecrets:n.allowedSecrets||[]})),
   departingNpcs:packet.departingNpcs||[],items:(packet.items||[]).map(i=>pick(i,['id','name','quantity','ownerId','effects','description','lastTransfer'])),activeQuests:(packet.activeQuests||[]).map(q=>pick(q,['id','title','giverId','targetLocationId','state','summary','condition','deadline','requiredCommitmentIds'])),simulationFacts:packet.simulationFacts||{},
   recentTurns:(packet.recentTurns||[]).slice(-1).map(t=>({userText:t.userText,dialogue:t.dialogue||[]})),

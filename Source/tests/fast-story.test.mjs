@@ -7,6 +7,10 @@ test('short dialogue projects a smaller factual view and preserves consent, owne
  const s=setup(),p=compileAstraContext(s,'小满，你为什么帮我？',[]);p.playerTurn={speech:'小满，你为什么帮我？',action:''};p.conversation={targetId:'npc:lin-xiaoman'};
  const f=dialogueFrame(p);assert.ok(f);assert.ok(JSON.stringify(f).length<JSON.stringify(p).length);assert.deepEqual(f.playerTurn,p.playerTurn);assert.equal(f.items.find(i=>i.id==='item:main-herb').ownerId,'player');assert.deepEqual(f.simulationFacts.commitments,p.simulationFacts.commitments);
 });
+test('growing duplicate conversation evidence cannot push routine chat back into the heavy lane',()=>{
+ const s=setup(),p=compileAstraContext(s,'你平时喜欢做什么？',[]);p.playerTurn={speech:'你平时喜欢做什么？',action:''};p.conversation={targetId:'npc:lin-xiaoman',knownFacts:Array.from({length:30},(_,i)=>({id:'opaque-evidence-id-'+i,kind:'event',summary:'人物此前的一件事情已被完整记录。'}))};
+ const f=dialogueFrame(p);assert.ok(f);assert.equal(f.conversation.knownFacts.length,2);assert.equal(p.conversation.knownFacts.length,30);
+});
 test('long recall and multi-action turns keep the full author view instead of erasing necessary history',()=>{
  const p={playerTurn:{speech:'回顾从前所有的事，梳理已经发生的变化',action:''}};assert.equal(dialogueFrame(p),null);assert.equal(dialogueFrame({playerTurn:{speech:'你好',action:'攻击敌人'}}),null);
 });
