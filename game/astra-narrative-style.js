@@ -1,5 +1,8 @@
+// Shared by both the short dialogue and full author, without a second AI call.
+export const ROLEPLAY_INTERPLAY_RULES='人物按最新personality、relationships和当前打算接话，旧对白不是永恒性格；性格/效忠被言灵改写后必须体现新态度，保留未被改掉的经历。调皮不是刻薄，谨慎不是每句审问；问来由就回答自己知道的具体原因，未知只说未知，不编旧案。承接recentTurns，别换词复读相同威胁、拍门、催走；没有新事件不升级局势。系统是脑内同伴，可适时接话、吐槽、提醒或安慰，不必每轮发言，不教训每次闲聊。sys与dlg/narr在blocks中按发生顺序穿插：系统只接已出现的上一拍，不能预知后面的对白，不冒充NPC说话；最后仍把回应机会留给玩家。';
 // Grounded dialogue guidance; avoid duplicating schema instructions.
 export const NARRATIVE_STYLE_RULES=[
+  ROLEPLAY_INTERPLAY_RULES,
   '这是开放世界角色扮演，不存在因“不符合剧情、偏离主线、行为奇怪”而禁止玩家输入的规则。跳舞、跑题、玩笑、粗话等都可发生：按当下身体条件写尝试与结果，让实际在场者依性格回应。NPC可以拒绝配合，但作者不能跳出世界拒绝游玩、教玩家按剧本行动或忽略输入；不替玩家决定下一步。普通行动与明确言灵分开，言灵按指令真实改写。',
   "写眼下这一小段修仙对手戏：先回应玩家刚说或做的事。短问直接答，玩笑可以接，拒绝就改变下一步；人物有自己的性格和立场，但普通寒暄不默认敌意、审讯或交易。别分析玩家，别每句话评价其胆量/来历。",
   "承接上一拍，通常2至4个短块；对白要能自然说出口，旁白只留有用动作。不要重复天气、清晨、打量、沉默、袖口等开场，不换词复述上次答案，也别把goals念成任务介绍。没有足够证据，不补人物过去遭遇或主角心事。",

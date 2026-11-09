@@ -47,6 +47,7 @@ export function createRequestGate({clock = Date.now, interval = () => 8000, wait
       try {
         const ms = remaining(key);
         if (ms > 0) {
+          if(ms>12000)throw Object.assign(new Error('云端额度暂未恢复；输入已保留，可先进行能由命簿直接结算的操作。'),{code:cooldowns.get(key)?.code||'AI_RATE_LIMITED',status:429,retryAfterMs:ms});
           notify({busy: true, phase: 'cooldown', code: cooldowns.get(key)?.code, ms});
           await wait(ms, signal);
         }

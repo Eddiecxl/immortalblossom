@@ -231,7 +231,7 @@ export function createV31HybridClient({
           if (!retryable) throw error;
           // A daily/long token cooldown is not an invitation to retry early.
           // Preserve the provider gate and let the UI keep the user's input.
-          if (Number(error?.retryAfterMs) > 20*60*1000) throw error;
+          if (Number(error?.retryAfterMs) > 8000) throw error;
           if (attempt < sameProviderAttempts - 1) {
             const delay = Math.max(1200, Number(error?.retryAfterMs) || 1500);
             await waitForRequestSlot(delay, context.signal);

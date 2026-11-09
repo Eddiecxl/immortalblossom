@@ -30,6 +30,7 @@ import {useAstraInventory,parseInventoryCommand} from './astra-inventory.js';
 import {reconcileMainStory} from './astra-main-story.js';
 import {dialogueFrame,DIALOGUE_PROMPT,DIALOGUE_OPERATIONS} from './astra-dialogue.js';
 import {reconcileStories,settleExplicitStoryReply} from './astra-story.js';
+import {realityAuthorMessages} from './astra-reality-prompt.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -363,7 +364,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       }
       const visibleEvents = events.filter(event => event.playerWitnessed).slice(-6);
       const quick=settings.fastDialogue?dialogueFrame(packet):null;
-      const authorPacket=quick||compactNarrativePacket(packet);
+      const authorPacket=action.type==='reality'?packet:quick||compactNarrativePacket(packet);
       const messages = [
         { role: 'system', content: 'Roleplay 落仙 in natural Chinese. The player controls the protagonist; respond to this turn, never dictate their choices. Engine facts govern life, location, ownership, memory and time. New changes require worldPlan. Return complete JSON:{"blocks":[{"type":"narr|dlg|sys","name":"only for dlg: real speaker name","text":"Chinese"}],"worldPlan":{"operations":[]}}. No effects or surrounding commentary. narr is what I perceive; dlg contains direct speech only.' },
         { role: 'user', content: `世界事实：${JSON.stringify(authorPacket)}\n本回合已结算事件：${JSON.stringify(visibleEvents)}\n回应本轮实际含义。speech是说话，action是动作尝试；已结算事件不重演，普通动作与明确言灵分开。旁白写我所见所闻，别替我决定。` }
@@ -375,11 +376,13 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       messages[0].content+='\n'+NARRATIVE_STYLE_RULES;
       messages[0].content+='\nAdd top-level turnCue (same shape as one block) as the final concrete beat awaiting the player. Do not repeat the prior handoff, replace choices with system advice or finish the player action for them.';
       if(quick){messages[0].content=DIALOGUE_PROMPT+'\n'+DIALOGUE_OPERATIONS;messages[1].content='世界事实：'+JSON.stringify(quick);}
+      if(action.type==='reality')messages.splice(0,messages.length,...realityAuthorMessages(world,packet,turnInput));
       const baseDraft = structuredClone(world);
       const localName = settings.mode === 'local' ? await localModelName(settings) : '';
       let raw = '';
       let errors = [];
       let wasTruncated = false;
+      let budgetRetried=false;
       const attempts = settings.mode === 'local' ? 2 : 3;
       for (let attempt = 0; !narration && attempt < attempts; attempt++) {
         if (signal?.aborted) throw new Error('本回合已取消。');
@@ -393,9 +396,13 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           raw = await aiClient.narrate(attempt === 2 && settings.mode==='hybrid-assist' ? { ...settings, forceCloudAssist: true } : settings,
             { requestType: attempt ? 'repair' : 'world', transactionId: `${txId}:narrative:${attempt}`,
               messages: requestMessages,
-              ...(action.type==='reality'||wasTruncated?{maxTokens:1500}:quick?{maxTokens:768}:{}),
+              ...(wasTruncated?{maxTokens:1500}:action.type==='reality'?{maxTokens:1000}:quick?{maxTokens:768}:{}),
               signal, protectBudget: true });
         } catch (error) {
+          if(error?.code==='AI_INPUT_BUDGET'&&action.type==='reality'&&!budgetRetried){
+            budgetRetried=true;raw='';messages.splice(0,messages.length,...realityAuthorMessages(world,packet,turnInput,{lean:true}));
+            errors=['保留全部明确目标和操作，使用更精简格式。'];continue;
+          }
           if (['AI_INVALID_JSON','AI_OUTPUT_TRUNCATED'].includes(error?.code)) {
             wasTruncated ||= error.code==='AI_OUTPUT_TRUNCATED';
             errors=['上一回复未形成完整JSON。缩短旁白，保留完整worldPlan和blocks并闭合全部括号；不返回半个操作。'];

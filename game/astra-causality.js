@@ -156,6 +156,8 @@ export function captureWorldChanges(before, after, context) {
   };
   for (const npc of Object.values(after.characters)) {
     const prior = before.characters[npc.id];
+    if(prior&&npc.personality!==prior.personality)
+      put(npc.id+':personality',npc.id,'personality',0,npc.name+'的性格已经改变：'+String(npc.personality).slice(0,240));
     if (prior?.alive && !npc.alive) put(npc.id + ':death', npc.id, 'life', -1, npc.name + '身亡，原有牵挂随之改变。');
     if (prior && (npc.gender !== prior.gender || npc.name !== prior.name))
       put(npc.id + ':identity', npc.id, 'identity', 0, npc.name + '的身份信息已经改变。');

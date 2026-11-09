@@ -837,6 +837,23 @@ test('a learned oversized input becomes a sanitized terminal error without anoth
   assert.equal(calls, 1);
 });
 
+test('an impossible input fails immediately and cannot impose its 1000-second wait on a smaller next turn',async()=>{
+ let calls=0;const app=harness({upstream:async()=>++calls===1?Response.json({error:{message:'input tokens per minute (ITPM): Limit 500, Used 0, Requested 1000. Please try again in 1000s.'}},{status:429,headers:{'retry-after':'1000'}}):completion('小请求成功')});
+ const player=app.visitor(),large=await(await player.request('/api/ai/cloud/generate',{...payload('impossible-now'),maxTokens:64,messages:[{role:'user',content:'a'.repeat(1000)}]})).json();await app.fire();
+ const failed=await player.request(jobPath(large));assert.equal(failed.status,413);assert.equal((await failed.json()).code,'AI_INPUT_BUDGET');
+ const next=await(await player.request('/api/ai/cloud/generate',{...payload('small-after-impossible'),maxTokens:64})).json();await app.fire();assert.equal((await player.request(jobPath(next))).status,200);assert.equal(calls,2);
+});
+
+test('a legacy impossible retry is cleared before its stale global wait, without clearing valid provider limits',async()=>{
+ const app=harness(),player=app.visitor(),request={...payload('legacy-blocked-law'),maxTokens:64,messages:[{role:'user',content:'big'.repeat(600)}]},job=await(await player.request('/api/ai/cloud/generate',request)).json();
+ const queue=app.queue(),stored=await queue.ctx.storage.get('job:'+job.jobId);stored.attempts=1;stored.retryAt=app.now()+1000000;await queue.ctx.storage.put('job:'+job.jobId,stored);
+ const {fingerprint}=await import('../../cloud/groq-queue.mjs'),modelHash=await fingerprint(request.model),requestFingerprint=await fingerprint(JSON.stringify({messages:request.messages,maxTokens:request.maxTokens}));
+ await queue.ctx.storage.put('usage:'+modelHash,{schema:2,density:1,samples:[{requestFingerprint,promptTokens:1000,costs:{'input-tokens':1000}}]});
+ await queue.ctx.storage.put('quota:'+modelHash+':input-tokens',{kind:'input-tokens',model:request.model,limit:500,remaining:500,observedAt:app.now(),refillRate:500/60000,resetAt:app.now()+60000});
+ const meta=await queue.ctx.storage.get('meta');meta.nextAt=app.now()+1000000;await queue.ctx.storage.put('meta',meta);await app.fire();assert.equal((await player.request(jobPath(job))).status,413);
+ const next=await(await player.request('/api/ai/cloud/generate',{...payload('small-after-legacy'),maxTokens:64})).json();await app.fire();assert.equal((await player.request(jobPath(next))).status,200);
+});
+
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
  let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});
  const player=app.visitor();await player.request('/api/ai/cloud/test',{provider:'groq'});await app.fire();

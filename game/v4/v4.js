@@ -46,6 +46,7 @@ const pendingTurns=createPendingTurns();
 let state = null;
 let transcript = [];
 let systemTranscript=[];
+let systemRevealEntries=null;
 let activeDrawer = 'world';
 let toastTimer;
 const cpuCores = Number(navigator.hardwareConcurrency || 8);
@@ -437,7 +438,7 @@ async function applyInventoryAction(name,action,itemId){
 
 function renderSystemDock() {
   if (!dom.systemFeed || !state) return;
-  const memory = systemTranscript.length?systemTranscript.slice(-20):(state.systemCompanion?.dialogueMemory||[]);
+  const memory = systemRevealEntries!==null?systemRevealEntries.slice(-20):systemTranscript.length?systemTranscript.slice(-20):(state.systemCompanion?.dialogueMemory||[]);
   dom.systemFeed.replaceChildren();
   if (!memory.length) {
     dom.systemFeed.append(node('p', 'sys-msg', '系统在线。你继续说，我会盯着时间、人物和局势。'));
@@ -449,6 +450,14 @@ function renderSystemDock() {
     }
   }
   dom.systemFeed.scrollTop = dom.systemFeed.scrollHeight;
+}
+
+async function revealTurn(blocks,speech,{opening=false,previousMemory=[]}={}){
+  systemRevealEntries=opening?[]:structuredClone(systemTranscript.length?systemTranscript:previousMemory);
+  renderSystemDock();
+  try{await experience.renderBlocks(blocks,speech,{onRowComplete:row=>{
+    if(row.type==='sys'){systemRevealEntries.push({role:'system',text:row.text});renderSystemDock();}
+  }});}finally{systemTranscript=systemRevealEntries||[];systemRevealEntries=null;renderSystemDock();}
 }
 
 function rememberRealtimeSystem(text) {
@@ -550,7 +559,7 @@ async function submitTurn(input) {
       if(dom.speechInput.value===playerTurn.speech)dom.speechInput.value='';
       if(dom.actionInput.value===playerTurn.action)dom.actionInput.value='';
       const actionDetails=document.getElementById('actionDetails');if(actionDetails&&!dom.actionInput.value)actionDetails.open=false;
-      committedReveal=experience.renderBlocks(result.blocks, playerTurn.speech);
+      committedReveal=revealTurn(result.blocks,playerTurn.speech,{previousMemory:beforeState.systemCompanion?.dialogueMemory||[]});
       renderHud();if(!dom.worldDrawer.hidden)renderDrawer(activeDrawer);
       await committedReveal;committedReveal=null;
       experience.showEvents(beforeState,state);
@@ -625,10 +634,11 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
   else await loadTranscript(state.journeyId);
   persist();
   const showOpening=revealOpening&&transcript.length===1;
+  if(showOpening)systemRevealEntries=[];
   if(showOpening)turnBusy=true;
   try{
     await experience.enter(()=>{dom.titleScreen.hidden=true;dom.gameShell.hidden=false;if(showOpening){experience.clear();dom.storyScroll.replaceChildren();}else rebuildStory();renderAll({suggestions:getAvailableActions(state)});});
-    if(showOpening)await experience.renderBlocks(transcript[0].blocks||[],transcript[0].speech);
+    if(showOpening)await revealTurn(transcript[0].blocks||[],transcript[0].speech,{opening:true});
   }finally{if(showOpening){turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}}
   refreshAiBadge();
   const pending=pendingTurns.read(state);

@@ -19,7 +19,12 @@ test('cancelled queue does not poll or invent an answer',async()=>{
 test('queue deadline preserves a retryable pending job instead of a fake scene',async()=>{
  let now=0;
  await assert.rejects(()=>waitForCloudJob({job:{jobId:'safe',state:'queued',retryAt:100000},clock:()=>now,maxWaitMs:5000,
-  wait:async ms=>{now+=ms;},fetchStatus:async()=>({state:'queued'})}),e=>e.code==='AI_RATE_LIMITED'&&e.jobId==='safe');
+  wait:async ms=>{now+=ms;},fetchStatus:async()=>({state:'queued'})}),e=>e.code==='AI_QUEUE_PENDING'&&e.jobId==='safe'&&!e.retryAfterMs);
+});
+
+test('a thousand-second quota wait does not lock the foreground for twenty minutes',async()=>{
+ let now=0,calls=0;const states=[];await assert.rejects(()=>waitForCloudJob({job:{jobId:'long-wait',state:'queued',retryAt:1000000},clock:()=>now,wait:async ms=>{now+=ms;},report:s=>states.push(s),fetchStatus:async()=>{calls++;return{state:'queued',retryAt:1000000};}}),e=>e.code==='AI_QUEUE_PENDING'&&e.jobId==='long-wait');
+ assert.ok(now<=15000);assert.equal(calls,0);assert.equal(states.at(-1).phase,'deferred');assert.equal(states.at(-1).ms,0);
 });
 test('polling survives transient network loss and request timeout without replacing the durable job',async()=>{
  let now=0,calls=0;

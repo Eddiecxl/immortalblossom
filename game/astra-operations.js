@@ -57,7 +57,7 @@ function authorizeScope(world, op, context) {
     : op.type.startsWith('relation.') ? [op.fromId, op.toId]
       : op.type === 'resource.transfer' ? [op.fromId, op.toId, op.itemId]
         : op.type === 'effect.apply' ? [op.itemId] : [];
-  if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟/u.test(input)) fail('本轮没有授权改写关系。');
+  if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟|忠诚|忠心|效忠|归顺|洗脑|服从|立场/u.test(input)) fail('本轮没有授权改写关系。');
   for (const id of targetIds) {
     const entity = context.scopeEntities?.[id] || requireEntity(world, id);
     if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name))) fail('言灵超出了明确指令中的目标范围。');
@@ -134,7 +134,10 @@ function updateEntity(world, op, context) {
   const priority = field => field === 'alive' ? 0 : field === 'locationId' ? 2 : 1;
   for (const [field, value] of Object.entries(changes).sort(([a], [b]) => priority(a) - priority(b))) {
     if (context.mode !== 'reality') fail('直接属性改写需要言出法随；普通动作须用有前置条件的效果或转移。');
-    if (['name', 'gender', 'occupation', 'description', 'physicalCondition'].includes(field)) {
+    if(field==='personality'&&kind==='character'){
+      if(typeof value!=='string'||!value.trim()||value.length>240)fail('人物性格须为明确且有界的文字。');
+      target.personality=clean(value,240);
+    } else if (['name', 'gender', 'occupation', 'description', 'physicalCondition'].includes(field)) {
       if (typeof value !== 'string' || !clean(value)) fail('身份属性无效。');
       target[field] = clean(value, field === 'description' ? 400 : 60);
     } else if (['goals', 'currentGoals'].includes(field)) {
@@ -192,6 +195,9 @@ function relation(world, op, context) {
   } else {
     from.relationships ||= {};
     from.relationships[to.id] = active ? Math.round(sim.relations[id].weight * 100) : 0;
+    const oldPlan=from.currentPlan;
+    if(active&&oldPlan?.causeEventId&&oldPlan.targetId===to.id
+      &&(oldPlan.type==='avoid'&&sim.relations[id].weight>0||oldPlan.type==='support'&&sim.relations[id].weight<0))from.currentPlan=null;
   }
 }
 function createQuest(world, op, context) {

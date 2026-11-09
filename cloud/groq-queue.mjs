@@ -242,7 +242,9 @@ export class GroqQueue {
     const pendingKey = `pending:${String(++meta.sequence).padStart(16, '0')}:${id}`;
     const job = {id, sessionId, credential, payload, requestHash, state: 'queued', createdAt: now, updatedAt: now, pendingKey, dedupeKey, attempts: 0};
     // Persist the recovery alarm before accepting the job. Output gates wait for storage.
-    await this.storage.setAlarm(Math.max(now + 1, meta.nextAt || 0));
+    // Wake once to validate the head, including legacy impossible requests.
+    // alarm still enforces every authoritative retry before any upstream call.
+    await this.storage.setAlarm(now + 1);
     await this.storage.put({
       [`job:${id}`]: job,
       [pendingKey]: id,
@@ -390,9 +392,14 @@ export class GroqQueue {
         await this.finish(job, {code: 'AI_REQUEST_INTERRUPTED', status: 409});
         return;
       }
-      if (Math.max(meta.nextAt || 0, job.retryAt || 0) > now) return;
       const pacing = await this.preflight(job.payload);
-      if (pacing.error) { await this.finish(job, pacing.error); return; }
+      if (pacing.error) {
+        // Upgrade old queued oversized jobs too. The serial head's old rejected
+        // request may have set nextAt before this immediate-failure fix existed.
+        if(job.attempts>0){meta.nextAt=0;await this.storage.put('meta',meta);}
+        await this.finish(job, pacing.error);return;
+      }
+      if (Math.max(meta.nextAt || 0, job.retryAt || 0) > now) return;
       if (pacing.retryAt > now) {
         job.retryAt = pacing.retryAt;
         await this.storage.put(`job:${job.id}`, job);
@@ -427,6 +434,13 @@ export class GroqQueue {
         return;
       }
       const errorInfo = response.status === 429 ? await knownQuotaError(response) : null;
+      // An input larger than a whole bucket cannot fit after any reset. Do not
+      // poison this credential's entire queue with its suggested long retry.
+      if(response.status===429&&errorInfo?.requested>errorInfo?.limit){
+        await this.observeQuota(job.payload,response,errorInfo);
+        await this.finish(job,{code:'AI_INPUT_BUDGET',status:413});
+        await response.body?.cancel();return;
+      }
       const delay = quotaDelay(response, this.clock(), errorInfo?.retryMs);
       // Enqueue can run while fetch is in flight. Read the current sequence again.
       const currentMeta = await this.storage.get('meta') || meta;

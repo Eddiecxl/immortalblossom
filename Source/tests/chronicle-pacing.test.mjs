@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createTextPlayback,upgradeReadingPreferences} from '../../game/beta4/chronicle-player.js';
+import {createTextPlayback,upgradeReadingPreferences,createChroniclePlayer} from '../../game/beta4/chronicle-player.js';
 
 test('reading progresses by visible frame time, with a breathing pause at punctuation',()=>{
  const play=createTextPlayback('甲，乙。丙',{interval:50});
@@ -12,6 +12,14 @@ test('reading progresses by visible frame time, with a breathing pause at punctu
  assert.equal(play.advance(250).text,'甲，乙。');
  assert.equal(play.advance(300).text,'甲，乙。');
  assert.equal(play.advance(350).text,'甲，乙。');
+});
+
+test('system projection is called only when that block has actually finished, in NPC-system-NPC order',async()=>{
+ const element=()=>({children:[],style:{},classList:{add(){},remove(){}},append(...xs){this.children.push(...xs);},setAttribute(){},addEventListener(){},querySelector(q){return q==='p'?this.children.find(c=>c.tag==='p'):null;},querySelectorAll(){return[];}});
+ const doc={hidden:false,createElement(tag){return {...element(),tag};},createTextNode(text){return {text};}},target={...element(),ownerDocument:doc,scrollTop:0,scrollHeight:0,clientHeight:0};let time=0;const calls=[];
+ const player=createChroniclePlayer({target,status:element(),skipButton:element(),pauseButton:element(),latestButton:element(),getSpeed:()=>0,frame:fn=>{queueMicrotask(()=>fn(time+=16));return time;}});
+ const rows=[{type:'dlg',name:'甲',text:'吃过了。'},{type:'sys',text:'你倒是会挑时候。'},{type:'dlg',name:'甲',text:'先走，路上再说。'}];
+ await player.render(rows,{onRowComplete:row=>{assert.equal(target.children.at(-1).querySelector('p').textContent,row.text);calls.push(row.type);if(row.type==='dlg'&&calls.length===1)assert.equal(target.children.length,1);}});assert.deepEqual(calls,['dlg','sys','dlg']);
 });
 test('pausing or a long background frame cannot dump the unread paragraph on resume',()=>{
  const play=createTextPlayback('一二三四五六七八九十'.repeat(20),{interval:50});

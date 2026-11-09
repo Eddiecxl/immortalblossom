@@ -38,3 +38,9 @@ test('provider spacing waits on the same request instead of failing a healthy tu
   assert.equal(waits, 1);
   assert.equal(time, 8000);
 });
+test('a long provider limit is respected without sleeping the player in a thousand-second foreground gate',async()=>{
+ let now=0,calls=0,waits=0;const gate=createRequestGate({clock:()=>now,interval:()=>0,wait:async ms=>{waits++;now+=ms;},onState:()=>{}});
+ await assert.rejects(()=>gate.run(async()=>{calls++;throw Object.assign(Error('limit'),{status:429,retryAfterMs:1000000});},undefined,'groq'));
+ await assert.rejects(()=>gate.run(async()=>{calls++;},undefined,'groq'),e=>e.retryAfterMs===1000000);assert.equal(calls,1);assert.equal(waits,0);
+ assert.equal(await gate.run(async()=> 'different account',undefined,'other'),'different account');
+});

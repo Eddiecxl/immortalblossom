@@ -80,7 +80,7 @@ export function createChroniclePlayer({target,status,skipButton,pauseButton,late
  async function breath(ms){
   let last=null,elapsed=0;await new Promise(resolve=>{function tick(now){if(last!=null&&!paused&&following&&!doc.hidden)elapsed+=Math.min(64,now-last);last=now;if(skipping||elapsed>=ms)resolve();else frame(tick);}frame(tick);});
  }
- async function render(rows,{animate=true}={}){
+ async function render(rows,{animate=true,onRowComplete}={}){
   writing=animate;skipping=false;paused=false;controls();
   try{
    for(const row of rows){
@@ -91,8 +91,9 @@ export function createChroniclePlayer({target,status,skipButton,pauseButton,late
     const p=article.querySelector('p');
     if(!animate||row.player||getReduced())article.style.animation='none';
     if(!promoted)target.append(article);
-    if(!animate||row.player){p.textContent=row.text;follow();continue;}
+    if(!animate||row.player){p.textContent=row.text;follow();await onRowComplete?.(row);continue;}
     article.classList.add('is-revealing');await reveal(p,row.text);article.classList.remove('is-revealing');
+    await onRowComplete?.(row);
     if(!skipping&&Number(getSpeed())>0)await breath(row.type==='dlg'?320:220);
    }
   }finally{writing=false;paused=false;controls();follow();}

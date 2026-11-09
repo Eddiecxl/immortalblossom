@@ -116,8 +116,8 @@ test('an unexecutable reality concept retains the whole input without a fabricat
   assert.deepEqual(result.state.astraWorld,state.astraWorld);
   assert.equal(result.state.astraWorld.player.cultivation.realm,'none');
   assert.equal(result.retry.input,'我用言出法随让时间长出蓝色翅膀');
-  const requestFacts=JSON.parse(h.calls[0].messages[1].content.split('\n')[0].slice('世界事实：'.length));
-  assert.equal(requestFacts.planMode,'reality');
+  const requestFacts=JSON.parse(h.calls[0].messages[1].content);
+  assert.equal(requestFacts.command.speech,'我用言出法随让时间长出蓝色翅膀');
 });
 
 test('a failed cloud job retains its terminal status for the browser retry policy', async () => {
