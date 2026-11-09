@@ -221,6 +221,11 @@ export class GroqQueue {
       if (job.state === 'completed') return json({jobId: job.id, text: job.text, provider: job.payload.provider||'groq', model: job.payload.model});
       if (job.state === 'failed') return failure(job.error.code, job.error.status,true);
       if(job.state==='queued'&&job.queueRevision!==QUEUE_REVISION){job.queueRevision=QUEUE_REVISION;await this.storage.put(`job:${job.id}`,job);await this.storage.setAlarm(this.clock()+1);}
+      if(url.searchParams.get('quota')==='1'&&job.state==='queued'){
+        const pacing=await this.preflight(job.payload),now=this.clock();
+        return json({...pendingResult(job,meta?.nextAt,now),quota:{attempts:job.attempts,retrySource:job.retrySource||null,providerWaitMs:Math.max(0,(meta?.nextAt||0)-now),predictedWaitMs:Math.max(0,(pacing.retryAt||0)-now),
+          budgets:[...(pacing.budgets?.values()||[])].slice(0,16).map(b=>({kind:b.kind,model:b.model,limit:b.limit,available:Math.floor(availableQuota(b,now)),estimated:pacing.costs[b.kind],refillRate:b.refillRate,resetMs:Math.max(0,b.resetAt-now)}))}},202);
+      }
       return json(pendingResult(job, meta?.nextAt, this.clock()), 202);
     }
     return failure('AI_JOB_NOT_FOUND', 404);
@@ -593,7 +598,7 @@ export class SessionStore {
       const saved = await this.storage.get(`job:${jobId}`);
       if (!saved || saved.expiresAt <= this.clock()) return failure('AI_JOB_NOT_FOUND', 404);
       const queue = objectStub(this.env.GROQ_QUEUE, saved.fingerprint);
-      return queue.fetch(internalRequest(`/jobs/${jobId}?sessionId=${encodeURIComponent(saved.sessionId)}`));
+      return queue.fetch(internalRequest(`/jobs/${jobId}?sessionId=${encodeURIComponent(saved.sessionId)}${url.searchParams.get('quota')==='1'?'&quota=1':''}`));
     }
     return failure('AI_JOB_NOT_FOUND', 404);
   }

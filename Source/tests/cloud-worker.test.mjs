@@ -878,6 +878,9 @@ test('polling a legacy queued job wakes its upgrade once without bypassing a tru
  const app=harness(),player=app.visitor(),job=await(await player.request('/api/ai/cloud/generate',payload('legacy-poll-upgrade'))).json(),q=app.queue();const stored=await q.ctx.storage.get('job:'+job.jobId);delete stored.queueRevision;await q.ctx.storage.put('job:'+job.jobId,stored);await q.ctx.storage.setAlarm(app.now()+1000000);
  await player.request(jobPath(job));assert.equal(await q.ctx.storage.getAlarm(),app.now()+1);const meta=await q.ctx.storage.get('meta');meta.nextAt=app.now()+90000;await q.ctx.storage.put('meta',meta);await app.fire();assert.equal((await player.request(jobPath(job))).status,202);assert.equal(await q.ctx.storage.getAlarm(),meta.nextAt);
 });
+test('quota diagnostics contain bounded counters only and remain protected by job ownership',async()=>{
+ const app=harness(),player=app.visitor(),job=await(await player.request('/api/ai/cloud/generate',payload('private-quota'))).json();const response=await player.request(jobPath(job)+'?quota=1'),data=await response.json();assert.equal(response.status,202);assert.equal(data.quota.attempts,0);assert.ok(Array.isArray(data.quota.budgets));assert.doesNotMatch(JSON.stringify(data),/gsk_|真实剧情|credential|sessionId/);assert.equal((await app.visitor().request(jobPath(job)+'?quota=1')).status,404);
+});
 
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
  let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});

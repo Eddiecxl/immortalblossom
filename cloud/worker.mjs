@@ -113,7 +113,7 @@ export default {
           const transactionHash = data.transactionId ? await fingerprint(data.transactionId) : null;
           response = await store.fetch(internalRequest('/submit', {sessionId: session.id, payload, requestHash, transactionHash}));
         } else if (/^\/api\/ai\/cloud\/jobs\/[a-f0-9-]{36}$/.test(url.pathname) && request.method === 'GET') {
-          response = await store.fetch(internalRequest(`/jobs/${url.pathname.split('/').at(-1)}`));
+          response = await store.fetch(internalRequest(`/jobs/${url.pathname.split('/').at(-1)}${url.searchParams.get('quota')==='1'?'?quota=1':''}`));
         } else {
           response = failure('AI_JOB_NOT_FOUND', 404);
         }
