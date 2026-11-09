@@ -259,7 +259,7 @@ function renderHud() {
   dom.sceneThreat.textContent = dead ? '命途已断' : state.astraWorld ? '世界自行运转中'
     : arrived ? '追兵已至' : danger >= 2 ? '危机逼近' : '局势流动中';
   const locked = turnBusy || experience.isWriting() || turnFlow.state() !== 'idle';
-  dom.sendButton.disabled = dead || (locked&&!committedReveal);
+  dom.sendButton.disabled = dead || locked;
   dom.speechInput.disabled = dead || (locked&&!committedReveal && turnFlow.state() !== 'cooldown');
   dom.actionInput.disabled = dead || (locked&&!committedReveal && turnFlow.state() !== 'cooldown');
 

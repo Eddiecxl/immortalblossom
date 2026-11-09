@@ -8,6 +8,10 @@ on:
         description: Deploy to Cloudflare using the repository API Token
         type: boolean
         default: false
+      sync_gemini_secret:
+        description: Explicitly update the existing Gemini beta secret
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -29,7 +33,7 @@ jobs:
           LX_MINIFLARE_MODULE: ${{ github.workspace }}/cloud/node_modules/miniflare/dist/src/index.js
       - run: node cloud/build-web.mjs
       - name: Configure Gemini beta secret
-        if: ${{ env.CF_TOKEN != '' && github.event_name == 'workflow_dispatch' && inputs.deploy }}
+        if: ${{ env.CF_TOKEN != '' && github.event_name == 'workflow_dispatch' && inputs.deploy && inputs.sync_gemini_secret }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
