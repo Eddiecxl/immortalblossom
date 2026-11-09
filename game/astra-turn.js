@@ -32,6 +32,8 @@ import {dialogueFrame,DIALOGUE_PROMPT,DIALOGUE_OPERATIONS} from './astra-dialogu
 import {reconcileStories,settleExplicitStoryReply} from './astra-story.js';
 import {realityAuthorMessages} from './astra-reality-prompt.js';
 import {pendingAftermath} from './astra-aftermath.js';
+import {compileLocalInteraction} from './astra-local-interaction.js';
+import {rememberSceneChoices,SCENE_CHOICES_PROMPT} from './astra-choices.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -118,7 +120,7 @@ function mechanicalAction(world, input, narrativePolicy) {
 export function canResolveAstraTurnLocally(state,input){
  if(!state?.astraWorld)return false;
  try{const action=mechanicalAction(state.astraWorld,normalizePlayerTurnInput(input));
-  if(action.type==='reality')return Boolean(planRealityMutation(state.astraWorld,action.statement));
+  if(action.type==='reality')return Boolean(compileLocalInteraction(state.astraWorld,action.statement)||planRealityMutation(state.astraWorld,action.statement));
   return ['attack','train','use_inventory','wait','travel'].includes(action.type)&&(!input.speech||['attack','train','use_inventory'].includes(action.type));
  }catch{return false;}
 }
@@ -244,7 +246,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     if(settings.fastDialogue&&action.type==='speech'&&turnInput.speech&&!turnInput.action)action.minutes=1;
     let knownRealityPlan = null;
     if (action.type === 'reality') {
-      try { knownRealityPlan = planRealityMutation(state.astraWorld, action.statement); }
+      try { knownRealityPlan = compileLocalInteraction(state.astraWorld,action.statement)||planRealityMutation(state.astraWorld, action.statement); }
       catch { action.minutes = 1; }
     }
     let world, events, narration;
@@ -255,13 +257,13 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     let degradation = null;
     if (knownRealityPlan) {
       const plan = knownRealityPlan;
-      world = applyRealityMutation(state.astraWorld, plan);
+      world = plan.type==='interaction'?applyWorldPlan(state.astraWorld,{operations:plan.operations},{turnId:txId,mode:'reality',input:turnInput,realityStatement:action.statement,enforceScope:true,timedInteraction:true}).world:applyRealityMutation(state.astraWorld, plan);
       beginPlayerSceneTurn(world,turnInput,{turnId:txId});
       captureWorldChanges(state.astraWorld, world, { turnId: txId, action: 'rewrite' });
-      ({ world, events } = advanceAstraWorld(world, 1));
+      ({ world, events } = advanceAstraWorld(world, Math.max(1,Math.ceil(plan.elapsedMinutes||1))));
       settleWorldRules(world, Object.values(ensureSimulation(world).events).filter(event => !previousCausalIds.has(event.id)));
       const outcome = world.history.find(entry => entry.id === plan.id);
-      narration = { blocks: [{ type: 'narr', text: realityOutcomeText(plan,outcome,world) }] };
+      narration = { blocks:plan.type==='interaction'?settledRealityBlocks(state.astraWorld,world):[{ type: 'narr', text: realityOutcomeText(plan,outcome,world) }] };
     } else if(mechanicalRpg){
       let draft=structuredClone(state.astraWorld);
       beginPlayerSceneTurn(draft,turnInput,{turnId:txId});recordHeardSpeech(draft,turnInput.speech);
@@ -379,6 +381,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       messages[0].content+='\nAdd top-level turnCue (same shape as one block) as the final concrete beat awaiting the player. Do not repeat the prior handoff, replace choices with system advice or finish the player action for them.';
       if(quick){messages[0].content=DIALOGUE_PROMPT+'\n'+DIALOGUE_OPERATIONS;messages[1].content='世界事实：'+JSON.stringify(quick);}
       if(action.type==='reality')messages.splice(0,messages.length,...realityAuthorMessages(world,packet,turnInput));
+      messages[0].content+='\n'+SCENE_CHOICES_PROMPT;
       const baseDraft = structuredClone(world);
       const localName = settings.mode === 'local' ? await localModelName(settings) : '';
       let raw = '';
@@ -463,7 +466,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           : validateAstraNarration(candidateWorld, parsed.blocks, candidatePacket);
         const livingTarget=conversation?.targetId&&candidateWorld.characters[conversation.targetId]?.alive;
         const answered = !turnInput.speech&&turnInput.action?{ok:true,errors:[]}:validateAstraConversation(checked.blocks,livingTarget?conversation:null,recent);
-        if (checked.ok && answered.ok && !inventedPlayerDialogue&&(!immediateReality||checked.blocks.length)) { world = candidateWorld; narration = { blocks: checked.blocks };if(checked.warnings?.length)world.flags.lastNarrativeWarnings={turnId:txId,codes:checked.warnings};break; }
+        if (checked.ok && answered.ok && !inventedPlayerDialogue&&(!immediateReality||checked.blocks.length)) { world = candidateWorld; narration = { blocks: checked.blocks,choices:parsed.choices };if(checked.warnings?.length)world.flags.lastNarrativeWarnings={turnId:txId,codes:checked.warnings};break; }
         if(settings.narrativePolicy==='playable'&&!inventedPlayerDialogue&&checked.errors.length
           &&checked.errors.every(error=>error.code==='second-person-protagonist')
           &&validateAstraConversation(checked.blocks,conversation,recent).ok){
@@ -542,6 +545,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       &&(knownRealityPlan||engineAction&&majorImpact||(action.type==='reality'||turnInput.action&&liveHere.size)&&!hasReply))
       world.flags.pendingAftermath=pendingAftermath(state.astraWorld,world,{turnId:txId,input:turnInput,actionType:action.type,impact,targetId:targetName?liveTarget.id:null});
     rememberPlayerScene(world,narration.blocks,{turnId:txId,input:turnInput});
+    rememberSceneChoices(world,narration.choices,{turnId:txId});
     if (signal?.aborted) throw new Error('本回合已取消。');
     narration = injectExactPlayerSpeech(narration, turnInput.speech);
     const committed = projectAstraWorld(state, world);

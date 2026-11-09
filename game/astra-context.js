@@ -159,7 +159,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
       rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
     },
     storyThreads:storyView(world),
-    recentExperiences:list(world.simulation?.experiences).filter(e=>e.actorId==='player'||e.targetIds?.includes('player')||e.locationId===locationId).slice(-4).map(e=>compact(e,['id','actorId','targetIds','kind','description','state','minute','locationId'],{description:240})),
+    recentExperiences:list(world.simulation?.experiences).filter(e=>e.actorId==='player'||e.targetIds?.includes('player')||e.locationId===locationId).slice(-4).map(e=>compact(e,['id','actorId','targetIds','kind','description','state','minute','locationId','durationMinutes','endsAt'],{description:240})),
     affordances: sceneAffordances(world),
     numericFacts, presentNpcs, departingNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),

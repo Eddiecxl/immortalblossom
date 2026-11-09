@@ -37,7 +37,7 @@
     }
   ],
   "vars": {
-    "CLOUD_VERSION": "4.2.10"
+    "CLOUD_VERSION": "4.2.11"
   },
   "observability": {
     "enabled": false

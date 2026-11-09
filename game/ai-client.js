@@ -247,6 +247,7 @@ export function parseNarration(text, requestType = 'world') {
   return {
     blocks,
     ...(data.worldPlan !== undefined ? { worldPlan: data.worldPlan } : {}),
+    ...(Array.isArray(data.choices)?{choices:data.choices.slice(0,6)}:{}),
     reaction: data.reaction && typeof data.reaction === 'object' ? { result: cleanText(data.reaction.result, 140) } : null,
     cast: Array.isArray(data.cast) ? data.cast.slice(0, 4).map(c => ({ name: cleanText(c?.name, 32),
       mood: cleanText(c?.mood, 40), condition: cleanText(c?.condition, 50), realm: cleanText(c?.realm, 30),

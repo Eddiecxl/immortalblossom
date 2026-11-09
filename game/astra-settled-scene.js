@@ -12,6 +12,7 @@ import { propagateCausality } from './astra-causality.js';
 import { validateAstraNarration,preparePlayableNarration } from './astra-validator.js';
 import {dialogueFrame,DIALOGUE_OPERATIONS}from './astra-dialogue.js';
 import { validateAstraConversation } from './astra-interaction.js';
+import {SCENE_CHOICES_PROMPT}from './astra-choices.js';
 
 const reactions = new Set(['social.observe', 'commitment.offer', 'commitment.respond', 'quest.create', 'quest.respond','story.propose','story.respond']);
 const short = value => String(value || '').replace(/[\u0000-\u001f]/gu, ' ').slice(0, 240);
@@ -63,6 +64,7 @@ export async function narrateSettledScene({ sourceWorld, world, state, input, se
     { role: 'user', content: '结算后的世界事实：' + JSON.stringify(author) + '\n只写当前余波与互动，不把人物私心念成任务介绍，不用结算通告代替场面。' }
   ];
   if(compact)messages[0].content='刚才的行动已经由Engine完成并保存。只写紧接着的余波：实际在场人物现在就回应，或出现我可观察的现场变化，不能只复述动作。2至4个短blocks，顺序可narr/dlg/sys/dlg；sys只在左侧按这一步显示，不替NPC说话。原命令不是要再次执行的动作，不再施法、收费、移动或推进时间。停在玩家可接话或选择之处，不代替玩家答应、躲避或出发。返回完整JSON {"blocks":[{"type":"dlg","name":"真实人物名","text":"人物反应"}],"worldPlan":{"operations":[]}}。'+DIALOGUE_OPERATIONS+'\n仅允许social.observe、commitment、quest、story反应操作，其他效果已执行，不能重复。\n'+ROLEPLAY_INTERPLAY_RULES+'\n最新命簿优先于旧对白：不制造未发生的生死、移动、物品交付或同意。不替主角决定，说话只写人物原话，旁白用我。数值只留在面板。系统回应已发生的上一拍，不提前透露后续。';
+  messages[0].content+='\n'+SCENE_CHOICES_PROMPT;
   let raw = '', errors = [], truncated = false;
   for (let attempt = 0; attempt < 2; attempt++) {
     cancelled(signal);
@@ -105,7 +107,7 @@ export async function narrateSettledScene({ sourceWorld, world, state, input, se
       const checked = settings.narrativePolicy==='playable'?preparePlayableNarration(applied.world,blocks,candidatePacket):validateAstraNarration(applied.world, blocks, candidatePacket);
       const answered = validateAstraConversation(checked.blocks, present(applied.world, targetId) ? conversation : null, recent);
       if (!checked.ok || !answered.ok) throw Error([...checked.errors.map(error => error.message), ...answered.errors].join('；'));
-      return { world: applied.world, blocks: checked.blocks };
+      return { world: applied.world, blocks: checked.blocks,choices:parsed.choices };
     } catch (error) {
       errors = [short(error.message) || '场景格式无效'];
       truncated = false;

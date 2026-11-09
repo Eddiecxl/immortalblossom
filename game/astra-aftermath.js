@@ -3,6 +3,7 @@ import {projectAstraWorld}from './astra-turn.js';
 import {narrateSettledScene}from './astra-settled-scene.js';
 import {rememberPlayerScene}from './astra-player-scene.js';
 import {selectAstraHandoff}from './astra-handoff.js';
+import {rememberSceneChoices}from './astra-choices.js';
 const pick=(v,keys)=>Object.fromEntries(keys.filter(k=>v?.[k]!==undefined).map(k=>[k,structuredClone(v[k])]));
 export function pendingAftermath(before,world,{turnId,input,actionType,impact,targetId}){
  const words=[input.speech,input.action].filter(Boolean).join(' '),target=Object.values(world.characters).find(n=>n.name&&words.includes(n.name));
@@ -25,6 +26,7 @@ export async function runAstraAftermath({source,settings={},aiClient,transcriptS
    transactionId:pending.id+':g'+pending.generation,aiClient,recent,signal,impact:pending.impact,handoff:selectAstraHandoff(state.astraWorld,{targetId:pending.targetId}),actionType:pending.actionType});
   if(signal?.aborted)throw Object.assign(Error('后续展示已停止，刚才的变化已保存。'),{code:'AI_CANCELLED'});
   authored.world.flags.pendingAftermath=null;rememberPlayerScene(authored.world,authored.blocks,{turnId:pending.id,input:{}});
+  rememberSceneChoices(authored.world,authored.choices,{turnId:pending.id});
   const committed=projectAstraWorld(state,authored.world,{advanceTurn:false});committed.updatedAt=new Date(now()).toISOString();
   committed.systemCompanion.dialogueMemory=[...(committed.systemCompanion.dialogueMemory||[]),...authored.blocks.filter(b=>b.type==='sys').map(b=>({role:'system',text:b.text}))].slice(-24);
   const turn={id:pending.id,kind:'world',phase:'aftermath',parentTurnId:pending.parentTurnId,blocks:authored.blocks,summary:'刚才行动的后续回应；没有再次发动或推进玩家回合。',createdAt:committed.updatedAt,provider:settings.provider||settings.mode||'groq',model:settings.model||''};

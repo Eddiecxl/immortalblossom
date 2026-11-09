@@ -3,6 +3,8 @@ import {createPendingTurns} from '../pending-turn.js';
 import {createSaveSession} from '../beta4/save-session.js';
 import {createAstraOpening} from '../astra-opening.js';
 import {canResolveAstraTurnLocally} from '../astra-turn.js';
+import {sceneChoices}from '../astra-choices.js';
+import {createLawQueueResume}from '../beta4/law-queue-resume.js';
 import {storyView} from '../astra-story.js';
 import {bindJourneyAi,journeyAiSettings,JOURNEY_PROVIDERS} from '../journey-ai.js';
 import {realmLabel} from '../astra-rules.js';
@@ -48,6 +50,9 @@ let transcript = [];
 let systemTranscript=[];
 let systemRevealEntries=null;
 let aftermathTimer=null;
+const lawQueue=createLawQueueResume({getState:()=>state,readPending:s=>pendingTurns.read(s),
+ isReady:()=>!turnBusy&&!document.hidden&&!dom.gameShell.hidden&&!saveUI?.isBusy()&&!experience.isWriting()&&turnFlow.state()==='idle',
+ submit:input=>submitTurn(input)});
 let activeDrawer = 'world';
 let toastTimer;
 const cpuCores = Number(navigator.hardwareConcurrency || 8);
@@ -196,26 +201,17 @@ function rebuildStory() {
 function renderSuggestions(suggestions = []) {
   dom.suggestionStrip.replaceChildren();
   if (state.astraWorld && !state.astraWorld.flags?.legacyMigration) {
-    const world = state.astraWorld;
-    const roads = world.edges.filter(edge => edge.from === world.player.locationId && !edge.closed && !world.locations[edge.to]?.destroyed)
-      .slice(0, 3).map(edge => ({ label: `前往${world.locations[edge.to].name}`, command: `前往${world.locations[edge.to].name}` }));
-    suggestions = [
-      { label: '观察周围', command: '观察周围的人和道路' },
-      { label: '打听消息', command: '向在场的人打听最近的消息' },
-      { label: '打坐修炼', command: '打坐修炼一小时' },
-      ...roads,
-      { label: '等待片刻', command: '在此等待一小时' }
-    ];
-    if(world.player.travel){const remaining=Math.max(1,Math.ceil(world.player.travel.arriveAt-world.minute));suggestions=[{label:'继续赶路',command:`等待${remaining}分钟`},{label:'观察路途',command:'观察路途'}];}
+    suggestions=sceneChoices(state.astraWorld);
   } else suggestions=state.campaign?.status==='active'?[...campaignGuidance(state).options,...suggestions]:[];
   for (const suggestion of suggestions.slice(0, 7)) {
     const button = node('button', '', suggestion.label || suggestion.command || '行动');
     button.type = 'button';
     button.addEventListener('click', () => {
-      dom.actionInput.value = suggestion.command || suggestion.label || '';
+      dom.speechInput.value=suggestion.speech||'';
+      dom.actionInput.value = suggestion.action || suggestion.command || (!suggestion.speech?suggestion.label:'') || '';
       const details = document.getElementById('actionDetails');
-      if (details) details.open = true;
-      dom.actionInput.focus();
+      if (details) details.open = Boolean(dom.actionInput.value);
+      (suggestion.speech?dom.speechInput:dom.actionInput).focus();
     });
     dom.suggestionStrip.append(button);
   }
@@ -457,6 +453,9 @@ function renderSystemDock() {
   }
   dom.systemFeed.scrollTop = dom.systemFeed.scrollHeight;
   if(aftermathWork()&&!turnBusy){const button=node('button','subtle-button','接上刚才的反应');button.onclick=()=>resumePendingAftermath();dom.systemFeed.append(button);}
+  if(pendingTurns.read(state)?.input?.invocation){const button=node('button','subtle-button','撤回待续敕令');button.id='withdrawPendingLaw';button.disabled=turnFlow.state()==='engine_commit';button.onclick=()=>{
+    if(turnFlow.state()==='engine_commit'){dom.systemLine.textContent='敕令正在落账，不能在此时撤回；结果会保存在命簿中。';return;}
+    lawQueue.stop();activeTurnController?.abort();pendingTurns.clear();dom.systemLine.textContent='待续敕令已撤回，尚未改写世界。';renderSystemDock();};dom.systemFeed.append(button);}
 }
 
 async function revealTurn(blocks,speech,{opening=false,previousMemory=[],animate=true}={}){
@@ -585,7 +584,7 @@ async function submitTurn(input) {
       signal:activeTurnController.signal,
       onProgress: (phase) => {
         if (phase === 'generating' || phase === 'repair') turnFlow.phase('ai_running');
-        if (phase === 'saving') turnFlow.phase('engine_commit');
+        if (phase === 'saving') {turnFlow.phase('engine_commit');const withdraw=document.getElementById('withdrawPendingLaw');if(withdraw)withdraw.disabled=true;}
         dom.systemLine.textContent = phase === 'validating'
           ? '正在核对人物、地点、时间、记忆与因果…'
           : phase === 'saving' ? '正在写入本地命簿与长期记忆…'
@@ -639,6 +638,9 @@ async function submitTurn(input) {
     // A fixed cloud route never substitutes another writing engine. If Groq
     // cannot produce a causally valid turn after same-provider retries/repair,
     // leave reality untouched and let the player retry without style-jumping.
+    if(playerTurn.invocation&&(result.code==='AI_QUEUE_PENDING'||result.status===429&&result.code!=='AI_INPUT_BUDGET')){
+      turnFlow.fail();lawQueue.schedule();dom.systemLine.textContent='敕令已记下，正在自动衔接；无需重复发动。';renderSystemDock();return 'queued';
+    }
     if(result.terminalJob||['AI_REALITY_PLAN_PENDING','AI_NARRATIVE_INVALID','AI_AUTH_FAILED','AI_NOT_CONFIGURED','AI_MODEL_UNAVAILABLE'].includes(result.code))pendingTurns.clear();
     throw Object.assign(new Error(result.error || '本回合尚未完成。'),{code:result.code,retryAfterMs:result.retryAfterMs});
   } catch (error) {
@@ -647,6 +649,7 @@ async function submitTurn(input) {
     dom.systemLine.textContent = `回合未提交：${message} · 输入与世界保持原样。`;
     showToast(message);
     audioEngine.sfx('danger');
+    return false;
   } finally {
     committedReveal=null;
     turnBusy = false;
@@ -694,7 +697,8 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
   if(aftermathWork())aftermathTimer=setTimeout(()=>resumePendingAftermath(),0);
   const pending=pendingTurns.read(state);
   if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;
-   dom.systemLine.textContent='上次等待的原话已恢复；落笔会继续同一云端请求。';}
+   if(pending.input.invocation){lawQueue.schedule();dom.systemLine.textContent='上次敕令已恢复，正在自动衔接。';}
+   else dom.systemLine.textContent='上次等待的原话已恢复；落笔会继续同一云端请求。';}
   if (!state.story.flags?.playerDead) dom.speechInput.focus();
 }
 
@@ -1174,6 +1178,7 @@ $('titleSettingsButton').onclick=()=>experience.openSettings();
 $('gameSettingsButton').onclick=()=>experience.openSettings();
 window.addEventListener('lx-open-settings',()=>experience.openSettings('ai'));
 document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&pendingTurns.read(state)?.input?.invocation)lawQueue.schedule();
   if(!document.hidden&&aftermathWork()&&!turnBusy&&!dom.gameShell.hidden)
     aftermathTimer=setTimeout(()=>resumePendingAftermath(),0);
 });

@@ -6,8 +6,10 @@ const DAY = 1440;
 // Only consequential, persistent characters get scheduled decisions. No frame loop.
 export function runNpcPlans(world, minute = world.minute) {
   const outcomes = [];
+  const occupied=new Set(Object.values(world.simulation?.experiences||{}).filter(e=>e.kind==='contact'&&e.endsAt>minute).flatMap(e=>[e.actorId,...(e.targetIds||[])]));
   for (const npc of Object.values(world.characters || {})) {
     if (!npc.alive || npc.travel) continue;
+    if(occupied.has(npc.id))continue;
     const cadence = npc.simulationImportance === 'background' ? 7 * DAY
       : npc.simulationImportance === 'regional' ? 6 * 60 : 20;
     const bucket = Math.floor(minute / cadence);

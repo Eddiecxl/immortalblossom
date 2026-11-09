@@ -61,6 +61,7 @@ function authorizeScope(world, op, context) {
         : op.type === 'effect.apply' ? [op.itemId] : [];
   if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟|忠诚|忠心|效忠|归顺|洗脑|服从|立场/u.test(input)) fail('本轮没有授权改写关系。');
   for (const id of targetIds) {
+    if(op.type==='experience.record'&&id==='player'&&op.actorId==='player')continue; // Imperative "亲某人" has an implicit player actor, not a new numeric target.
     const entity = context.scopeEntities?.[id] || requireEntity(world, id);
     if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name)||context.scopeReferents?.includes(id))) fail('言灵超出了明确指令中的目标范围。');
   }
