@@ -686,6 +686,10 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
   if (resetLog) {transcript = [];systemTranscript=[];}
   else await loadTranscript(state.journeyId);
   persist();
+  const pending=pendingTurns.read(state);
+  // Restore before revealing the composer. Restoring after the entrance
+  // animation would erase a new draft typed while the panels were appearing.
+  if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;}
   const showOpening=revealOpening&&transcript.length===1;
   if(showOpening)systemRevealEntries=[];
   if(showOpening)turnBusy=true;
@@ -695,8 +699,7 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
   }finally{if(showOpening){turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}}
   refreshAiBadge();
   if(aftermathWork())aftermathTimer=setTimeout(()=>resumePendingAftermath(),0);
-  const pending=pendingTurns.read(state);
-  if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;
+  if(pending){
    if(pending.input.invocation){lawQueue.schedule();dom.systemLine.textContent='上次敕令已恢复，正在自动衔接。';}
    else dom.systemLine.textContent='上次等待的原话已恢复；落笔会继续同一云端请求。';}
   if (!state.story.flags?.playerDead) dom.speechInput.focus();
