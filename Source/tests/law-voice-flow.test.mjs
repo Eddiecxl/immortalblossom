@@ -15,6 +15,9 @@ test('addressing a present character by name stays in the compact lane and retai
  const s=setup(),npc=s.astraWorld.characters['npc:lin-xiaoman'],p=compileAstraContext(s,'林小满，你现在怎么看我？',[]);p.playerTurn={speech:'林小满，你现在怎么看我？',action:''};p.conversation={targetId:npc.id};assert.ok(p.numericFacts.length);const frame=dialogueFrame(p);assert.ok(frame);assert.equal(frame.presentNpcs.find(n=>n.id===npc.id).wealth,npc.wealth);
  const outside=structuredClone(p);outside.numericFacts.push({id:'remote:unknown',wealth:500});assert.equal(dialogueFrame(outside),null);
 });
+test('short dialogue retains the last committed change so new loyalty cannot be mistaken for an invented shared past',()=>{
+ const s=setup(),p=compileAstraContext(s,'你现在怎么想？',[{userText:'言出法随：让林小满忠诚于我',blocks:[{type:'narr',text:'敕令生效，林小满对我的效忠已经改变。'}]},{userText:'你好',blocks:[{type:'narr',text:'我说：“你好”',engineOwnedPlayerSpeech:true},{type:'dlg',name:'林小满',text:'我在。'}]}]);p.playerTurn={speech:'你现在怎么想？',action:''};p.conversation={targetId:'npc:lin-xiaoman'};const frame=dialogueFrame(p);assert.ok(frame);assert.match(JSON.stringify(frame.recentTurns),/敕令生效/);assert.ok(!JSON.stringify(frame.recentTurns).includes('我说'));
+});
 test('the first player reply continues the actual opening encounter rather than marking the same NPC as a stranger again',async()=>{
  const opening=createAstraOpening(setup()),store=createTranscriptStore({memory:new Map()}),requests=[];await store.appendTurn(opening.state.journeyId,opening.turn);
  const runner=createAiTurnRunner({transcriptStore:store,aiClient:{narrate:async(_,req)=>{requests.push(req);return JSON.stringify({blocks:[{type:'dlg',name:'林小满',text:'药包还在你衣襟里，先摸摸看。'}],worldPlan:{operations:[]}});}}});

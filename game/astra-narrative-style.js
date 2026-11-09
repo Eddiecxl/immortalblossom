@@ -1,5 +1,5 @@
 // Shared by both the short dialogue and full author, without a second AI call.
-export const ROLEPLAY_INTERPLAY_RULES='人物按最新personality、relationships和当前打算接话，旧对白不是永恒性格；性格/效忠被言灵改写后必须体现新态度，保留未被改掉的经历。调皮不是刻薄，谨慎不是每句审问；问来由就回答自己知道的具体原因，未知只说未知，不编旧案。承接recentTurns，别换词复读相同威胁、拍门、催走；没有新事件不升级局势。系统是脑内同伴，可适时接话、吐槽、提醒或安慰，不必每轮发言，不教训每次闲聊。sys与dlg/narr在blocks中按发生顺序穿插：系统只接已出现的上一拍，不能预知后面的对白，不冒充NPC说话；最后仍把回应机会留给玩家。';
+export const ROLEPLAY_INTERPLAY_RULES='人物按最新personality、relationships和当前打算接话，旧对白不是永恒性格；性格/效忠被言灵改写后必须体现新态度，保留未被改掉的经历。态度的成因只能来自已记录事件；不能为新好感或效忠编造救命恩、旧交或交易。刚由言灵改写时延续这个改变，不倒填过去。调皮不是刻薄，谨慎不是每句审问；问来由就回答自己知道的具体原因，未知只说未知，不编旧案。承接recentTurns，别换词复读相同威胁、拍门、催走；没有新事件不升级局势。系统是脑内同伴，可适时接话、吐槽、提醒或安慰，不必每轮发言，不教训每次闲聊。sys与dlg/narr在blocks中按发生顺序穿插：系统只接已出现的上一拍，不能预知后面的对白，不冒充NPC说话；最后仍把回应机会留给玩家。';
 // Grounded dialogue guidance; avoid duplicating schema instructions.
 export const NARRATIVE_STYLE_RULES=[
   ROLEPLAY_INTERPLAY_RULES,
