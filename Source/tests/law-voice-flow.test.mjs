@@ -11,6 +11,10 @@ test('quick author remembers the actual recent NPC and system blocks instead of 
  const packet=compileAstraContext(state,'能解释一下吗',recent);packet.playerTurn={speech:'能解释一下吗',action:''};packet.conversation={targetId:'npc:lin-xiaoman'};
  const frame=dialogueFrame(packet);assert.ok(frame);assert.ok(JSON.stringify(frame.recentTurns).includes('顺路搭个伴'));assert.ok(JSON.stringify(frame.recentTurns).includes('先听完'));
 });
+test('addressing a present character by name stays in the compact lane and retains their real numeric facts',()=>{
+ const s=setup(),npc=s.astraWorld.characters['npc:lin-xiaoman'],p=compileAstraContext(s,'林小满，你现在怎么看我？',[]);p.playerTurn={speech:'林小满，你现在怎么看我？',action:''};p.conversation={targetId:npc.id};assert.ok(p.numericFacts.length);const frame=dialogueFrame(p);assert.ok(frame);assert.equal(frame.presentNpcs.find(n=>n.id===npc.id).wealth,npc.wealth);
+ const outside=structuredClone(p);outside.numericFacts.push({id:'remote:unknown',wealth:500});assert.equal(dialogueFrame(outside),null);
+});
 test('the first player reply continues the actual opening encounter rather than marking the same NPC as a stranger again',async()=>{
  const opening=createAstraOpening(setup()),store=createTranscriptStore({memory:new Map()}),requests=[];await store.appendTurn(opening.state.journeyId,opening.turn);
  const runner=createAiTurnRunner({transcriptStore:store,aiClient:{narrate:async(_,req)=>{requests.push(req);return JSON.stringify({blocks:[{type:'dlg',name:'林小满',text:'药包还在你衣襟里，先摸摸看。'}],worldPlan:{operations:[]}});}}});

@@ -13,6 +13,7 @@ export function dialogueFrame(packet){
   presentNpcs:(packet.presentNpcs||[]).map(n=>({...pick(n,['id','name','gender','personality','occupation','alive','locationId','homeId','travel','cultivation','physicalCondition','wealth','inventory','currentGoals','relationships']),memories:(n.memories||[]).slice(0,2).map(m=>typeof m==='string'?m:pick(m,['summary','source','confidence','beliefEvidence','minute'])),allowedSecrets:n.allowedSecrets||[]})),
   departingNpcs:packet.departingNpcs||[],items:(packet.items||[]).map(i=>pick(i,['id','name','quantity','ownerId','effects','description','lastTransfer'])),activeQuests:(packet.activeQuests||[]).map(q=>pick(q,['id','title','giverId','targetLocationId','state','summary','condition','deadline','requiredCommitmentIds'])),simulationFacts:packet.simulationFacts||{},
   recentTurns:(packet.recentTurns||[]).slice(-3).map(t=>({userText:t.userText,blocks:(t.blocks||t.dialogue||[]).filter(b=>b.type==='dlg'||b.type==='sys').slice(-3).map(b=>pick(b,['type','name','text']))})),
+  numericFacts:packet.numericFacts||[],
   recalledSummaries:(packet.recalledSummaries||[]).slice(0,1).map(r=>typeof r==='string'?r:pick(r,['summary','text'])),storyThreads:(packet.storyThreads||[]).filter(t=>t.ownerId===focus||t.locationId===packet.location?.id||[t.id,t.title].some(label=>label&&input.speech.includes(label))).map(t=>pick(t,['id','title','summary','state','ownerId','locationId','startsAt','dueAt','condition'])),
   settledStoryReplies:packet.settledStoryReplies||[],
   pacing:{mode:'conversation',listenerId:focus||null,rule:'短对白先回答当下问题。允许闲聊、停顿、休息；不重复旧威胁，不强推任务。实际到期事件仍发生。'},
@@ -20,8 +21,16 @@ export function dialogueFrame(packet){
  if((packet.recentImpacts||[]).some(row=>packet.minute-Number(row.atMinute||0)<=5))return null;
  // Scope dependencies involving places or other numeric entities require the
  // original packet; never drop those bindings just to fit the quick lane.
- if((packet.numericFacts||[]).length||(packet.simulationFacts?.commitments||[]).some(c=>c.condition)||(packet.activeQuests||[]).some(q=>q.condition))return null;
- return JSON.stringify(frame).length<=3600?frame:null;
+ const presentIds=new Set(['player',...(packet.presentNpcs||[]).map(n=>n.id)]);
+ // Naming a listener adds a numericFacts alias of their already preserved
+ // alive/wealth fields. That is not a remote dependency or a complex action.
+ if((packet.numericFacts||[]).some(n=>!presentIds.has(n.id))||(packet.simulationFacts?.commitments||[]).some(c=>c.condition)||(packet.activeQuests||[]).some(q=>q.condition))return null;
+ // Storage provenance is not a personality fact. Keep explicitly referenced
+ // IDs, while removing opaque turn UUIDs from otherwise identical appraisals.
+ frame.simulationFacts={...frame.simulationFacts,
+  relations:(frame.simulationFacts.relations||[]).map(r=>pick(r,['fromId','toId','kind','active','weight',...(r.id&&input.speech.includes(r.id)?['id']:[])])),
+  beliefs:(frame.simulationFacts.beliefs||[]).map(b=>pick(b,['holderId','mode','confidence','appraisal','meaning','summary',...(b.eventId&&input.speech.includes(b.eventId)?['eventId']:[])]))};
+ return JSON.stringify(frame).length<=4400?frame:null;
 }
 export const DIALOGUE_PROMPT='Roleplay 落仙 in natural Chinese. Answer this exact speech first; idle chat, jokes, rest and reflection are valid. Usually 1-2 short dlg blocks, at most one brief useful narr; a brief sys may follow the relevant beat. No repeated scenery, forced danger or task pitch. The player controls their choices. Memories are evidence, plans are not facts. Preserve identity, location, life and ownership. Only present living NPCs speak. Narration uses 我. Return JSON {blocks:[{type:"dlg|narr|sys",name:"real speaker for dlg",text:"Chinese"}],worldPlan:{operations:[]}}. Speech does not automatically perform physical actions. No effects or unrecorded changes. A natural pause is valid; do not invent a crisis. Concrete future invitations/plans you propose MUST use story.propose with real venue/homeId and time:{dayOffset,hour,minute,durationMinutes} so Engine computes the date; never invent an unregistered venue or accept for the player. Story IDs are new stable ASCII identifiers, not character IDs.\n'+ROLEPLAY_INTERPLAY_RULES;
 export const DIALOGUE_OPERATIONS='Optional operations (each needs type and actual IDs): social.observe {observerId,subjectId:"player",meaning,evidence:exact current words,valence:-1..1,reason}; commitment.offer {offer:{id,fromId,toId:"player",itemId,condition?,durationMinutes?}} requires real NPC ownership; commitment.respond {commitmentId,actorId,response:"accept|decline|withdraw",evidence} requires actual player consent. quest.create {quest:{id,title,summary,giverId,targetLocationId,condition,reward}}; quest.respond {questId,actorId,response,evidence}. condition:{op:"eq|ne|lt|lte|gt|gte|exists",left:{entityId,field},right:constant}; all/any use conditions. story.propose {thread:{id,kind:"invitation|plan|clue|foreshadow",title,summary,ownerId,locationId,time?:{dayOffset,hour,minute,durationMinutes},startsAt?,dueAt?,condition?}} records a future intention only; story.respond {id,response:"accept|decline|withdraw",evidence} handles a known thread. No automatic player action, invented items or paid rewards.';
