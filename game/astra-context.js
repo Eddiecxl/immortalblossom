@@ -140,7 +140,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
     },
     location: compact(current, ['id', 'name', 'status', 'destroyed', 'closed', 'regionId', 'population', 'risk', 'description'], { description: 140 }),
     nearbyLocations, nearbyEdges,
-    player: compact(player, ['id', 'name', 'gender', 'locationId', 'travel', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory'], {}),
+    player: compact(player, ['id', 'name', 'gender', 'locationId', 'travel', 'cultivation', 'realm', 'health', 'maxHealth', 'wealth', 'safety', 'hp', 'qi', 'spirit', 'skills', 'inventory','invincible'], {}),
     items: list(world.items).filter(item => !item.destroyed && (item.ownerId === 'player' || npcIds.includes(item.ownerId)))
       .sort((a,b)=>refScore(b,[String(b.name||'').split('·')[0]])-refScore(a,[String(a.name||'').split('·')[0]])).slice(0, 16)
       .map(item => ({...compact(item, ['id', 'name', 'quantity', 'ownerId', 'effects', 'description']),
@@ -159,6 +159,7 @@ export function compileAstraContext(state, input, recentTurns = [], options = {}
       rules: list(world.simulation?.rules).slice(-4).map(row => ({ id: row.id, trigger: row.trigger, version: row.version }))
     },
     storyThreads:storyView(world),
+    recentExperiences:list(world.simulation?.experiences).filter(e=>e.actorId==='player'||e.targetIds?.includes('player')||e.locationId===locationId).slice(-4).map(e=>compact(e,['id','actorId','targetIds','kind','description','state','minute','locationId'],{description:240})),
     affordances: sceneAffordances(world),
     numericFacts, presentNpcs, departingNpcs, activeQuests, dueEvents, history, memories, rumors,
     terminal: compact(world.terminal, ['ended', 'ending', 'minute', 'type', 'kind', 'state', 'active', 'summary'], { summary: 120 }),

@@ -47,6 +47,7 @@ let state = null;
 let transcript = [];
 let systemTranscript=[];
 let systemRevealEntries=null;
+let aftermathTimer=null;
 let activeDrawer = 'world';
 let toastTimer;
 const cpuCores = Number(navigator.hardwareConcurrency || 8);
@@ -114,6 +115,7 @@ function runnerSettings() {
   return {
     ...settings,
     renderSettledScenes:false,
+    autoAftermath:true,
     narrativePolicy:'playable',
     fastDialogue:true,
     provider: profileProvider,
@@ -436,6 +438,10 @@ async function applyInventoryAction(name,action,itemId){
   finally{turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}
 }
 
+function aftermathWork(){
+  return state?.astraWorld?.flags?.pendingAftermath||
+    (state?.transactionJournal?.turn?.phase==='aftermath'?{generation:0}:null);
+}
 function renderSystemDock() {
   if (!dom.systemFeed || !state) return;
   const memory = systemRevealEntries!==null?systemRevealEntries.slice(-20):systemTranscript.length?systemTranscript.slice(-20):(state.systemCompanion?.dialogueMemory||[]);
@@ -450,14 +456,54 @@ function renderSystemDock() {
     }
   }
   dom.systemFeed.scrollTop = dom.systemFeed.scrollHeight;
+  if(aftermathWork()&&!turnBusy){const button=node('button','subtle-button','接上刚才的反应');button.onclick=()=>resumePendingAftermath();dom.systemFeed.append(button);}
 }
 
 async function revealTurn(blocks,speech,{opening=false,previousMemory=[]}={}){
   systemRevealEntries=opening?[]:structuredClone(systemTranscript.length?systemTranscript:previousMemory);
   renderSystemDock();
-  try{await experience.renderBlocks(blocks,speech,{onRowComplete:row=>{
-    if(row.type==='sys'){systemRevealEntries.push({role:'system',text:row.text});renderSystemDock();}
+  try{await experience.renderBlocks(blocks,speech,{onSystemStart:row=>{
+    const entry={role:'system',text:''};systemRevealEntries.push(entry);renderSystemDock();
+    return {element:dom.systemFeed.lastElementChild,onProgress:text=>{entry.text=text;dom.systemFeed.scrollTop=dom.systemFeed.scrollHeight;}};
+  },onRowComplete:row=>{
+    if(row.type==='sys')systemRevealEntries.at(-1).text=row.text;
   }});}finally{systemTranscript=systemRevealEntries||[];systemRevealEntries=null;renderSystemDock();}
+}
+
+async function resumePendingAftermath({insideTurn=false}={}){
+  clearTimeout(aftermathTimer);aftermathTimer=null;
+  const pending=aftermathWork();
+  if(!pending||!insideTurn&&(turnBusy||dom.gameShell.hidden||document.hidden))return;
+  const journeyId=state.journeyId,revision=state.revision;
+  if(!insideTurn){turnBusy=true;activeTurnController=new AbortController();renderHud();}
+  try{
+    dom.systemLine.textContent='刚才的事已经发生，人物正在回应…';
+    const result=await aiRunner.runAftermath({state,settings:runnerSettings(),signal:activeTurnController?.signal});
+    if(state?.journeyId!==journeyId||state.revision!==revision)return;
+    if(result.stale){
+      if(result.currentState){state=ensureV31Canon(result.currentState,'ai');await loadTranscript(state.journeyId);rebuildStory();}
+      dom.systemLine.textContent='命簿已有更新，旧回应没有覆盖新进度。';return {stale:true};
+    }
+    if(result.ok){
+      state=ensureV31Canon(result.state,'ai');persist();await saveSession.committed(state);
+      if(result.blocks?.length&&!dom.gameShell.hidden){
+        const reveal=revealTurn(result.blocks,'',{previousMemory:systemTranscript});committedReveal=reveal;await reveal;committedReveal=null;
+        transcript.push({input:'',speech:'',action:'',blocks:result.blocks,summary:result.turn?.summary||'',at:formatClock(state),turn:state.memory.turnCount,phase:'aftermath'});transcript=transcript.slice(-240);
+      }
+    }else{
+      if(result.historyPending||result.narrativeInvalid||result.terminalJob){
+        state=ensureV31Canon(result.state,'ai');
+        if(!result.historyPending)await saveSession.committed(state);
+      }
+      dom.systemLine.textContent='刚才的变化已保存，后续回应会自动接上。';
+      const next=aftermathWork();
+      if(next&&(next.generation||0)<2&&result.code!=='AI_CANCELLED'&&result.code!=='SAVE_CONFLICT')aftermathTimer=setTimeout(()=>resumePendingAftermath(),4000);
+    }
+  }catch{
+    dom.systemLine.textContent='刚才的变化已保存，可以接上人物的后续回应。';
+  }finally{
+    if(!insideTurn){turnBusy=false;activeTurnController=null;committedReveal=null;renderAll({suggestions:getAvailableActions(state)});}
+  }
 }
 
 function rememberRealtimeSystem(text) {
@@ -507,6 +553,8 @@ async function submitTurn(input) {
   if (state.story.flags?.playerDead||state.astraWorld?.terminal?.ended||(!state.astraWorld && state.campaign?.status==='complete')) { showToast('此世已终；系统仍可交谈，返回标题可重新启程'); audioEngine.sfx('death'); return; }
   const beforeState = structuredClone(state);
   const playerTurn = normalizePlayerTurnInput(input);
+  const savedPending=pendingTurns.read(state);
+  if(savedPending?.input?.invocation&&savedPending.input.speech===playerTurn.speech&&savedPending.input.action===playerTurn.action)playerTurn.invocation=true;
   if (playerTurnIsEmpty(playerTurn)) {
     showToast('至少填写“说话”或“动作”其中一项');
     return;
@@ -541,7 +589,7 @@ async function submitTurn(input) {
         dom.systemLine.textContent = phase === 'validating'
           ? '正在核对人物、地点、时间、记忆与因果…'
           : phase === 'saving' ? '正在写入本地命簿与长期记忆…'
-          : phase === 'repair' ? '叙事结构未通过，正在由同一 AI 修正…'
+          : phase === 'repair' ? '正在接续眼前的变化与人物回应…'
           : '叙事 AI 正在生成这一回合…';
       }
     });
@@ -562,13 +610,14 @@ async function submitTurn(input) {
       committedReveal=revealTurn(result.blocks,playerTurn.speech,{previousMemory:beforeState.systemCompanion?.dialogueMemory||[]});
       renderHud();if(!dom.worldDrawer.hidden)renderDrawer(activeDrawer);
       await committedReveal;committedReveal=null;
-      experience.showEvents(beforeState,state);
       transcript.push({
         input: serialized, speech: playerTurn.speech, action: playerTurn.action,
         blocks: result.blocks, summary: result.turn?.summary || '', at: formatClock(state), turn: state.memory.turnCount,
         provider: result.turn?.provider || '', model: result.turn?.model || ''
       });
       transcript = transcript.slice(-240);
+      const follow=await resumePendingAftermath({insideTurn:true});if(follow?.stale)return true;
+      experience.showEvents(beforeState,state);
       const liveReaction = realtimeSystemReaction(beforeState, state, result.blocks);
       if (liveReaction) rememberRealtimeSystem(liveReaction);
       persist();
@@ -583,13 +632,14 @@ async function submitTurn(input) {
         : sticky?.provider
         ? `命簿已续 · ${V31_PROVIDER_DEFAULTS[sticky.provider]?.label || sticky.provider}`
         : 'AI 与游戏规则已同步。';
+      if(aftermathWork())dom.systemLine.textContent='变化已经生效，人物的后续回应会自动接上。';
       return true;
     }
 
     // A fixed cloud route never substitutes another writing engine. If Groq
     // cannot produce a causally valid turn after same-provider retries/repair,
     // leave reality untouched and let the player retry without style-jumping.
-    if(result.terminalJob||['AI_NARRATIVE_INVALID','AI_AUTH_FAILED','AI_NOT_CONFIGURED','AI_MODEL_UNAVAILABLE'].includes(result.code))pendingTurns.clear();
+    if(result.terminalJob||['AI_REALITY_PLAN_PENDING','AI_NARRATIVE_INVALID','AI_AUTH_FAILED','AI_NOT_CONFIGURED','AI_MODEL_UNAVAILABLE'].includes(result.code))pendingTurns.clear();
     throw Object.assign(new Error(result.error || '本回合尚未完成。'),{code:result.code,retryAfterMs:result.retryAfterMs});
   } catch (error) {
     if (!committedTurn) turnFlow.fail();
@@ -641,6 +691,7 @@ async function enterGame(nextState, { resetLog = false, revealOpening = false } 
     if(showOpening)await revealTurn(transcript[0].blocks||[],transcript[0].speech,{opening:true});
   }finally{if(showOpening){turnBusy=false;renderAll({suggestions:getAvailableActions(state)});}}
   refreshAiBadge();
+  if(aftermathWork())aftermathTimer=setTimeout(()=>resumePendingAftermath(),0);
   const pending=pendingTurns.read(state);
   if(pending){dom.speechInput.value=pending.input.speech;dom.actionInput.value=pending.input.action;
    dom.systemLine.textContent='上次等待的原话已恢复；落笔会继续同一云端请求。';}
@@ -794,7 +845,7 @@ async function submitLaw() {
   dom.lawCostHint.textContent = estimateLawScale(wish) + ' · 正在敕令世界…';
   dom.lawLayer.hidden=true;
   try {
-    const committed=await submitTurn({ speech: '', action: `言出法随：${wish}` });
+    const committed=await submitTurn({ speech: '', action: `言出法随：${wish}`,invocation:true });
     if(committed)dom.lawInput.value='';
     else{dom.lawInput.value=wish;dom.lawLayer.hidden=false;dom.lawCostHint.textContent='本次尚未完成，敕令原文已保留，可再次发动。';}
   } finally {
@@ -1122,6 +1173,10 @@ experience = createExperience({aiClient,onAiSettings:()=>window.dispatchEvent(ne
 $('titleSettingsButton').onclick=()=>experience.openSettings();
 $('gameSettingsButton').onclick=()=>experience.openSettings();
 window.addEventListener('lx-open-settings',()=>experience.openSettings('ai'));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&aftermathWork()&&!turnBusy&&!dom.gameShell.hidden)
+    aftermathTimer=setTimeout(()=>resumePendingAftermath(),0);
+});
 const savedAtLoad = safeLoad();
 dom.continueJourneyButton.hidden = !savedAtLoad;
 

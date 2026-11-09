@@ -19,9 +19,9 @@ test('system projection is called only when that block has actually finished, in
  const doc={hidden:false,createElement(tag){return {...element(),tag};},createTextNode(text){return {text};}},target={...element(),ownerDocument:doc,scrollTop:0,scrollHeight:0,clientHeight:0};let time=0;const calls=[];
  const player=createChroniclePlayer({target,status:element(),skipButton:element(),pauseButton:element(),latestButton:element(),getSpeed:()=>0,frame:fn=>{queueMicrotask(()=>fn(time+=16));return time;}});
  const rows=[{type:'dlg',name:'甲',text:'吃过了。'},{type:'sys',text:'你倒是会挑时候。'},{type:'dlg',name:'甲',text:'先走，路上再说。'}];
- await player.render(rows,{onRowComplete:row=>{assert.equal(target.children.at(-1).querySelector('p').textContent,row.text);calls.push(row.type);if(row.type==='dlg'&&calls.length===1)assert.equal(target.children.length,1);}});assert.deepEqual(calls,['dlg','sys','dlg']);
+ const side=element();await player.render(rows,{onSystemStart:row=>{assert.equal(target.children.length,1);const p=doc.createElement('p');side.append(p);return {element:p};},onRowComplete:row=>{assert.equal((row.type==='sys'?side:target).children.at(-1).querySelector?.('p')?.textContent||(row.type==='sys'?side.children.at(-1).textContent:''),row.text);calls.push(row.type);if(row.type==='dlg'&&calls.length===1)assert.equal(target.children.length,1);}});assert.deepEqual(calls,['dlg','sys','dlg']);assert.equal(target.children.length,2);assert.equal(side.children.length,1);
  target.children=[];const first=player.render(rows,{animate:false}),second=player.render(rows,{animate:false});
- assert.deepEqual(target.children.map(el=>el.querySelector('p').textContent),[...rows,...rows].map(r=>r.text));await Promise.all([first,second]);
+ assert.deepEqual(target.children.map(el=>el.querySelector('p').textContent),[...rows,...rows].filter(r=>r.type!=='sys').map(r=>r.text));await Promise.all([first,second]);
 });
 test('pausing or a long background frame cannot dump the unread paragraph on resume',()=>{
  const play=createTextPlayback('一二三四五六七八九十'.repeat(20),{interval:50});

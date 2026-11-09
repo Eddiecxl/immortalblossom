@@ -26,7 +26,7 @@ test('a quota wait during the settled scene preserves the uncommitted law and cu
  assert.equal(JSON.stringify(result.state.astraWorld),JSON.stringify(start.state.astraWorld));
 });
 
-test('semantic arrival validates its persistent resident and gives repair the candidate cast without replaying the plan',async()=>{
+test('semantic arrival commits its real resident before prose repair and automatically authors the actual arrival cast',async()=>{
  const start=createAstraOpening(createGameState('顾长生','ai',()=> 'review-arrival'));
  const w=start.state.astraWorld,to=Object.values(w.locations).find(l=>l.id!==w.player.locationId&&l.population>0&&!l.destroyed);
  for(const npc of Object.values(w.characters))if(npc.locationId===to.id){npc.locationId=w.player.locationId;npc.travel=null;}
@@ -38,21 +38,22 @@ test('semantic arrival validates its persistent resident and gives repair the ca
    aiClient:{narrate:async(_,request)=>{
     calls++;
     if(calls===1)return JSON.stringify({worldPlan:{operations},blocks:[{type:'narr',text:`眼前景物一换，我已站在${to.name}。周围空无一人。`}]});
-    assert.match(JSON.stringify(request.messages),/候选抵达事实/u);
     assert.ok(JSON.stringify(request.messages).includes(residentId),'repair must know the resident stable ID');
-    return JSON.stringify({worldPlan:{operations},blocks:[{type:'narr',text:`眼前景物一换，我已站在${to.name}。近旁的人忽然停下脚步，向我看过来。`}]});
+    const line=request.messages[1].content.split('\n')[0],facts=JSON.parse(line.slice(line.indexOf('{'))),resident=facts.presentNpcs.find(n=>n.id===residentId);
+    return JSON.stringify({worldPlan:{operations:[]},blocks:[{type:'dlg',name:resident.name,text:'你怎么突然出现在这里？可还站得稳？'}]});
    }}});
-  const result=await runner.runWorld({state:start.state,input:{action:`言出法随：把我传送到${to.name}，并把我的财富改为100`},settings:{mode},transactionId:'semantic-arrival'});
-  assert.equal(result.ok,true,result.error);assert.equal(calls,2);assert.equal(saves,1);
+  const result=await runner.runWorld({state:start.state,input:{action:`言出法随：把我传送到${to.name}，并把我的财富改为100`},settings:{mode,autoAftermath:true},transactionId:'semantic-arrival'});
+  assert.equal(result.ok,true,result.error);assert.equal(calls,1);assert.equal(saves,1);
   const final=result.state.astraWorld;
   assert.equal(final.characters[residentId].locationId,to.id);assert.equal(final.player.wealth,100);
   assert.equal(final.history.filter(e=>e.id==='scene:semantic-arrival').length,1);
   assert.equal(final.simulation.transactions['semantic-arrival'].operations,1);
+  const after=await runner.runAftermath({state:result.state,settings:{mode}});assert.equal(after.ok,true,after.error);assert.equal(calls,2);assert.equal(after.state.astraWorld.player.locationId,to.id);assert.equal(after.state.memory.turnCount,result.state.memory.turnCount);
   assert.equal(JSON.stringify(start.state),before,'no failed candidate may mutate the source');
  }
 });
 
-test('a failed semantic-arrival repair keeps both movement and resident creation uncommitted',async()=>{
+test('failed arrival prose cannot undo a completed teleport or its persistent resident',async()=>{
  const start=createAstraOpening(createGameState('顾长生','ai',()=> 'review-arrival'));
  const w=start.state.astraWorld,to=Object.values(w.locations).find(l=>l.id!==w.player.locationId&&l.population>0&&!l.destroyed);
  for(const npc of Object.values(w.characters))if(npc.locationId===to.id){npc.locationId=w.player.locationId;npc.travel=null;}
@@ -63,7 +64,8 @@ test('a failed semantic-arrival repair keeps both movement and resident creation
    return JSON.stringify({worldPlan:{operations:[{type:'entity.update',targetId:'player',changes:{locationId:to.id,wealth:100}}]},
     blocks:[{type:'narr',text:`我落在${to.name}。周围空无一人。`}]});
   }}});
- const result=await runner.runWorld({state:start.state,input:{action:`言出法随：把我传送到${to.name}，并把我的财富改为100`},settings:{mode:'groq'},transactionId:'semantic-arrival-failed'});
- assert.equal(result.ok,false);assert.equal(result.code,'AI_RATE_LIMIT');assert.equal(saves,0);assert.equal(calls,2);
- assert.equal(JSON.stringify(start.state),before);assert.equal(JSON.stringify(result.state.astraWorld),JSON.stringify(w));
+ const result=await runner.runWorld({state:start.state,input:{action:`言出法随：把我传送到${to.name}，并把我的财富改为100`},settings:{mode:'groq',autoAftermath:true},transactionId:'semantic-arrival-failed'});
+ assert.equal(result.ok,true,result.error);assert.equal(saves,1);assert.equal(calls,1);assert.equal(result.state.astraWorld.player.locationId,to.id);
+ const after=await runner.runAftermath({state:result.state,settings:{mode:'groq'}});assert.equal(after.ok,false);assert.equal(after.code,'AI_RATE_LIMIT');assert.equal(after.effectCommitted,true);assert.equal(calls,2);assert.equal(saves,1);
+ assert.equal(JSON.stringify(start.state),before);assert.deepEqual(after.state.astraWorld,result.state.astraWorld);
 });

@@ -194,6 +194,13 @@ function normalizeEffects(effects) {
   return output;
 }
 
+// A complete executable proposal is independent of its optional display prose.
+// This still requires the entire JSON document; never salvage a truncated tail.
+export function parseWorldPlanProposal(text) {
+  let data;try{data=JSON.parse(stripTrailingJsonCommas(findJsonObject(text)));}catch{throw aiFormatError();}
+  if(!data||typeof data!=='object'||Array.isArray(data)||!data.worldPlan)throw aiFormatError();
+  return {blocks:[],worldPlan:data.worldPlan,effects:data.effects||{}};
+}
 export function parseNarration(text, requestType = 'world') {
   let data;
   try {

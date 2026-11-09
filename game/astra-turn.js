@@ -1,5 +1,5 @@
 import { migrateGameState } from './game-state.js';
-import { parseNarration } from './ai-client.js';
+import { parseNarration,parseWorldPlanProposal } from './ai-client.js';
 import { normalizePlayerTurnInput, serializePlayerTurn, injectExactPlayerSpeech, stripExactPlayerSpeechEcho, hasInventedPlayerDialogue } from './player-turn.js';
 import { advanceAstraWorld } from './astra-scheduler.js';
 import { compileAstraContext } from './astra-context.js';
@@ -31,6 +31,7 @@ import {reconcileMainStory} from './astra-main-story.js';
 import {dialogueFrame,DIALOGUE_PROMPT,DIALOGUE_OPERATIONS} from './astra-dialogue.js';
 import {reconcileStories,settleExplicitStoryReply} from './astra-story.js';
 import {realityAuthorMessages} from './astra-reality-prompt.js';
+import {pendingAftermath} from './astra-aftermath.js';
 
 const clean = (value, max = 2000) => String(value ?? '').replace(/[\u0000-\u001f]/gu, ' ').trim().slice(0, max);
 let localModelNamePromise;
@@ -65,7 +66,8 @@ const questVerbs = {
 function mechanicalAction(world, input, narrativePolicy) {
   const action = clean(input.action, 1800);
   const speech = clean(input.speech, 1200);
-  const statement = explicitRealityStatement(action) || explicitRealityStatement(speech);
+  const statement = input.invocation===true&&action?'言出法随：'+action.replace(/^言出法随\s*[:：]?\s*/u,'').replace(/[？?]+$/u,'')
+    :explicitRealityStatement(action) || explicitRealityStatement(speech);
   if (statement) return { type: 'reality', statement };
   if (action && (isSpeculativeInput(action) || /[‘'『《]/u.test(action)))
     return { type: 'speech', minutes: 5 };
@@ -121,6 +123,8 @@ export function canResolveAstraTurnLocally(state,input){
  }catch{return false;}
 }
 function settledRealityBlocks(before,after){
+ const experiences=Object.values(after.simulation?.experiences||{}).filter(e=>!before.simulation?.experiences?.[e.id]);
+ if(experiences.length)return experiences.map(e=>({type:'narr',text:e.description.startsWith(after.player.name)?'我'+e.description.slice(after.player.name.length):e.description}));
  const blocks=conciseEngineAftermath(before,after,{actionType:'reality'});
  const created=Object.values(after.items).filter(item=>!before.items[item.id]&&item.ownerId===after.player.id&&!item.destroyed);
  if(created.length)blocks.push({type:'narr',text:`${created.map(item=>item.name).join('、')}已经出现在我的行囊里，可以打开行囊查看和使用。`});
@@ -176,7 +180,7 @@ function recordHeardSpeech(world, speech, targetId = null) {
     summary: `玩家在场说话；${witnesses.length}人听见。`, playerWitnessed: true });
 }
 
-export function projectAstraWorld(source, world) {
+export function projectAstraWorld(source, world,{advanceTurn=true}={}) {
   const state = structuredClone(source);
   state.astraWorld = world;
   state.player.name = world.player.name;
@@ -207,8 +211,7 @@ export function projectAstraWorld(source, world) {
   }
   state.quests.active = Object.values(world.quests || {}).filter(quest => ['active','mutated'].includes(quest.state))
     .map(quest => ({ id: quest.id, progress: 0, target: 1 }));
-  state.stats.turns += 1;
-  state.memory.turnCount += 1;
+  if(advanceTurn){state.stats.turns += 1;state.memory.turnCount += 1;}
   return state;
 }
 
@@ -286,8 +289,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         : `我在${scene.locationName||world.locations[world.player.locationId]?.name||'此地'}停留了${action.minutes}分钟。`},
         ...events.filter(e=>e.playerWitnessed&&e.summary).slice(-6).map(e=>({type:'sys',text:e.summary}))]};
     } else {
-      const conversation = action.type !== 'reality' && !turnInput.action && turnInput.speech
-        ? resolveAstraConversation(state.astraWorld, turnInput.speech, recent) : null;
+      const conversation = resolveAstraConversation(state.astraWorld, turnInput.speech||turnInput.action, recent);
       const draft = structuredClone(state.astraWorld);
       beginPlayerSceneTurn(draft,turnInput,{turnId:txId});
       ensureSimulation(draft);
@@ -416,17 +418,20 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         onProgress('validating');
         let parsed;
         try { parsed = parseNarration(raw, 'world'); }
-        catch (error) { errors = [clean(error?.message || '叙事格式无效', 100)]; continue; }
+        catch (error) {
+          if(action.type==='reality'){try{parsed=parseWorldPlanProposal(raw);}catch{errors=[clean(error?.message||'提案格式未完整',100)];continue;}}
+          else{errors = [clean(error?.message || '叙事格式无效', 100)]; continue;}
+        }
         parsed.blocks = stripExactPlayerSpeechEcho(parsed.blocks, turnInput.speech);
         const inventedPlayerDialogue=hasInventedPlayerDialogue(parsed.blocks, turnInput.speech);
-        const immediateReality=action.type==='reality'&&settings.renderSettledScenes===false;
+        const immediateReality=action.type==='reality';
         if (inventedPlayerDialogue&&!immediateReality) { errors = ['擅自代玩家说话']; continue; }
         if (Object.keys(parsed.effects || {}).length) { errors = ['模型试图提出 Engine 效果']; continue; }
         let candidateWorld = structuredClone(baseDraft);
         try {
           if (action.type === 'reality' && (!parsed.worldPlan?.operations?.length
             || parsed.worldPlan.operations.some(op=>op.type==='concept.defer')))
-            throw new Error('这次是明确言出法随，必须把整个指令转成可执行的操作；不能只记概念或只做一部分。用实体、关系、物品效果与规则表达完整结果。');
+            throw new Error('明确言灵须完整执行，不用concept.defer。数值用实体操作；接触、姿态等无数值经历用experience.record真实落账，不能因没有数值变化留空，也不必把人物改成受伤。');
           if (parsed.worldPlan) {
             const applied = applyWorldPlan(baseDraft, parsed.worldPlan, { turnId: txId,
               mode: action.type === 'reality' ? 'reality' : 'ordinary', input: turnInput,
@@ -456,8 +461,9 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
         const checked = settings.narrativePolicy==='playable'
           ? preparePlayableNarration(candidateWorld,parsed.blocks,candidatePacket)
           : validateAstraNarration(candidateWorld, parsed.blocks, candidatePacket);
-        const answered = validateAstraConversation(checked.blocks, conversation, recent);
-        if (checked.ok && answered.ok && !inventedPlayerDialogue) { world = candidateWorld; narration = { blocks: checked.blocks };if(checked.warnings?.length)world.flags.lastNarrativeWarnings={turnId:txId,codes:checked.warnings};break; }
+        const livingTarget=conversation?.targetId&&candidateWorld.characters[conversation.targetId]?.alive;
+        const answered = !turnInput.speech&&turnInput.action?{ok:true,errors:[]}:validateAstraConversation(checked.blocks,livingTarget?conversation:null,recent);
+        if (checked.ok && answered.ok && !inventedPlayerDialogue&&(!immediateReality||checked.blocks.length)) { world = candidateWorld; narration = { blocks: checked.blocks };if(checked.warnings?.length)world.flags.lastNarrativeWarnings={turnId:txId,codes:checked.warnings};break; }
         if(settings.narrativePolicy==='playable'&&!inventedPlayerDialogue&&checked.errors.length
           &&checked.errors.every(error=>error.code==='second-person-protagonist')
           &&validateAstraConversation(checked.blocks,conversation,recent).ok){
@@ -477,7 +483,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
           degradation = { degraded: true, code: 'AI_GROUNDED_RECOVERY', reasons: errors.slice(0,3) };
           narration.blocks.push({ type:'sys',text:'叙事 AI 本轮未能给出有效回复。系统依据命簿作了有限回应；没有替 AI 创建新委托。可在设置中检查模型，或继续交谈。' }); }
       }
-      if (!narration) throw Object.assign(new Error('AI生成的后续仍与已记录事实冲突；这不是你的输入不被允许。原话和存档已保留，可以重试。'), { code: 'AI_NARRATIVE_INVALID',details:errors });
+      if (!narration) throw Object.assign(new Error(action.type==='reality'?'敕令原文已保留，AI还未完成可执行提案；可继续处理。':'回应还在整理，原话和存档已保留，可以续接。'), { code: action.type==='reality'?'AI_REALITY_PLAN_PENDING':'AI_NARRATIVE_INVALID',details:errors });
       const continuingNpc = world.characters?.[conversation?.targetId];
       if (continuingNpc?.alive && !continuingNpc.travel && continuingNpc.locationId === world.player.locationId
         && narration.blocks.some(block => block.type === 'dlg' && block.name === conversation.targetName)) {
@@ -506,7 +512,7 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     const majorImpact=impact&&impact.kinds.some(kind=>kind!=='health-change');
     if(majorImpact)world.flags.recentSceneImpacts=[...(state.astraWorld.flags.recentSceneImpacts||[]),{...impact,atMinute:world.minute}].slice(-3);
     const authorAftermath=knownRealityPlan||engineAction&&!['use_inventory','train'].includes(action.type);
-    if(authorAftermath&&majorImpact&&settings.renderSettledScenes!==false&&aiClient?.narrate){
+    if(!settings.autoAftermath&&authorAftermath&&majorImpact&&settings.renderSettledScenes!==false&&aiClient?.narrate){
       onProgress('generating');
       const authored=await narrateSettledScene({sourceWorld:state.astraWorld,world,state,input:turnInput,settings,
         transactionId:txId,aiClient,recent,signal,impact,handoff:selectAstraHandoff(world,{events}),actionType:action.type});
@@ -526,6 +532,15 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
     if(injury&&action.type!=='reality'&&!narration.blocks.some(b=>/受伤|伤得|疼痛|伤口/u.test(b.text)))narration.blocks.push(injury);
     if(action.type==='reality')world.flags.realityInvocations=(Number(state.astraWorld.flags.realityInvocations)
       ||Number(state.astraWorld.historyArchive?.counts?.reality_mutation||0)+state.astraWorld.history.filter(e=>e.type==='reality_mutation').length)+1;
+    world.flags.pendingAftermath=null;
+    const liveHere=new Set(Object.values(world.characters).filter(n=>n.alive&&!n.travel&&!world.player.travel&&n.locationId===world.player.locationId).map(n=>n.name));
+    const addressed=resolveAstraConversation(state.astraWorld,turnInput.speech||turnInput.action,recent);
+    const liveTarget=world.characters[addressed?.targetId];
+    const targetName=liveTarget?.alive&&!liveTarget.travel&&liveTarget.locationId===world.player.locationId?liveTarget.name:null;
+    const hasReply=narration.blocks.some(b=>b.type==='dlg'&&liveHere.has(b.name)&&(!targetName||b.name===targetName));
+    if(settings.autoAftermath&&!world.terminal?.ended&&world.player.alive
+      &&(knownRealityPlan||engineAction&&majorImpact||(action.type==='reality'||turnInput.action&&liveHere.size)&&!hasReply))
+      world.flags.pendingAftermath=pendingAftermath(state.astraWorld,world,{turnId:txId,input:turnInput,actionType:action.type,impact,targetId:targetName?liveTarget.id:null});
     rememberPlayerScene(world,narration.blocks,{turnId:txId,input:turnInput});
     if (signal?.aborted) throw new Error('本回合已取消。');
     narration = injectExactPlayerSpeech(narration, turnInput.speech);

@@ -9,7 +9,7 @@ export function normalizePlayerTurnInput(input) {
   }
   const speech = clean(input?.speech, 1200);
   const action = clean(input?.action, 1800);
-  return { speech, action };
+  return { speech, action,...(input?.invocation===true?{invocation:true}:{}) };
 }
 
 export function playerTurnIsEmpty(input) {

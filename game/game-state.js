@@ -213,6 +213,7 @@ function safeTransactionJournal(value) {
     turn: {
       id,
       kind: 'world',
+      ...(value.turn.phase==='aftermath'?{phase:'aftermath',parentTurnId:cleanText(value.turn.parentTurnId,160)}:{}),
       userText: cleanText(value.turn.userText, 2_000),
       speech: cleanText(value.turn.speech, 1200),
       actionText: cleanText(value.turn.actionText, 1800),

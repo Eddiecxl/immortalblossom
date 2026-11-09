@@ -40,6 +40,7 @@ function sanitizeTurn(turn) {
   const model = cleanText(turn.model, 100);
   const createdAt = cleanText(turn.createdAt, 40);
   if (userText) output.userText = userText;
+  if(turn.phase==='aftermath'){output.phase='aftermath';output.parentTurnId=cleanId(turn.parentTurnId);}
   if (turn.speech) output.speech = cleanText(turn.speech,1200);
   if (turn.actionText) output.actionText = cleanText(turn.actionText,1800);
   if (turn.summary) output.summary = cleanText(turn.summary, 240);

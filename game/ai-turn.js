@@ -24,6 +24,7 @@ import {
 } from './player-turn.js';
 import { ensureDeterministicSchedules, estimateTurnMinutes, previewTemporalAdvance, settleScheduledEvents } from './time-engine.js';
 import { runAstraWorldTurn } from './astra-turn.js';
+import {runAstraAftermath} from './astra-aftermath.js';
 import { compileAstraContext } from './astra-context.js';
 import {hasInternalMetric} from './astra-narrative-style.js';
 
@@ -745,6 +746,9 @@ export function createAiTurnRunner({ aiClient, transcriptStore, stateStore, now 
       settings=journeyAiSettings(state,settings);
       if (playerTurnIsEmpty(input)) return failure('至少填写“说话”或“行动”其中一项。', '', cleanText(transactionId || idFactory(), 100), undefined);
       return executeWorld({ state, input, settings, transactionId, signal, onProgress }, 'world');
+    },
+    async runAftermath({state,settings={},signal,onProgress}={}){
+      return runAstraAftermath({source:state,settings:journeyAiSettings(state,settings),signal,onProgress,aiClient,transcriptStore,stateStore,now});
     },
     async runSystem({ state, input, settings = {}, transactionId, signal } = {}) {
       settings=journeyAiSettings(state,settings);

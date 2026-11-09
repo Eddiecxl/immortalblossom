@@ -70,20 +70,27 @@ export function createChroniclePlayer({target,status,skipButton,pauseButton,late
   const cancel=doc.createElement('button');cancel.type='button';cancel.textContent='停止等待';cancel.onclick=onCancel;article.append(cancel);
   target.append(article);latest();
  }
- async function reveal(p,text){
+ async function reveal(p,text,onProgress){
   const play=createTextPlayback(text,{interval:Number(getSpeed())});
   await new Promise(resolve=>{
-   function tick(now){const next=play.advance(now,{paused:paused||!following||doc.hidden,skip:skipping});if(p.textContent!==next.text)p.textContent=next.text;follow();if(next.done)resolve();else frame(tick);}
+   function tick(now){const next=play.advance(now,{paused:paused||!following||doc.hidden,skip:skipping});if(p.textContent!==next.text){p.textContent=next.text;onProgress?.(next.text);}follow();if(next.done)resolve();else frame(tick);}
    frame(tick);
   });
  }
  async function breath(ms){
   let last=null,elapsed=0;await new Promise(resolve=>{function tick(now){if(last!=null&&!paused&&following&&!doc.hidden)elapsed+=Math.min(64,now-last);last=now;if(skipping||elapsed>=ms)resolve();else frame(tick);}frame(tick);});
  }
- async function render(rows,{animate=true,onRowComplete}={}){
+ async function render(rows,{animate=true,onRowComplete,onSystemStart}={}){
   writing=animate;skipping=false;paused=false;controls();
   try{
    for(const row of rows){
+    if(row.type==='sys'){
+      const view=onSystemStart?.(row);
+      if(view?.element){if(animate)await reveal(view.element,row.text,view.onProgress);else{view.element.textContent=row.text;view.onProgress?.(row.text);}}
+      if(onRowComplete)await onRowComplete(row);
+      if(animate&&view&&!skipping&&Number(getSpeed())>0)await breath(220);
+      continue;
+    }
     const pending=target.querySelector('#pendingSpeech');
     const promoted=row.player&&pending?.dataset.speech===row.text;
     const article=promoted?pending:makeRow(row);

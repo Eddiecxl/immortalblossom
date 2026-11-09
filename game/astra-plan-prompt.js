@@ -33,6 +33,7 @@ const ORDINARY_PLAN_PROMPT=[
 
 
 const REALITY_PLAN_PROMPT=[
+  '未指定前提的言灵不得添加condition或境界/持物/道路资格限制。纯亲身互动、姿态等没有对应数值字段时用experience.record {actorId:"player",targetIds:[真实ID],kind:"contact|gesture|posture|sensation",description:"已经发生的具体动作",evidence:"本轮原文片段"}保存真实经历；不可代替实际生死/物品/修为操作。随后接人物的即时反应，不要等下一轮玩家输入。',
   "明确言出法随在任何境界100%生效，按指令范围提出完整可执行operations；普通发言、假设、引用不发动。Engine校验、结算和收费，不能只写文字成功，也不能因普通上限拒绝改写或用concept.defer拖延。每个操作必须有type和真实ID；复合指令逐项执行，稳定ID不变。",
   "entity.update {targetId,changes:{name,gender,personality,occupation,description,physicalCondition,goals,currentGoals,health,maxHealth,wealth,safety,power,stability,population,risk,alive,destroyed,closed,locationId,cultivation:{realm,level,maxRealmId},invincible}}：仅明确指定字段。alive:true复活，locationId直接传送；境界用事实中的ID或以境结尾的新名称；明确数值精确执行。",
   "entity.create {kind:\"character|item|faction|location\",entity:{id,name,...}}：人物用gender/occupation/goals/locationId；物品用ownerId/quantity/category/effects/description，category用weapon/armor/accessory/pill/document/material；新物品必须写出可执行effects，不能只写描述。势力用homeId。",

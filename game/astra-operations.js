@@ -10,6 +10,8 @@ import { reconcileQuestArcs, respondQuestArc } from './astra-quests.js';
 import { transferOwnedItem, offerCommitment, respondCommitment } from './astra-commitments.js';
 import {resolveCombatExchange} from './astra-combat.js';
 import {proposeStory,respondStory,reconcileStories} from './astra-story.js';
+import{recordRealityExperience}from './astra-experience.js';
+import{resolveAstraPronouns}from './astra-interaction.js';
 export { evaluateCondition } from './astra-expression.js';
 
 const domains = { character: 'characters', faction: 'factions', location: 'locations', item: 'items' };
@@ -48,19 +50,19 @@ function authorizeScope(world, op, context) {
   if (!context.enforceScope || context.mode !== 'reality' || op.type === 'concept.defer') return;
   const input = realityInput(context);
   if(op.type.startsWith('story.')&&!/故事|剧情|计划|邀请|邀约|伏笔|线索|宴|赴约/u.test(input))fail('本轮言灵没有要求额外改写故事邀约或计划。');
-  if (!explicitRealityStatement(input)) fail('假设或询问不授权执行言灵。');
+  if (context.input?.invocation!==true&&!explicitRealityStatement(input)) fail('假设或询问不授权执行言灵。');
   if (worldScope(input)) return;
   const creative = /创造|诞生|变出|制造|炼成|出现|召唤|生成|造出/u.test(input);
   if (op.type === 'entity.create' && !creative) fail('本轮没有授权创造新实体。');
   if (op.type === 'quest.create' && !/任务|委托|目标/u.test(input)) fail('本轮没有授权创造委托。');
-  const targetIds = op.type === 'entity.update' ? [op.targetId]
+  const targetIds = op.type === 'experience.record'?[op.actorId,...(op.targetIds||[])]:op.type === 'entity.update' ? [op.targetId]
     : op.type.startsWith('relation.') ? [op.fromId, op.toId]
       : op.type === 'resource.transfer' ? [op.fromId, op.toId, op.itemId]
         : op.type === 'effect.apply' ? [op.itemId] : [];
   if (op.type.startsWith('relation.') && !/关系|所属|加入|脱离|信任|依恋|关联|结盟|忠诚|忠心|效忠|归顺|洗脑|服从|立场/u.test(input)) fail('本轮没有授权改写关系。');
   for (const id of targetIds) {
     const entity = context.scopeEntities?.[id] || requireEntity(world, id);
-    if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name))) fail('言灵超出了明确指令中的目标范围。');
+    if (!(id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(entity.name)||context.scopeReferents?.includes(id))) fail('言灵超出了明确指令中的目标范围。');
   }
   const remoteLocation = op.type === 'entity.create' ? op.entity.locationId || op.entity.homeId
     : op.type === 'quest.create' ? op.quest.targetLocationId
@@ -125,7 +127,7 @@ function updateEntity(world, op, context) {
     const input = realityInput(context);
     const global = worldScope(input);
     const namedTarget = context.scopeEntities?.[target.id] || target;
-    if (!global && !(target.id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(namedTarget.name)))
+    if (!global && !(target.id === 'player' ? /我|自己|本人|主角/u.test(input) : input.includes(namedTarget.name)||context.scopeReferents?.includes(target.id)))
       fail('言灵提案超出了玩家明确指定的目标范围。');
   }
   // JSON object key order has no gameplay meaning. Restore life before applying
@@ -265,7 +267,7 @@ export function applyWorldPlan(source, plan, context) {
     && plan.operations.some(op => op.type !== 'concept.defer'))
     fail('言灵计划仍有未结算部分，必须完整执行或保留整个请求待处理。');
   const world = structuredClone(source);
-  context={...context,scopeEntities:Object.fromEntries([source.player, ...Object.values(source.characters),
+  context={...context,scopeReferents:resolveAstraPronouns(source,realityInput(context),context.conversationTargetId||source.flags?.conversation?.npcId),scopeEntities:Object.fromEntries([source.player, ...Object.values(source.characters),
     ...Object.values(source.factions), ...Object.values(source.locations), ...Object.values(source.items)]
     .map(entity => [entity.id, { id: entity.id, name: entity.name }])),actionItems:Object.values(source.items).map(item=>({id:item.id,name:item.name,
     ownerId:item.ownerId,destroyed:item.destroyed}))};
@@ -278,11 +280,12 @@ export function applyWorldPlan(source, plan, context) {
     const beforeTarget = op.type === 'entity.update' ? JSON.stringify(worldEntity(world, op.targetId)) : null;
     sim = ensureSimulation(world);
     authorizeScope(world, op, context);
-    if (op.condition) {
+    if (op.condition&&(context.mode!=='reality'||/如果|只在|只有|每当|一旦|当.+(?:时|才)/u.test(realityInput(context)))) {
       validateConditionReferences(world, op.condition);
       if (!evaluateCondition(world, op.condition)) fail('操作前置条件尚未满足。');
     }
     switch (op.type) {
+      case 'experience.record':recordRealityExperience(world,op,context,changedOperations.length);break;
       case 'story.propose':proposeStory(world,op.thread,context);break;
       case 'story.respond':respondStory(world,op,context);break;
       case 'entity.create': createEntity(world, op, context); break;
@@ -341,7 +344,7 @@ export function applyWorldPlan(source, plan, context) {
   captureWorldChanges(source, world, { ...context, action: context.mode === 'reality' ? 'rewrite' : 'change' });
   let settledCost=0;
   if (context.mode === 'reality') {
-    const costs = { 'entity.create': 24, 'entity.update': 8, 'relation.upsert': 6, 'relation.remove': 6,
+    const costs = { 'experience.record':2,'entity.create': 24, 'entity.update': 8, 'relation.upsert': 6, 'relation.remove': 6,
       'rule.upsert': 30, 'quest.create': 12, 'resource.transfer': 4, 'effect.apply': 4 };
     const charged=new Set();
     const cost = changedOperations.reduce((sum, op) => {

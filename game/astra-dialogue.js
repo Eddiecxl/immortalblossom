@@ -1,13 +1,13 @@
 // Small author view only. The complete world and validator packet remain intact.
 import {ROLEPLAY_INTERPLAY_RULES} from './astra-narrative-style.js';
 const pick=(v,keys)=>Object.fromEntries(keys.filter(k=>v?.[k]!==undefined).map(k=>[k,structuredClone(v[k])]));
-export function dialogueFrame(packet){
+export function dialogueFrame(packet,{aftermath=false}={}){
  const input=packet.playerTurn;
- if(!input?.speech||input.action||packet.planMode==='reality'||/回顾|梳理|复述|全部经过|所有的事|所有事情|从前|以前|曾经|记得|承诺|约定|历史|刚才|上次|来历|谁.{0,8}给|怎么得到/u.test(input.speech))return null;
+ if(!aftermath&&(!input?.speech||input.action||packet.planMode==='reality'||/回顾|梳理|复述|全部经过|所有的事|所有事情|从前|以前|曾经|记得|承诺|约定|历史|刚才|上次|来历|谁.{0,8}给|怎么得到/u.test(input.speech)))return null;
  if(packet.simulationFacts?.rules?.length)return null;
  const focus=packet.conversation?.targetId;
  const frame={playerTurn:pick(input,['speech','action','mode','targetId']),minute:packet.minute,clock:packet.clock,
-  location:pick(packet.location,['id','name','destroyed']),player:pick(packet.player,['id','name','health','maxHealth','cultivation','locationId','wealth','inventory','travel']),
+  location:pick(packet.location,['id','name','destroyed']),player:pick(packet.player,['id','name','health','maxHealth','cultivation','locationId','wealth','inventory','travel','invincible']),
   knownLocations:(packet.nearbyLocations||[]).map(loc=>pick(loc,['id','name','destroyed'])),
   conversation:{...pick(packet.conversation,['targetId','targetName','firstContact','absentName','presentAtStart']),knownFacts:(packet.conversation?.knownFacts||[]).slice(0,2).map(f=>pick(f,['kind','summary']))},
   presentNpcs:(packet.presentNpcs||[]).map(n=>({...pick(n,['id','name','gender','personality','occupation','alive','locationId','homeId','travel','cultivation','physicalCondition','wealth','inventory','currentGoals','relationships']),memories:(n.memories||[]).slice(0,2).map(m=>typeof m==='string'?m:pick(m,['summary','source','confidence','beliefEvidence','minute'])),allowedSecrets:n.allowedSecrets||[]})),
@@ -18,7 +18,10 @@ export function dialogueFrame(packet){
   settledStoryReplies:packet.settledStoryReplies||[],
   pacing:{mode:'conversation',listenerId:focus||null,rule:'短对白先回答当下问题。允许闲聊、停顿、休息；不重复旧威胁，不强推任务。实际到期事件仍发生。'},
   dueEvents:packet.dueEvents||[],turnStart:packet.turnStart};
- if((packet.recentImpacts||[]).some(row=>packet.minute-Number(row.atMinute||0)<=5))return null;
+ if(packet.recentExperiences?.length)frame.recentExperiences=packet.recentExperiences;
+ if(aftermath)frame.pacing={mode:'aftermath',rule:'承接已完成动作的真实余波，人物现在回应，不重新执行命令，不替玩家选择。'};
+ if(aftermath)Object.assign(frame,{settledAction:packet.settledAction,realityApplied:packet.realityApplied,settledImpact:packet.settledImpact,turnStart:packet.turnStart,narrativeContinuity:packet.narrativeContinuity});
+ if(!aftermath&&(packet.recentImpacts||[]).some(row=>packet.minute-Number(row.atMinute||0)<=5))return null;
  // Scope dependencies involving places or other numeric entities require the
  // original packet; never drop those bindings just to fit the quick lane.
  const presentIds=new Set(['player',...(packet.presentNpcs||[]).map(n=>n.id)]);
@@ -28,8 +31,8 @@ export function dialogueFrame(packet){
  // Storage provenance is not a personality fact. Keep explicitly referenced
  // IDs, while removing opaque turn UUIDs from otherwise identical appraisals.
  frame.simulationFacts={...frame.simulationFacts,
-  relations:(frame.simulationFacts.relations||[]).map(r=>pick(r,['fromId','toId','kind','active','weight',...(r.id&&input.speech.includes(r.id)?['id']:[])])),
-  beliefs:(frame.simulationFacts.beliefs||[]).map(b=>pick(b,['holderId','mode','confidence','appraisal','meaning','summary',...(b.eventId&&input.speech.includes(b.eventId)?['eventId']:[])]))};
+  relations:(frame.simulationFacts.relations||[]).map(r=>pick(r,['fromId','toId','kind','active','weight',...(r.id&&String(input.speech||input.action).includes(r.id)?['id']:[])])),
+  beliefs:(frame.simulationFacts.beliefs||[]).map(b=>pick(b,['holderId','mode','confidence','appraisal','meaning','summary',...(b.eventId&&String(input.speech||input.action).includes(b.eventId)?['eventId']:[])]))};
  return JSON.stringify(frame).length<=4400?frame:null;
 }
 export const DIALOGUE_PROMPT='Roleplay 落仙 in natural Chinese. Answer this exact speech first; idle chat, jokes, rest and reflection are valid. Usually 1-2 short dlg blocks, at most one brief useful narr; a brief sys may follow the relevant beat. No repeated scenery, forced danger or task pitch. The player controls their choices. Memories are evidence, plans are not facts. Preserve identity, location, life and ownership. Only present living NPCs speak. Narration uses 我. Return JSON {blocks:[{type:"dlg|narr|sys",name:"real speaker for dlg",text:"Chinese"}],worldPlan:{operations:[]}}. Speech does not automatically perform physical actions. No effects or unrecorded changes. A natural pause is valid; do not invent a crisis. Concrete future invitations/plans you propose MUST use story.propose with real venue/homeId and time:{dayOffset,hour,minute,durationMinutes} so Engine computes the date; never invent an unregistered venue or accept for the player. Story IDs are new stable ASCII identifiers, not character IDs.\n'+ROLEPLAY_INTERPLAY_RULES;

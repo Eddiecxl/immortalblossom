@@ -4,6 +4,15 @@ import { sceneAffordances, isOrientationSpeech } from './astra-affordances.js';
 const clean = value => String(value ?? '').trim();
 const present = world => Object.values(world.characters || {})
   .filter(npc => !world.player.travel && npc.alive && npc.locationId === world.player.locationId && !npc.travel);
+export function resolveAstraPronouns(world,input,focusId){
+ const text=String(input||'').replace(/其他人?|他人/gu,''),people=present(world),ids=new Set();
+ for(const [word,gender]of [['她','female'],['他','male']])if(text.includes(word)){
+  const matches=people.filter(n=>(n.gender||n.sex)===gender),focus=matches.find(n=>n.id===focusId);
+  if(focus)ids.add(focus.id);else if(matches.length===1)ids.add(matches[0].id);
+ }
+ if((/对方|那个人|这个人|此人/u.test(text)||text.includes('你')&&!text.includes('系统'))&&people.some(n=>n.id===focusId))ids.add(focusId);
+ return [...ids];
+}
 const sayable = value => clean(value).replace(/危险程度为\d+\/100/gu, '路上有险');
 const normalized = value => clean(value).replace(/[\s\p{P}\p{S}]/gu, '');
 const subjectGrams = value => {
@@ -55,7 +64,9 @@ export function resolveAstraConversation(world, rawSpeech, recentTurns = []) {
     .filter(block => block.type === 'dlg').at(-1);
   const lastSpeaker = people.find(npc => npc.name === prior?.name);
   const callout = /有人|谁在|喂/u.test(speech) || isOrientationSpeech(speech);
-  const target = named || byRole || focused || lastSpeaker || (people.length === 1 || callout ? people[0] : null);
+  const referents=resolveAstraPronouns(world,speech,focused?.id||lastSpeaker?.id);
+  const pronoun=referents.length===1?people.find(n=>n.id===referents[0]):null;
+  const target = named || byRole || pronoun || focused || lastSpeaker || (people.length === 1 || callout ? people[0] : null);
   return { targetId: target?.id || null, targetName: target?.name || null,
     facts: target ? knownFacts(world, target) : [], speech };
 }
