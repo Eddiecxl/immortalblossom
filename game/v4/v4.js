@@ -430,7 +430,7 @@ async function applyInventoryAction(name,action,itemId){
       try{await saveSession.committed(state);}catch(error){showToast('物品已结算；续玩检查点待恢复：'+error.message);}
     }
     transcript.push({blocks:result.blocks,summary:result.turn.summary,input:result.turn.userText,at:formatClock(state)});
-    await experience.renderBlocks(result.blocks,'',{animate:false});
+    await revealTurn(result.blocks,'',{animate:false});
     renderAll({suggestions:getAvailableActions(state)});
     experience.showEvents(before,state);audioEngine.sfx('quest');
     showToast(result.historyPending?'物品已结算，记录待恢复；下次操作会先重试保存。':result.blocks.map(b=>b.text).join(' '));
@@ -459,10 +459,10 @@ function renderSystemDock() {
   if(aftermathWork()&&!turnBusy){const button=node('button','subtle-button','接上刚才的反应');button.onclick=()=>resumePendingAftermath();dom.systemFeed.append(button);}
 }
 
-async function revealTurn(blocks,speech,{opening=false,previousMemory=[]}={}){
+async function revealTurn(blocks,speech,{opening=false,previousMemory=[],animate=true}={}){
   systemRevealEntries=opening?[]:structuredClone(systemTranscript.length?systemTranscript:previousMemory);
   renderSystemDock();
-  try{await experience.renderBlocks(blocks,speech,{onSystemStart:row=>{
+  try{await experience.renderBlocks(blocks,speech,{animate,onSystemStart:row=>{
     const entry={role:'system',text:''};systemRevealEntries.push(entry);renderSystemDock();
     return {element:dom.systemFeed.lastElementChild,onProgress:text=>{entry.text=text;dom.systemFeed.scrollTop=dom.systemFeed.scrollHeight;}};
   },onRowComplete:row=>{
