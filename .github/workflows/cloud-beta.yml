@@ -51,6 +51,14 @@ jobs:
           cloud/node_modules/.bin/wrangler deployments list --config cloud/wrangler.jsonc
           node --input-type=module <<'JS'
           import fs from 'node:fs';
+          const config=JSON.parse(fs.readFileSync('cloud/wrangler.jsonc'));
+          const api='https://api.cloudflare.com/client/v4/accounts/'+config.account_id+'/workers/';
+          const headers={Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN};
+          for(const suffix of ['subdomain','scripts/'+config.name+'/subdomain','scripts/'+config.name+'/settings']){
+            const response=await fetch(api+suffix,{headers}),data=await response.json();
+            const result=suffix.endsWith('/settings')?{version:data.result?.bindings?.find(b=>b.name==='CLOUD_VERSION')?.text}:data.result;
+            console.log(JSON.stringify({diagnostic:suffix,status:response.status,success:data.success,result,errors:data.errors?.map(e=>e.code)}));
+          }
           const expected=JSON.parse(fs.readFileSync('version.json')).version;
           for(let attempt=0;attempt<6;attempt++){
             const url='https://immortalblossombeta.eddiechanxule.workers.dev/api/status?release='+Date.now();
