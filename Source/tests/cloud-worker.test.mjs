@@ -898,6 +898,12 @@ test('daily quota charges actual usage rather than retaining unused maximum outp
  await app.queue().ctx.storage.put(key,{kind:'day-tokens',model,quotaVersion:3,limit:10000,remaining:5000,observedAt:app.now(),refillRate:10000/86400000,resetAt:app.now()+43200000,windowMs:86400000});
  await player.request('/api/ai/cloud/generate',{...payload('actual-day-output'),messages:[{role:'user',content:'a'.repeat(4000)}],maxTokens:1500});await app.fire();assert.equal((await app.queue().ctx.storage.get(key)).remaining,3900);
 });
+test('legacy long untyped waits are forecasts while real provider waits and short failure backoff remain protected',async()=>{
+ for(const [wait,providerWait,expectedCalls]of [[1000000,0,1],[2000,0,0],[1000000,90000,0]]){
+  let calls=0;const app=harness({upstream:async()=>{calls++;return completion('旧预测已解除');}}),player=app.visitor(),job=await(await player.request('/api/ai/cloud/generate',payload('legacy-kind-'+wait+'-'+providerWait))).json(),q=app.queue();
+  const stored=await q.ctx.storage.get('job:'+job.jobId);stored.attempts=1;stored.retryAt=app.now()+wait;delete stored.retrySource;await q.ctx.storage.put('job:'+job.jobId,stored);const meta=await q.ctx.storage.get('meta');meta.nextAt=app.now()+providerWait;await q.ctx.storage.put('meta',meta);await app.fire();assert.equal(calls,expectedCalls);
+ }
+});
 
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
  let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});

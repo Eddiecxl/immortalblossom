@@ -8,8 +8,10 @@ export const SESSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 90000;
 const LEASE_MS = 120000;
 const SAFETY_MS = 250;
-const QUEUE_REVISION=3;
-const hasBackoff=(job,now)=>job?.retryAt>now&&(job.retrySource==='backoff'||!job.retrySource&&job.attempts>0);
+const QUEUE_REVISION=4;
+// Old temporary-failure backoff was bounded at8s unless a provider deadline
+// also lived in meta.nextAt. Longer untyped job waits were quota forecasts.
+const hasBackoff=(job,now)=>job?.retryAt>now&&(job.retrySource==='backoff'||!job.retrySource&&job.attempts>0&&job.retryAt-now<=8000);
 
 export function json(value, status = 200) {
   return Response.json(value, {status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
