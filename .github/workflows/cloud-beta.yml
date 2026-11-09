@@ -65,6 +65,11 @@ jobs:
             const r=await fetch(url,{headers:{'Cache-Control':'no-cache'}}),data=await r.json();
             console.log(JSON.stringify({expected,actual:data.version,attempt}));
             if(r.ok&&data.version===expected)process.exit(0);
+            if(attempt===2){
+              const repaired=await fetch(api+'scripts/'+config.name+'/subdomain',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({enabled:true,previews_enabled:true})});
+              const registration=await repaired.json();
+              console.log(JSON.stringify({refreshWorkersDevRegistration:true,status:repaired.status,success:registration.success,result:registration.result}));
+            }
             await new Promise(resolve=>setTimeout(resolve,5000));
           }
           throw Error('Public Worker did not activate the tested release.');
