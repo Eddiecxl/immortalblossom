@@ -8,7 +8,7 @@ export const SESSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 90000;
 const LEASE_MS = 120000;
 const SAFETY_MS = 250;
-const QUEUE_REVISION=2;
+const QUEUE_REVISION=3;
 const hasBackoff=(job,now)=>job?.retryAt>now&&(job.retrySource==='backoff'||!job.retrySource&&job.attempts>0);
 
 export function json(value, status = 200) {
@@ -112,13 +112,16 @@ export function quotaDelay(response, now, learnedRetryMs = 0) {
     const numeric = Number(retry);
     delay = Math.max(delay, Math.max(0, Number.isFinite(numeric) ? numeric * 1000 : Date.parse(retry) - now) || 0);
   }
+  // retry-after is the provider's wait for this request, whereas reset headers
+  // describe restoration of the entire bucket, not the next usable request.
+  if(response.status===429&&delay>0)return Math.ceil(delay);
   for (const kind of ['requests', 'tokens', 'input-tokens', 'output-tokens']) {
     const remaining = response.headers.get(`x-ratelimit-remaining-${kind}`);
     if (remaining !== null && Number(remaining) <= 0) {
       // Successful complete token headers support a partial refill calculation.
       // Missing limits and every429 still preserve the provider's full reset wait.
       const limit = Number(response.headers.get(`x-ratelimit-limit-${kind}`));
-      if (response.ok && kind !== 'requests' && limit > 0
+      if (response.ok && limit > 0
         && durationMs(response.headers.get(`x-ratelimit-reset-${kind}`)) > 0) continue;
       delay = Math.max(delay, durationMs(response.headers.get(`x-ratelimit-reset-${kind}`)));
     }
@@ -141,9 +144,9 @@ function quotaSnapshot(kind, limit, remaining, resetMs, now, model) {
   // The documented token headers express per-minute buckets. Infer a slower
   // refill if the observed reset contradicts that rate; daily quotas do not refill here.
   const depleted = limit - remaining;
-  const rate = kind.endsWith('tokens') && kind !== 'day-tokens'
-    ? Math.min(limit / 60000, depleted > 0 ? depleted / resetMs : limit / 60000) : 0;
-  return {kind, model, limit, remaining, observedAt: now, refillRate: rate, windowMs: rate > 0 ? 60000 : 86400000,
+  const daily=kind==='requests'||kind==='day-tokens',windowMs=daily?86400000:60000;
+  const rate = daily?limit/windowMs:Math.min(limit/windowMs,depleted>0?depleted/resetMs:limit/windowMs);
+  return {kind, model, quotaVersion:3, limit, remaining, observedAt: now, refillRate: rate, windowMs,
     resetAt: now + Math.max(resetMs, rate > 0 ? depleted / rate : resetMs)};
 }
 
@@ -317,6 +320,10 @@ export class GroqQueue {
       tokens: input + payload.maxTokens, 'day-tokens': input + payload.maxTokens};
     const baseCosts = {...costs, 'input-tokens': baseInput, tokens: baseInput + payload.maxTokens, 'day-tokens': baseInput + payload.maxTokens};
     const budgets = await this.storage.list({prefix: 'quota:'});
+    // Old daily shadow balances were frozen and charged maximum predicted
+    // output without refunds. They cannot prove the provider is still empty.
+    // Drop only these estimates; the actual429 meta.nextAt gate stays intact.
+    for(const [key,budget] of budgets)if(['day-tokens','requests'].includes(budget.kind)&&!budget.refillRate&&budget.quotaVersion!==3){budgets.delete(key);await this.storage.delete(key);}
     const now = this.clock();
     let retryAt = 0;
     for (const budget of budgets.values()) {
@@ -349,7 +356,7 @@ export class GroqQueue {
     if (budgets.size) await this.storage.put(entries);
   }
 
-  async observeQuota(payload, response, errorInfo = null, usage = null) {
+  async observeQuota(payload, response, errorInfo = null, usage = null, reservedCosts = null) {
     const now = this.clock();
     const modelHash = await fingerprint(payload.model);
     const entries = {};
@@ -368,7 +375,19 @@ export class GroqQueue {
         : Math.max(1, window * (errorInfo.limit - errorInfo.remaining) / errorInfo.limit);
       const key = `quota:${modelHash}:${errorInfo.kind}`;
       const inferred = quotaSnapshot(errorInfo.kind, errorInfo.limit, errorInfo.remaining, resetMs, now, payload.model);
+      if(inferred&&errorInfo.kind==='day-tokens'&&errorInfo.retryMs>0){
+        inferred.refillRate=Math.max(inferred.refillRate,(errorInfo.requested-errorInfo.remaining)/errorInfo.retryMs);
+        inferred.resetAt=now+(inferred.limit-inferred.remaining)/inferred.refillRate;
+      }
       if (inferred && (!entries[key] || availableQuota(inferred, now) < availableQuota(entries[key], now))) entries[key] = inferred;
+    }
+    if(response.ok&&usage&&reservedCosts){
+      const actual=Number(usage.total_tokens)||Number(usage.prompt_tokens||0)+Number(usage.completion_tokens||0);
+      if(actual>0)for(const [key,budget]of await this.storage.list({prefix:'quota:'}))if(budget.kind==='day-tokens'&&budget.refillRate>0){
+        const refund=Math.min(reservedCosts['day-tokens'],budget.limit)-actual;
+        const remaining=Math.max(0,Math.min(budget.limit,availableQuota(budget,now)+refund));
+        entries[key]={...budget,remaining,observedAt:now,resetAt:now+(budget.limit-remaining)/budget.refillRate};
+      }
     }
     const actual = Number(usage?.prompt_tokens || (errorInfo?.kind === 'input-tokens' ? errorInfo.requested : 0));
     if (Number.isSafeInteger(actual) && actual > 0 || errorInfo?.kind&&errorInfo.requested>0) {
@@ -507,7 +526,7 @@ export class GroqQueue {
         return;
       }
       const result = await response.json().catch(() => null);
-      await this.observeQuota(job.payload, response, null, result?.usage);
+      await this.observeQuota(job.payload, response, null, result?.usage,pacing.costs);
       if (result?.choices?.[0]?.finish_reason === 'length') {
         await this.finish(job, {code: 'AI_OUTPUT_TRUNCATED', status: 422});
         return;

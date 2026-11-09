@@ -4,11 +4,17 @@ import {compileAstraContext} from '../../game/astra-context.js';import {dialogue
 import {applyWorldPlan} from '../../game/astra-operations.js';
 import * as realityPrompt from '../../game/astra-reality-prompt.js';
 import {createAiTurnRunner} from '../../game/ai-turn.js';import {createTranscriptStore} from '../../game/transcript-store.js';
+import {createAstraOpening} from '../../game/astra-opening.js';
 const setup=()=>createMainStoryState('顾长生',()=> 'voice-flow');
 test('quick author remembers the actual recent NPC and system blocks instead of an absent dialogue alias',()=>{
  const state=setup(),recent=[{userText:'你怎么帮我？',blocks:[{type:'dlg',name:'林小满',text:'我也想离开这里，顺路搭个伴。'},{type:'sys',text:'她在说自己的打算，先听完。'}]}];
  const packet=compileAstraContext(state,'能解释一下吗',recent);packet.playerTurn={speech:'能解释一下吗',action:''};packet.conversation={targetId:'npc:lin-xiaoman'};
  const frame=dialogueFrame(packet);assert.ok(frame);assert.ok(JSON.stringify(frame.recentTurns).includes('顺路搭个伴'));assert.ok(JSON.stringify(frame.recentTurns).includes('先听完'));
+});
+test('the first player reply continues the actual opening encounter rather than marking the same NPC as a stranger again',async()=>{
+ const opening=createAstraOpening(setup()),store=createTranscriptStore({memory:new Map()}),requests=[];await store.appendTurn(opening.state.journeyId,opening.turn);
+ const runner=createAiTurnRunner({transcriptStore:store,aiClient:{narrate:async(_,req)=>{requests.push(req);return JSON.stringify({blocks:[{type:'dlg',name:'林小满',text:'药包还在你衣襟里，先摸摸看。'}],worldPlan:{operations:[]}});}}});
+ const r=await runner.runWorld({state:opening.state,input:{speech:'林小满，你说的药包在哪？'},settings:{mode:'groq',fastDialogue:true,narrativePolicy:'playable',renderSettledScenes:false}});assert.equal(r.ok,true,r.error);const facts=JSON.parse(requests[0].messages[1].content.split('\n')[0].slice('世界事实：'.length));assert.equal(facts.conversation.firstContact,false);
 });
 test('one oversized semantic law is retried with its entire command then committed exactly once',async()=>{
  const state=setup(),calls=[],input={action:'言出法随：让林小满的性格变得温和并忠诚于我',speech:''};

@@ -881,6 +881,23 @@ test('polling a legacy queued job wakes its upgrade once without bypassing a tru
 test('quota diagnostics contain bounded counters only and remain protected by job ownership',async()=>{
  const app=harness(),player=app.visitor(),job=await(await player.request('/api/ai/cloud/generate',payload('private-quota'))).json();const response=await player.request(jobPath(job)+'?quota=1'),data=await response.json();assert.equal(response.status,202);assert.equal(data.quota.attempts,0);assert.ok(Array.isArray(data.quota.budgets));assert.doesNotMatch(JSON.stringify(data),/gsk_|真实剧情|credential|sessionId/);assert.equal((await app.visitor().request(jobPath(job)+'?quota=1')).status,404);
 });
+test('legacy frozen daily estimates cannot hold a healthy1761-token request behind a704-token shadow balance',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return completion('服务商实际有额度');}}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('frozen-daily-warm'));await app.fire();const {fingerprint}=await import('../../cloud/groq-queue.mjs'),model=payload().model,hash=await fingerprint(model);
+ await app.queue().ctx.storage.put('quota:'+hash+':day-tokens',{kind:'day-tokens',model,limit:200000,remaining:704,observedAt:app.now(),refillRate:0,resetAt:app.now()+5400000,windowMs:86400000});
+ const next=await(await player.request('/api/ai/cloud/generate',{...payload('frozen-daily-next'),messages:[{role:'user',content:'中'.repeat(1761)}]})).json();await app.fire();assert.equal(calls,2);assert.equal((await player.request(jobPath(next))).status,200);
+});
+test('successful daily request headers allow one-request refill rather than full-day recovery',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'回答'}}]},{headers:{'x-ratelimit-limit-requests':'1000','x-ratelimit-remaining-requests':'0','x-ratelimit-reset-requests':'24h'}});}}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('rpd-empty'));await app.fire();const next=await(await player.request('/api/ai/cloud/generate',payload('rpd-refill'))).json();await app.fire();assert.equal(calls,1);app.advance(87000);await app.fire();assert.equal(calls,2);assert.equal((await player.request(jobPath(next))).status,200);
+});
+test('an explicit provider retry is not expanded to a full token bucket reset',async()=>{
+ const {quotaDelay}=await import('../../cloud/groq-queue.mjs');const r=new Response(null,{status:429,headers:{'retry-after':'2','x-ratelimit-remaining-tokens':'0','x-ratelimit-reset-tokens':'1000s'}});assert.equal(quotaDelay(r,Date.now()),2000);
+});
+test('daily quota charges actual usage rather than retaining unused maximum output reservations',async()=>{
+ const app=harness({upstream:async()=>Response.json({choices:[{message:{content:'简短答复'}}],usage:{prompt_tokens:1000,completion_tokens:100,total_tokens:1100}})}),player=app.visitor();
+ const warm=await(await player.request('/api/ai/cloud/generate',payload('actual-day-warm'))).json();await app.fire();const {fingerprint}=await import('../../cloud/groq-queue.mjs'),model=payload().model,hash=await fingerprint(model),key='quota:'+hash+':day-tokens';
+ await app.queue().ctx.storage.put(key,{kind:'day-tokens',model,quotaVersion:3,limit:10000,remaining:5000,observedAt:app.now(),refillRate:10000/86400000,resetAt:app.now()+43200000,windowMs:86400000});
+ await player.request('/api/ai/cloud/generate',{...payload('actual-day-output'),messages:[{role:'user',content:'a'.repeat(4000)}],maxTokens:1500});await app.fire();assert.equal((await app.queue().ctx.storage.get(key)).remaining,3900);
+});
 
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
  let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});

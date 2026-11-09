@@ -352,8 +352,8 @@ export async function runAstraWorldTurn({ source, input, settings = {}, transact
       packet.intent = intent;
       if (conversation) {
         const originalNpc=state.astraWorld.characters[conversation.targetId];
-        const firstContact=Boolean(originalNpc)&&!(originalNpc.memories||[]).some(m=>m.source==='player-speech'
-          || m.source!=='opening-contact'&&m.summary&&/顾长生|主角|玩家/u.test(m.summary));
+        const firstContact=Boolean(originalNpc)&&!originalNpc.metPlayer&&!(originalNpc.memories||[]).some(m=>m.source==='player-speech'
+          ||m.source==='opening-contact'||m.summary&&/顾长生|主角|玩家/u.test(m.summary));
         packet.playerTurn.targetId = conversation.targetId;
         packet.conversation = { targetId: conversation.targetId, targetName: conversation.targetName,
           firstContact,
