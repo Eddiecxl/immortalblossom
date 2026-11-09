@@ -8,6 +8,7 @@ export const SESSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 90000;
 const LEASE_MS = 120000;
 const SAFETY_MS = 250;
+const QUEUE_REVISION=2;
 const hasBackoff=(job,now)=>job?.retryAt>now&&(job.retrySource==='backoff'||!job.retrySource&&job.attempts>0);
 
 export function json(value, status = 200) {
@@ -219,6 +220,7 @@ export class GroqQueue {
       if (url.searchParams.get('submission') === '1') return json(pendingResult(job, meta?.nextAt, this.clock()), 202);
       if (job.state === 'completed') return json({jobId: job.id, text: job.text, provider: job.payload.provider||'groq', model: job.payload.model});
       if (job.state === 'failed') return failure(job.error.code, job.error.status,true);
+      if(job.state==='queued'&&job.queueRevision!==QUEUE_REVISION){job.queueRevision=QUEUE_REVISION;await this.storage.put(`job:${job.id}`,job);await this.storage.setAlarm(this.clock()+1);}
       return json(pendingResult(job, meta?.nextAt, this.clock()), 202);
     }
     return failure('AI_JOB_NOT_FOUND', 404);
@@ -241,7 +243,7 @@ export class GroqQueue {
     const meta = await this.storage.get('meta') || {sequence: 0, nextAt: 0};
     const id = crypto.randomUUID();
     const pendingKey = `pending:${String(++meta.sequence).padStart(16, '0')}:${id}`;
-    const job = {id, sessionId, credential, payload, requestHash, state: 'queued', createdAt: now, updatedAt: now, pendingKey, dedupeKey, attempts: 0};
+    const job = {id, sessionId, credential, payload, requestHash, state: 'queued', createdAt: now, updatedAt: now, pendingKey, dedupeKey, attempts: 0,queueRevision:QUEUE_REVISION};
     // Persist the recovery alarm before accepting the job. Output gates wait for storage.
     // Wake once to validate the head, including legacy impossible requests.
     // alarm still enforces every authoritative retry before any upstream call.
@@ -315,6 +317,11 @@ export class GroqQueue {
     for (const budget of budgets.values()) {
       const actualCost=measured?.costs?.[budget.kind] ?? (budget.kind==='input-tokens'?measured?.promptTokens:null);
       if (budget.model===payload.model && actualCost>budget.limit) return {error: {code: 'AI_INPUT_BUDGET', status: 413}};
+      // A different prompt shape can invalidate the learned token density. A
+      // forecast above the entire bucket is not evidence this new request is
+      // impossible, nor a reason to reserve/wait for a full bucket forever.
+      // One real attempt calibrates it; authoritative429 nextAt still gates it.
+      if(!measured&&budget.kind.endsWith('tokens')&&costs[budget.kind]>budget.limit)continue;
       // The prediction margin may reserve all capacity; it cannot turn a known
       // fitting prompt into an artificial oversized-input failure.
       const cost = Math.min(costs[budget.kind], budget.limit);

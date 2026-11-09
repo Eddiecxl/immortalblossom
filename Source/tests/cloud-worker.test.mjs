@@ -869,6 +869,15 @@ test('a recovered non-head running lease cannot cause a one-millisecond alarm lo
 test('a second enqueue cannot bypass temporary upstream failure backoff',async()=>{
  let calls=0;const app=harness({upstream:async()=>++calls===1?new Response(null,{status:503}):completion('恢复')}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('backoff-head'));await app.fire();await player.request('/api/ai/cloud/generate',payload('backoff-next'));await app.fire();assert.equal(calls,1);assert.ok(await app.queue().ctx.storage.getAlarm()>=app.now()+2000);app.advance(2001);await app.fire();assert.equal(calls,2);
 });
+test('an unmeasured over-cap prediction permits one real calibration rather than waiting for a whole bucket forever',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return completion('实际放得下');}}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('calibration-warm'));await app.fire();const {fingerprint}=await import('../../cloud/groq-queue.mjs'),model=payload().model,hash=await fingerprint(model);
+ await app.queue().ctx.storage.put('usage:'+hash,{schema:2,density:20,samples:[]});await app.queue().ctx.storage.put('quota:'+hash+':input-tokens',{kind:'input-tokens',model,limit:7000,remaining:2000,observedAt:app.now(),refillRate:7000/60000,resetAt:app.now()+60000});
+ const job=await(await player.request('/api/ai/cloud/generate',{...payload('new-request-shape'),messages:[{role:'user',content:'这是真实指令'.repeat(180)}]})).json();await app.fire();assert.equal(calls,2);assert.equal((await player.request(jobPath(job))).status,200);
+});
+test('polling a legacy queued job wakes its upgrade once without bypassing a true provider deadline',async()=>{
+ const app=harness(),player=app.visitor(),job=await(await player.request('/api/ai/cloud/generate',payload('legacy-poll-upgrade'))).json(),q=app.queue();const stored=await q.ctx.storage.get('job:'+job.jobId);delete stored.queueRevision;await q.ctx.storage.put('job:'+job.jobId,stored);await q.ctx.storage.setAlarm(app.now()+1000000);
+ await player.request(jobPath(job));assert.equal(await q.ctx.storage.getAlarm(),app.now()+1);const meta=await q.ctx.storage.get('meta');meta.nextAt=app.now()+90000;await q.ctx.storage.put('meta',meta);await app.fire();assert.equal((await player.request(jobPath(job))).status,202);assert.equal(await q.ctx.storage.getAlarm(),meta.nextAt);
+});
 
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{
  let calls=0;const app=harness({upstream:async()=>{calls++;return Response.json({choices:[{message:{content:'真实回复'}}],usage:{prompt_tokens:calls===1?80:3800,completion_tokens:20}}, {headers:{'x-ratelimit-limit-input-tokens':'7000','x-ratelimit-remaining-input-tokens':'6000','x-ratelimit-reset-input-tokens':'9s'}});}});
