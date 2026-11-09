@@ -43,6 +43,24 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: cloud/node_modules/.bin/wrangler deploy --config cloud/wrangler.jsonc
+      - name: Verify public Worker version
+        if: ${{ env.CF_TOKEN != '' && ((github.event_name == 'workflow_dispatch' && inputs.deploy) || vars.CLOUDFLARE_AUTO_DEPLOY == 'true') }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          cloud/node_modules/.bin/wrangler deployments list --config cloud/wrangler.jsonc
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const expected=JSON.parse(fs.readFileSync('version.json')).version;
+          for(let attempt=0;attempt<6;attempt++){
+            const url='https://immortalblossombeta.eddiechanxule.workers.dev/api/status?release='+Date.now();
+            const r=await fetch(url,{headers:{'Cache-Control':'no-cache'}}),data=await r.json();
+            console.log(JSON.stringify({expected,actual:data.version,attempt}));
+            if(r.ok&&data.version===expected)process.exit(0);
+            await new Promise(resolve=>setTimeout(resolve,5000));
+          }
+          throw Error('Public Worker did not activate the tested release.');
+          JS
       - name: Explain missing deployment token
         if: ${{ env.CF_TOKEN == '' }}
         env:
