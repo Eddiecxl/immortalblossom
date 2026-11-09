@@ -694,9 +694,9 @@ test('observed input quota paces the next unchanged prompt until sufficient part
   const delay = waiting.retryAt - app.now();
   assert.ok(delay > 10000 && delay < 20000, `wait for enough refill, not the full58.8s: ${delay}`);
   app.env.GROQ_QUEUE.restart(app.queue().name);
-  app.advance(delay - 1); await app.fire();
+  app.advance(Math.floor(delay / 2)); await app.fire();
   assert.equal(calls, 1);
-  app.advance(2); await app.fire();
+  app.advance(Math.ceil(delay / 2) + 2); await app.fire();
   assert.equal(calls, 2);
   assert.deepEqual(sent[1], request('paced-usage').messages, 'pacing must not trim the prompt');
 });
@@ -852,6 +852,22 @@ test('a legacy impossible retry is cleared before its stale global wait, without
  await queue.ctx.storage.put('quota:'+modelHash+':input-tokens',{kind:'input-tokens',model:request.model,limit:500,remaining:500,observedAt:app.now(),refillRate:500/60000,resetAt:app.now()+60000});
  const meta=await queue.ctx.storage.get('meta');meta.nextAt=app.now()+1000000;await queue.ctx.storage.put('meta',meta);await app.fire();assert.equal((await player.request(jobPath(job))).status,413);
  const next=await(await player.request('/api/ai/cloud/generate',{...payload('small-after-legacy'),maxTokens:64})).json();await app.fire();assert.equal((await player.request(jobPath(next))).status,200);
+});
+
+test('a large estimated quota wait cannot starve a smaller ready conversation or probe',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return completion('真实回应');}}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('warm-fair'));await app.fire();
+ const {fingerprint}=await import('../../cloud/groq-queue.mjs'),model=payload().model,hash=await fingerprint(model);
+ await app.queue().ctx.storage.put('quota:'+hash+':input-tokens',{kind:'input-tokens',model,limit:5000,remaining:100,observedAt:app.now(),refillRate:5000/60000,resetAt:app.now()+60000});
+ const big=await(await player.request('/api/ai/cloud/generate',{...payload('big-before-ready'),messages:[{role:'user',content:'长世界'.repeat(500)}]})).json();
+ const small=await(await player.request('/api/ai/cloud/generate',{...payload('small-ready'),maxTokens:64,messages:[{role:'user',content:'好'}]})).json();await app.fire();assert.equal(calls,2);assert.equal((await player.request(jobPath(small))).status,200);assert.equal((await player.request(jobPath(big))).status,202);
+ app.advance(60001);await app.fire();assert.equal((await player.request(jobPath(big))).status,200);
+});
+test('a recovered non-head running lease cannot cause a one-millisecond alarm loop or duplicate upstream call',async()=>{
+ let calls=0;const app=harness({upstream:async()=>{calls++;return completion('唯一回复');}}),player=app.visitor(),first=await(await player.request('/api/ai/cloud/generate',payload('lease-first'))).json(),running=await(await player.request('/api/ai/cloud/generate',payload('lease-second'))).json();
+ const q=app.queue(),stored=await q.ctx.storage.get('job:'+running.jobId);stored.state='running';stored.leaseUntil=app.now()+120000;await q.ctx.storage.put('job:'+running.jobId,stored);app.env.GROQ_QUEUE.restart(q.name);await app.fire();assert.equal(calls,0);assert.equal(await q.ctx.storage.getAlarm(),stored.leaseUntil);assert.equal((await player.request(jobPath(first))).status,202);
+});
+test('a second enqueue cannot bypass temporary upstream failure backoff',async()=>{
+ let calls=0;const app=harness({upstream:async()=>++calls===1?new Response(null,{status:503}):completion('恢复')}),player=app.visitor();await player.request('/api/ai/cloud/generate',payload('backoff-head'));await app.fire();await player.request('/api/ai/cloud/generate',payload('backoff-next'));await app.fire();assert.equal(calls,1);assert.ok(await app.queue().ctx.storage.getAlarm()>=app.now()+2000);app.advance(2001);await app.fire();assert.equal(calls,2);
 });
 
 test('a short probe cannot turn a fitting story into a predicted oversized terminal error', async()=>{

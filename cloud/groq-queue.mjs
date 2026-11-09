@@ -8,6 +8,7 @@ export const SESSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 90000;
 const LEASE_MS = 120000;
 const SAFETY_MS = 250;
+const hasBackoff=(job,now)=>job?.retryAt>now&&(job.retrySource==='backoff'||!job.retrySource&&job.attempts>0);
 
 export function json(value, status = 200) {
   return Response.json(value, {status, headers: {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}});
@@ -256,11 +257,13 @@ export class GroqQueue {
 
   async schedule() {
     const meta = await this.storage.get('meta') || {};
-    const pending = await this.storage.list({prefix: 'pending:', limit: 1});
+    const pending = await this.storage.list({prefix: 'pending:', limit: 8});
     const now = this.clock();
     if (pending.size) {
-      const job = await this.storage.get(`job:${pending.values().next().value}`);
-      await this.storage.setAlarm(Math.max(now + 1, meta.nextAt || 0, job?.state === 'running' ? job.leaseUntil || 0 : job?.retryAt || 0));
+      const jobs=await Promise.all([...pending.values()].map(id=>this.storage.get(`job:${id}`)));
+      const running=jobs.find(job=>job?.state==='running');
+      const readyAt=running?running.leaseUntil||0:hasBackoff(jobs[0],now)?jobs[0].retryAt:Math.min(...jobs.filter(Boolean).map(job=>job.retryAt||0));
+      await this.storage.setAlarm(Math.max(now + 1, meta.nextAt || 0, Number.isFinite(readyAt)?readyAt:0));
     } else {
       // Terminal jobs remain pollable and idempotent for seven days.
       const retained = await this.storage.list({prefix: 'job:', limit: 1});
@@ -378,10 +381,12 @@ export class GroqQueue {
     try {
       const now = this.clock();
       const meta = await this.storage.get('meta') || {sequence: 0, nextAt: 0};
-      const pending = await this.storage.list({prefix: 'pending:', limit: 1});
+      const pending = await this.storage.list({prefix: 'pending:', limit: 8});
       if (!pending.size) { await this.cleanup(); return; }
+      const running=(await Promise.all([...pending.values()].map(id=>this.storage.get(`job:${id}`)))).find(job=>job?.state==='running');
+      if(running){if(running.leaseUntil>now)return;await this.finish(running,{code:'AI_REQUEST_INTERRUPTED',status:409});return;}
       const [pendingKey, jobId] = pending.entries().next().value;
-      const job = await this.storage.get(`job:${jobId}`);
+      let job = await this.storage.get(`job:${jobId}`);
       if (!job || !['queued', 'running'].includes(job.state)) {
         await this.storage.delete(pendingKey);
         return;
@@ -392,18 +397,29 @@ export class GroqQueue {
         await this.finish(job, {code: 'AI_REQUEST_INTERRUPTED', status: 409});
         return;
       }
-      const pacing = await this.preflight(job.payload);
+      let pacing = await this.preflight(job.payload);
       if (pacing.error) {
         // Upgrade old queued oversized jobs too. The serial head's old rejected
         // request may have set nextAt before this immediate-failure fix existed.
         if(job.attempts>0){meta.nextAt=0;await this.storage.put('meta',meta);}
         await this.finish(job, pacing.error);return;
       }
-      if (Math.max(meta.nextAt || 0, job.retryAt || 0) > now) return;
+      if ((meta.nextAt || 0) > now) return;
+      if(hasBackoff(job,now))return;
       if (pacing.retryAt > now) {
         job.retryAt = pacing.retryAt;
+        job.retrySource='forecast';
         await this.storage.put(`job:${job.id}`, job);
-        return;
+        // Forecasts depend on request size. A large author must not block a
+        // fitting chat/probe; an actual provider nextAt above still gates all.
+        for(const candidateId of [...pending.values()].slice(1)){
+          const candidate=await this.storage.get(`job:${candidateId}`);if(candidate?.state!=='queued'||hasBackoff(candidate,now))continue;
+          const next=await this.preflight(candidate.payload);
+          if(next.error){await this.finish(candidate,next.error);continue;}
+          candidate.retryAt=next.retryAt||0;candidate.retrySource='forecast';await this.storage.put(`job:${candidate.id}`,candidate);
+          if(next.retryAt<=now){job=candidate;pacing=next;break;}
+        }
+        if(pacing.retryAt>now)return;
       }
       const key = await this.credentialFor(job);
       if (!key) { await this.finish(job, {code: 'AI_NOT_CONFIGURED', status: 503}); return; }
@@ -451,6 +467,7 @@ export class GroqQueue {
         // Long quota waits are durable queue state, never a sleeping HTTP request.
         job.state = 'queued';
         job.retryAt = currentMeta.nextAt;
+        job.retrySource='provider';
         job.updatedAt = this.clock();
         delete job.leaseUntil;
         await this.storage.put(`job:${job.id}`, job);
@@ -460,7 +477,7 @@ export class GroqQueue {
       if (!response.ok) {
         const status = response.status;
         if([502,503,504].includes(status)&&job.attempts<3){
-          job.state='queued';job.retryAt=this.clock()+Math.max(delay,2000*2**(job.attempts-1));job.updatedAt=this.clock();delete job.leaseUntil;
+          job.state='queued';job.retryAt=this.clock()+Math.max(delay,2000*2**(job.attempts-1));job.retrySource='backoff';job.updatedAt=this.clock();delete job.leaseUntil;
           await this.storage.put(`job:${job.id}`,job);await response.body?.cancel();return;
         }
         const rejected = status === 400 || status === 422 ? await response.clone().json().catch(() => null) : null;

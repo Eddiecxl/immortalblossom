@@ -10,7 +10,9 @@ export async function waitForCloudJob({job,fetchStatus,signal,clock=Date.now,wai
   if(signal?.aborted)throw cancellationError(signal);
   const left=maxWaitMs-(clock()-started);
   if(left<=0){report({busy:false,phase:'deferred',ms:0,jobId});throw Object.assign(Error('云端尚未有可用额度；这句话已保留待续。可以先使用物品或执行可由命簿直接结算的动作。'),{code:'AI_QUEUE_PENDING',jobId,status:202});}
-  const delay=Math.min(left,Math.max(1000,Number(latest.pollAfterMs)||2000,Number(latest.retryAt)-clock()||0));
+  // Status polling consumes no model quota. A saved retry forecast may have
+  // become obsolete after completion or a queue repair; recheck it promptly.
+  const delay=Math.min(left,Math.max(1000,Math.min(2500,Number(latest.pollAfterMs)||2000)));
   const until=clock()+delay;
   while(clock()<until){
    report({busy:true,phase:latest.retryAt>clock()?'quota-wait':'queued',ms:until-clock(),jobId});

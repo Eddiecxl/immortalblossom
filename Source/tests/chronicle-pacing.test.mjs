@@ -20,6 +20,8 @@ test('system projection is called only when that block has actually finished, in
  const player=createChroniclePlayer({target,status:element(),skipButton:element(),pauseButton:element(),latestButton:element(),getSpeed:()=>0,frame:fn=>{queueMicrotask(()=>fn(time+=16));return time;}});
  const rows=[{type:'dlg',name:'甲',text:'吃过了。'},{type:'sys',text:'你倒是会挑时候。'},{type:'dlg',name:'甲',text:'先走，路上再说。'}];
  await player.render(rows,{onRowComplete:row=>{assert.equal(target.children.at(-1).querySelector('p').textContent,row.text);calls.push(row.type);if(row.type==='dlg'&&calls.length===1)assert.equal(target.children.length,1);}});assert.deepEqual(calls,['dlg','sys','dlg']);
+ target.children=[];const first=player.render(rows,{animate:false}),second=player.render(rows,{animate:false});
+ assert.deepEqual(target.children.map(el=>el.querySelector('p').textContent),[...rows,...rows].map(r=>r.text));await Promise.all([first,second]);
 });
 test('pausing or a long background frame cannot dump the unread paragraph on resume',()=>{
  const play=createTextPlayback('一二三四五六七八九十'.repeat(20),{interval:50});

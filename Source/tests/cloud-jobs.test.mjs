@@ -8,7 +8,7 @@ test('queued cloud job waits for quota without submitting another generation or 
    assert.equal(id,'a-safe-job');calls++;
    return calls===1?{state:'queued',pollAfterMs:1000,retryAt:10000}:{text:'继续发生的新剧情。'};
   }});
- assert.equal(result.text,'继续发生的新剧情。');assert.equal(calls,2);assert.ok(now>=10000);
+ assert.equal(result.text,'继续发生的新剧情。');assert.equal(calls,2);assert.ok(now<=5000);
  assert.ok(states.some(s=>s.phase==='quota-wait'));
 });
 test('cancelled queue does not poll or invent an answer',async()=>{
@@ -24,7 +24,12 @@ test('queue deadline preserves a retryable pending job instead of a fake scene',
 
 test('a thousand-second quota wait does not lock the foreground for twenty minutes',async()=>{
  let now=0,calls=0;const states=[];await assert.rejects(()=>waitForCloudJob({job:{jobId:'long-wait',state:'queued',retryAt:1000000},clock:()=>now,wait:async ms=>{now+=ms;},report:s=>states.push(s),fetchStatus:async()=>{calls++;return{state:'queued',retryAt:1000000};}}),e=>e.code==='AI_QUEUE_PENDING'&&e.jobId==='long-wait');
- assert.ok(now<=15000);assert.equal(calls,0);assert.equal(states.at(-1).phase,'deferred');assert.equal(states.at(-1).ms,0);
+ assert.ok(now<=15000);assert.ok(calls<=8);assert.equal(states.at(-1).phase,'deferred');assert.equal(states.at(-1).ms,0);
+});
+
+test('a saved long retry forecast cannot hide a job that has since completed or failed',async()=>{
+ let now=0;const result=await waitForCloudJob({job:{jobId:'now-complete',state:'queued',retryAt:1000000},clock:()=>now,wait:async ms=>{now+=ms;},fetchStatus:async()=>({text:'已经完成'})});assert.equal(result.text,'已经完成');assert.ok(now<=2500);
+ now=0;await assert.rejects(()=>waitForCloudJob({job:{jobId:'now-failed',state:'queued',retryAt:1000000},clock:()=>now,wait:async ms=>{now+=ms;},fetchStatus:async()=>{throw Object.assign(Error('too large'),{code:'AI_INPUT_BUDGET',status:413,terminalJob:true});}}),e=>e.code==='AI_INPUT_BUDGET');assert.ok(now<=2500);
 });
 test('polling survives transient network loss and request timeout without replacing the durable job',async()=>{
  let now=0,calls=0;

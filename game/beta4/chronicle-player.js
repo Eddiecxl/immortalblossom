@@ -91,7 +91,7 @@ export function createChroniclePlayer({target,status,skipButton,pauseButton,late
     const p=article.querySelector('p');
     if(!animate||row.player||getReduced())article.style.animation='none';
     if(!promoted)target.append(article);
-    if(!animate||row.player){p.textContent=row.text;follow();await onRowComplete?.(row);continue;}
+    if(!animate||row.player){p.textContent=row.text;follow();if(onRowComplete)await onRowComplete(row);continue;}
     article.classList.add('is-revealing');await reveal(p,row.text);article.classList.remove('is-revealing');
     await onRowComplete?.(row);
     if(!skipping&&Number(getSpeed())>0)await breath(row.type==='dlg'?320:220);
